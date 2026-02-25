@@ -1,23 +1,23 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    id("org.springframework.boot")
-    id("io.spring.dependency-management")
-    kotlin("jvm")
-    kotlin("plugin.spring")
-    id("org.jlleitschuh.gradle.ktlint")
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.spring)
+    alias(libs.plugins.ktlint)
 }
 
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation(libs.spring.boot.starter.web)
+    implementation(libs.jackson.module.kotlin)
+    implementation(libs.kotlin.reflect)
 
     // Slack SDK
-    implementation("com.slack.api:bolt:1.37.0")
-    implementation("com.slack.api:bolt-jetty:1.37.0")
+    implementation(libs.slack.bolt.jakarta.servlet)
 
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation(libs.spring.boot.starter.test)
+    testImplementation(libs.mockito.kotlin)
 }
 
 tasks.withType<KotlinCompile> {
@@ -32,7 +32,7 @@ tasks.named<Test>("test") {
 }
 
 ktlint {
-    version.set("1.5.0")
+    version.set("1.8.0")
     verbose.set(true)
     outputToConsole.set(true)
     filter {

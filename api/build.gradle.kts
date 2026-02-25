@@ -28,6 +28,7 @@ dependencies {
     testImplementation(libs.spring.boot.starter.test)
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers.postgresql)
+    testImplementation(libs.wiremock.standalone)
     testImplementation(libs.mockito.kotlin)
     testImplementation(libs.h2)
 }

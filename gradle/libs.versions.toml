@@ -11,6 +11,7 @@ novuJava = "1.6.0"
 slackBolt = "1.47.0"
 mockitoKotlin = "6.2.3"
 testcontainers = "1.20.4"
+wiremock = "3.13.2"
 h2 = "2.3.232"
 
 [libraries]
@@ -33,6 +34,7 @@ h2 = { module = "com.h2database:h2" }
 # Testing
 testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter" }
 testcontainers-postgresql = { module = "org.testcontainers:postgresql" }
+wiremock-standalone = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
 mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockitoKotlin" }
 
 # Third-party SDKs

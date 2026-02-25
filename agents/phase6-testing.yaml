@@ -1,0 +1,23 @@
+description: "System Testing"
+subagent_type: "general"
+prompt: |
+  # Phase 6: System Testing
+
+  Your goal is to test the entire Notification Router system.
+
+  **Context:**
+  - Verify the integration between the Slack Bot, the API Service, the PostgreSQL database, and Novu.
+  - Review `CLAUDE.md` testing guidelines.
+
+  **Tasks:**
+  1. Build Docker images for both `api` and `bot` (`docker build -t notification-router/api:dev ./api`).
+  2. Deploy `k8s/api-deployment.yaml` and `k8s/bot-deployment.yaml` to the local k3s cluster.
+     - Ensure the `secrets.yaml` is populated with correct tokens for Slack, GitHub, and Novu.
+  3. Verify pod status and logs.
+  4. Write load tests (e.g., using Gatling or K6 or a simple bash script) to simulate >1000 webhook events per second hitting the API.
+  5. Provide an end-to-end report on the system's performance and functional validation (Slack subscription -> GitHub Webhook -> Novu Notification).
+
+  **Deliverables:**
+  - Running k3s deployments.
+  - Load test results.
+  - End-to-end functional validation report.

@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-router-bot
+  namespace: notification-router
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-router-bot
+  template:
+    spec:
+      containers:
+      - name: bot
+        image: notification-router/bot:dev
+        env:
+        - name: SLACK_BOT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: notification-router-secrets
+              key: slack-bot-token
+        - name: SLACK_APP_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: notification-router-secrets
+              key: slack-app-token
+        - name: SLACK_SIGNING_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: notification-router-secrets
+              key: slack-signing-secret
+        - name: API_URL
+          value: "http://notification-router-api.notification-router.svc.cluster.local:8080"

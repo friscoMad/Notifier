@@ -1,0 +1,23 @@
+description: "Webhook adapters"
+subagent_type: "general"
+prompt: |
+  # Phase 3: Webhooks
+
+  Your goal is to implement Webhook Adapters in the API Service (`api/`) to process incoming events from external sources.
+
+  **Context:**
+  - The API needs to receive webhooks from GitHub, GitHub Actions, and Buildkite.
+  - Review `docs/notification-types.md` for the types of events to handle.
+
+  **Tasks:**
+  1. Create Webhook Controllers in `api/` for:
+     - GitHub (`/api/v1/webhooks/github`)
+     - Buildkite (`/api/v1/webhooks/buildkite`)
+  2. Implement payload parsing and normalization:
+     - Map the external JSON payloads to an internal `NormalizedEvent` class containing `typeKey`, `metadata` (for filtering), and `payload` (for templates).
+  3. Validate webhook signatures (e.g., `X-Hub-Signature-256` for GitHub).
+  4. Write unit tests to parse sample JSON payloads from GitHub and Buildkite and ensure correct normalization.
+
+  **Deliverables:**
+  - Webhook Controllers and normalization logic in `api/`.
+  - Passing unit tests with sample webhook payloads.

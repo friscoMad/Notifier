@@ -1,0 +1,23 @@
+description: "Core API development"
+subagent_type: "general"
+prompt: |
+  # Phase 2: Core API
+
+  Your goal is to build the REST API Service in Kotlin/Spring Boot.
+
+  **Context:**
+  - This API handles user management, subscription storage, and filtering logic.
+  - Review `docs/api-specification.md` and `docs/database-schema.md` for details.
+
+  **Tasks:**
+  1. Initialize a Kotlin Spring Boot project in the `api/` directory using Gradle.
+     - Dependencies: Web, PostgreSQL, Spring Data JPA (or JOOQ), Validation, Flyway.
+  2. Implement the database schema migrations using Flyway.
+  3. Create the data models (Entities) for `users`, `notification_types`, `filter_definitions`, `subscriptions`, and `channel_subscriptions`.
+  4. Build the Controller and Service layers for managing users and subscriptions.
+  5. Implement the Preference Engine logic (given an Event, evaluate filters against user subscriptions).
+  6. Write unit tests for the filter evaluation logic.
+
+  **Deliverables:**
+  - Complete Spring Boot application in `api/`.
+  - Passing unit tests.

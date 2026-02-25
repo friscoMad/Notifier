@@ -14,5 +14,7 @@ interface ChannelSubscriptionRepository : JpaRepository<ChannelSubscription, UUI
         notificationTypeId: UUID,
     ): ChannelSubscription?
 
+    fun findByNotificationTypeId(notificationTypeId: UUID): List<ChannelSubscription>
+
     fun findBySlackChannelIdAndEnabledTrue(slackChannelId: String): List<ChannelSubscription>
 }

@@ -47,7 +47,7 @@ class SubscriptionServiceTest {
                 enabled = subscriptionDto.enabled,
             )
 
-        whenever(subscriptionRepository.save(any())).thenReturn(savedDomain)
+        whenever(subscriptionRepository.save(any<Subscription>())).thenReturn(savedDomain)
 
         val result = subscriptionService.createSubscription(subscriptionDto)
 
@@ -83,7 +83,7 @@ class SubscriptionServiceTest {
 
         whenever(subscriptionRepository.findById(any()))
             .thenReturn(Optional.of(existingDomain))
-        whenever(subscriptionRepository.save(any())).thenAnswer { it.getArgument(0) }
+        whenever(subscriptionRepository.save(any<Subscription>())).thenAnswer { it.getArgument(0) }
 
         val result = subscriptionService.updateSubscription(id, subscriptionDto)
 

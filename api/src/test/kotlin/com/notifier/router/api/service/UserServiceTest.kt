@@ -41,7 +41,7 @@ class UserServiceTest {
                 name = userDto.name,
             )
 
-        whenever(userRepository.save(any())).thenReturn(savedUser)
+        whenever(userRepository.save(any<User>())).thenReturn(savedUser)
 
         val result = userService.createUser(userDto)
 

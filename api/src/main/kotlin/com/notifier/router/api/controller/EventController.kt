@@ -2,8 +2,7 @@ package com.notifier.router.api.controller
 
 import com.notifier.router.api.domain.Event
 import com.notifier.router.api.dto.EventDto
-import com.notifier.router.api.service.FilterEvaluator
-import com.notifier.router.api.service.SubscriptionService
+import com.notifier.router.api.service.EventService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -13,8 +12,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/v1/events")
 class EventController(
-    private val subscriptionService: SubscriptionService,
-    private val filterEvaluator: FilterEvaluator,
+    private val eventService: EventService,
 ) {
     @PostMapping
     fun processEvent(
@@ -27,10 +25,7 @@ class EventController(
                 payload = eventDto.payload,
             )
 
-        // In a real implementation, you would:
-        // 1. Get all subscriptions for this event type
-        // 2. Evaluate filters using FilterEvaluator
-        // 3. Route to appropriate channels via Novu
+        eventService.processEventAsync(event)
 
         return ResponseEntity.accepted().build()
     }

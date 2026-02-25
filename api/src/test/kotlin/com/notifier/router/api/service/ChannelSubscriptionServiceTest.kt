@@ -46,7 +46,7 @@ class ChannelSubscriptionServiceTest {
                 enabled = channelSubscriptionDto.enabled,
             )
 
-        whenever(channelSubscriptionRepository.save(any()))
+        whenever(channelSubscriptionRepository.save(any<ChannelSubscription>()))
             .thenReturn(savedDomain)
 
         val result = channelSubscriptionService.createChannelSubscription(channelSubscriptionDto)

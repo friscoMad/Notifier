@@ -14,5 +14,7 @@ interface SubscriptionRepository : JpaRepository<Subscription, UUID> {
         notificationTypeId: UUID,
     ): Subscription?
 
+    fun findByNotificationTypeId(notificationTypeId: UUID): List<Subscription>
+
     fun findByUserIdAndEnabledTrue(userId: UUID): List<Subscription>
 }

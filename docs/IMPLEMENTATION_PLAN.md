@@ -1,5 +1,7 @@
 # Implementation Plan
 
+*Note: For complete agent instructions, architecture, and notification types, refer to `GEMINI.md`.*
+
 Based on the architectural documents, API specifications, and the existing codebase cleanup, the project is structured correctly into a multi-module Kotlin Spring Boot architecture. Phase 1 established the DB models (PostgreSQL) and the core API structure (`api/` module). Below is the comprehensive execution plan required to finalize the Notification Router system.
 
 ## 1. Engine & Routing Implementation (`api` module)

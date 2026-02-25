@@ -1,23 +1,20 @@
-# Notification Router
+# Notification Router - Antigravity Agent Instructions
 
-A centralized notification management system with self-service subscription via Slack.
+A centralized notification management system with self-service subscription via Slack, built as a multi-module Kotlin Spring Boot application.
 
-## Project Overview
-
+## 1. Project Overview
 This project provides a unified notification router that allows developers to receive notifications from various sources (GitHub, CI/CD systems) through multiple channels (Slack, Email, Web Inbox) with flexible filtering and subscription capabilities.
 
 ### Key Features
-
-- **Unified API**: Single entry point for all notification sources
-- **Self-Service**: Users configure their subscriptions via Slack bot
+- **Unified API**: Single entry point for all notification sources.
+- **Self-Service**: Users configure their subscriptions via a Slack bot.
 - **Flexible Filtering**: Filter notifications by type, repository, author, service, etc.
-- **Digest Support**: Group notifications over 24h periods
-- **Multi-Channel**: Slack DM, Slack Channels, Web Inbox
-- **Open Source**: Built on Novu for notification delivery
+- **Digest Support**: Group notifications over 24h periods.
+- **Multi-Channel**: Slack DM, Slack Channels, Web Inbox.
+- **Open Source Core**: Built on Novu for notification delivery.
 
-## Architecture
-
-```
+## 2. Architecture
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                         INPUT                                   │
 ├─────────────────┬─────────────────┬─────────────────────────────┤
@@ -50,7 +47,7 @@ This project provides a unified notification router that allows developers to re
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Tech Stack
+## 3. Tech Stack & Project Structure
 
 | Component | Technology |
 |-----------|------------|
@@ -60,96 +57,51 @@ This project provides a unified notification router that allows developers to re
 | Notification Engine | Novu (Helm) |
 | Container | k3s / Kubernetes |
 
-## Project Structure
+### Directory Layout
+- `api/`: The core module handling the main web server, business logic, endpoints and REST functionality.
+- `bot/`: The module dedicated to integrating with Slack SDK and handling incoming/outgoing bot operations.
+- `docs/`: System documentation
+  - [`architecture.md`](docs/architecture.md)
+  - [`api-specification.md`](docs/api-specification.md)
+  - [`database-schema.md`](docs/database-schema.md)
+  - [`notification-types.md`](docs/notification-types.md)
+  - [`phase1-infrastructure-setup.md`](docs/phase1-infrastructure-setup.md)
+  - [`slack-commands.md`](docs/slack-commands.md)
+  - [`testing-k3s.md`](docs/testing-k3s.md)
+  - [`IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md)
+- `k8s/`: Kubernetes manifests.
 
-```
-notification-router/
-├── CLAUDE.md                 # This file
-├── docs/                     # Documentation
-│   ├── architecture.md
-│   ├── api-specification.md
-│   ├── database-schema.md
-│   ├── notification-types.md
-│   └── slack-commands.md
-├── k8s/                      # Kubernetes manifests
-│   ├── namespace.yaml
-│   ├── postgres.yaml
-│   ├── api-deployment.yaml
-│   ├── bot-deployment.yaml
-│   └── secrets.yaml
-├── api/                      # Kotlin Spring Boot API
-│   ├── build.gradle.kts
-│   ├── settings.gradle.kts
-│   └── src/main/kotlin/
-├── bot/                      # Kotlin Slack Bot
-│   ├── build.gradle.kts
-│   ├── settings.gradle.kts
-│   └── src/main/kotlin/
-└── agents/                   # Agent task definitions
-    ├── phase1-infra.yaml
-    ├── phase2-core-api.yaml
-    ├── phase3-webhooks.yaml
-    ├── phase4-slack-bot.yaml
-    ├── phase5-novu-integration.yaml
-    └── phase6-testing.yaml
-```
+## 4. Current Implementation Status
 
-## How Agents Should Work
+**Implemented:**
+- **Infrastructure:** K3s, PostgreSQL, Novu Helm.
+- **Core Models:** User management, subscriptions, preferences in DB.
+- **API Structure:** Foundational Spring Boot setup across `api` and `bot` modules using Gradle/Ktlint.
+- **Webhook Adapters:** Controllers for GitHub, GitHub Actions, Buildkite are actively capturing payloads.
 
-### General Guidelines
+**To Be Implemented:**
+- **Engine & Routing (`api` module):** Create `EventService` and integrate `FilterEvaluator` to connect incoming payloads to active subscriptions. Utilize a new `NovuService` to dispatch via `co.novu:novu-java`.
+- **Slack Bot (`bot` module):** Connect Slack Bolt SDK for Slash Commands (`/notifyme`) and Interactive Modals (View Submissions).
+- **Security:** HMAC signature verification for webhooks (GitHub, Buildkite).
+- **Testing:** End-To-End verification logic mock or wiremock testing with Novu.
 
-1. **Always read CLAUDE.md first** when starting work on this project
-2. **Follow the phase order** defined in `agents/` directory
-3. **Run tests before committing** - see testing guidelines below
-4. **Use Kotlin** for all new code (API and Bot)
-5. **Document all APIs** in OpenAPI/Swagger format
+## 5. Antigravity Workflows & Guidelines
 
-### Phase Workflow
+1. **Always read `GEMINI.md` first** when starting work on this project.
+2. **Evaluate Tasks:** Review file structures using `list_dir` and read logic using `view_file` or `view_code_item`. Consult `docs/IMPLEMENTATION_PLAN.md` for specific in-progress items.
+3. **Use Kotlin:** Write idiomatic Kotlin. Follow Spring Boot best practices. Try utilizing constructor injection, `@Service`, `@RestController` and standard JPA repository functionalities where possible.
+4. **Testing Setup:** 
+   - We leverage standard JUnit 5, Spring Boot Test, and Mockito-Kotlin.
+   - Run tests before committing: `./gradlew test`
+   - *Crucial:* All unit tests should utilize `org.mockito.kotlin.*` whenever using mocks. Never use Java's `any(Class::class.java)` as it lacks null-safety compatibility with Kotlin.
+5. **Linting & Code Standards (Ktlint):**
+   - Check formatting: `./gradlew ktlintCheck`
+   - Auto-format code: `./gradlew ktlintFormat`
+   - Always run `./gradlew ktlintFormat` after writing or modifying Kotlin files so the IDE state is clean.
 
-Agents should work through phases sequentially:
+## 6. Notification Types & Slack Commands
 
-1. **Phase 1 - Infrastructure**: Setup k3s, PostgreSQL, Novu Helm
-2. **Phase 2 - Core API**: User management, subscriptions, preferences
-3. **Phase 3 - Webhooks**: GitHub, GitHub Actions, Buildkite adapters
-4. **Phase 4 - Slack Bot**: Commands, interactive modals
-5. **Phase 5 - Novu Integration**: Workflows, digest, providers
-6. **Phase 6 - Testing**: Unit, integration, load tests
-
-### Code Standards
-
-- Use Kotlin idiomatic patterns
-- Follow Spring Boot best practices for API
-- Use Slack Kotlin SDK for bot development
-- Write unit tests for all services (minimum 80% coverage)
-- Use Spring Data JPA for database access
-
-### Testing Requirements
-
-Before completing any phase:
-- Run `./gradlew test` for unit tests
-- Verify API with `./gradlew bootJar && java -jar build/libs/*.jar`
-- Test Docker image builds successfully
-
-### Kubernetes Development
-
-For local development:
-```bash
-# Build API
-cd api && ./gradlew bootJar && cd ..
-# Build Bot
-cd bot && ./gradlew bootJar && cd ..
-
-# Build Docker images
-docker build -t notification-router/api:dev ./api
-docker build -t notification-router/bot:dev ./bot
-
-# Deploy to k3s
-kubectl set image deployment/notification-router-api api=notification-router/api:dev
-kubectl set image deployment/notification-router-bot bot=notification-router/bot:dev
-```
-
-## Notification Types
-
+### Notification Types
 | Type Key | Source | Filters |
 |----------|--------|---------|
 | `pr_created` | GitHub | author, repo, base_branch |
@@ -163,8 +115,7 @@ kubectl set image deployment/notification-router-bot bot=notification-router/bot
 | `pr_merged_master_success` | GitHub | author, repo |
 | `pr_merged_master_error` | GitHub | author, repo |
 
-## Slack Commands
-
+### Slack Commands
 | Command | Description |
 |---------|-------------|
 | `/notifyme subscribe <type>` | Subscribe to notification type |
@@ -173,30 +124,17 @@ kubectl set image deployment/notification-router-bot bot=notification-router/bot
 | `/notifyme list` | List subscriptions |
 | `/notifyme help` | Show help |
 
-## Environment Variables
+## 7. Local Kubernetes Development
+```bash
+# Build API and Bot
+cd api && ./gradlew bootJar && cd ..
+cd bot && ./gradlew bootJar && cd ..
 
-### API Service
+# Build Docker images
+docker build -t notification-router/api:dev ./api
+docker build -t notification-router/bot:dev ./bot
+
+# Deploy to local k3s
+kubectl set image deployment/notification-router-api api=notification-router/api:dev
+kubectl set image deployment/notification-router-bot bot=notification-router/bot:dev
 ```
-SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/notification_router
-SPRING_DATASOURCE_USERNAME=postgres
-SPRING_DATASOURCE_PASSWORD=postgres
-NOVU_API_URL=http://novu-api:3000
-NOVU_API_KEY=<novu-api-key>
-```
-
-### Slack Bot
-```
-SLACK_BOT_TOKEN=xoxb-<bot-token>
-SLACK_SIGNING_SECRET=<signing-secret>
-API_URL=http://notification-router-api:8080
-```
-
-## Getting Started
-
-1. Install k3s and kubectl
-2. Run `make setup` to install PostgreSQL and Novu
-3. Run `make db-migrate` to create database schema
-4. Run `make run-api` to start API locally
-5. Run `make run-bot` to start Slack bot locally
-
-See `docs/architecture.md` for detailed setup instructions.

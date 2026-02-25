@@ -101,10 +101,7 @@ stringData:
 
 ## Next Steps
 
-- **Phase 2**: Core API - User management, subscriptions, preferences
-- **Phase 3**: Webhooks - GitHub, GitHub Actions, Buildkite adapters
-- **Phase 4**: Slack Bot - Commands, interactive modals
-- **Phase 5**: Novu Integration - Workflows, digest, providers
+Please refer to `GEMINI.md` and `docs/IMPLEMENTATION_PLAN.md` for the overarching project architecture and further active implementation steps.
 
 ## Troubleshooting
 

@@ -1,0 +1,74 @@
+# Novu Testing Values
+# Use these values for Novu installation in testing environment
+
+# Provider configuration (required for webhook handling)
+provider:
+  enabled: true
+  
+# Workflows configuration (required for notification routing)
+workflows:
+  enabled: true
+  
+# Service configuration (use ClusterIP for testing)
+service:
+  type: ClusterIP
+  
+# Ingress configuration (disabled for testing)
+ingress:
+  enabled: false
+  
+# MongoDB configuration (use embedded for testing)
+mongodb:
+  enabled: true
+  
+# Redis configuration (use embedded for testing)
+redis:
+  enabled: true
+  
+# Email configuration (optional for testing)
+email:
+  enabled: true
+  host: "smtp.gmail.com"
+  port: 587
+  secure: false
+  requireTLS: true
+  
+# Logging configuration (increase for testing)
+logging:
+  level: debug
+  
+# Health check configuration
+health:
+  enabled: true
+  path: "/health"
+  port: 3000
+  
+# Resource limits for testing
+resources:
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+
+# Persistence configuration (use ephemeral for testing)
+persistence:
+  enabled: false
+  
+# Security configuration (use testing keys)
+security:
+  jwt:
+    secret: "your-super-secret-jwt-key-for-testing"
+    expiration: "24h"
+  
+# API configuration
+api:
+  port: 3000
+  host: "0.0.0.0"
+  
+# Webhook configuration
+webhook:
+  enabled: true
+  port: 3000
+  path: "/webhook"

@@ -1,6 +1,6 @@
 package com.notifier.router.api.controller
 
-import com.notifier.router.api.domain.Event
+import com.notifier.router.api.domain.GenericEvent
 import com.notifier.router.api.dto.EventDto
 import com.notifier.router.api.service.EventService
 import org.springframework.http.ResponseEntity
@@ -23,7 +23,7 @@ class EventController(
     }
 
     private fun EventDto.toEvent() =
-        Event(
+        GenericEvent(
             typeKey = typeKey,
             metadata = metadata,
             payload = payload,

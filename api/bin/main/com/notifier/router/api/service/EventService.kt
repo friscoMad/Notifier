@@ -1,6 +1,6 @@
 package com.notifier.router.api.service
 
-import com.notifier.router.api.domain.Event
+import com.notifier.router.api.domain.NotificationEvent
 import com.notifier.router.api.repository.ChannelSubscriptionRepository
 import com.notifier.router.api.repository.NotificationTypeRepository
 import com.notifier.router.api.repository.SubscriptionRepository
@@ -21,7 +21,7 @@ class EventService(
     private val logger = LoggerFactory.getLogger(EventService::class.java)
 
     @Async
-    fun processEventAsync(event: Event) {
+    fun processEventAsync(event: NotificationEvent) {
         logger.info("Processing event: ${event.typeKey}")
         try {
             val typeId =

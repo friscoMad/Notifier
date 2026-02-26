@@ -1,153 +1,133 @@
 package com.notifier.router.api.adapter
 
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.notifier.router.api.domain.Event
+import com.notifier.router.api.domain.GenericEvent
+import com.notifier.router.api.domain.NotificationEvent
+import com.notifier.router.api.domain.PrCheckCompletedEvent
+import com.notifier.router.api.domain.PrCheckReRequestedEvent
+import com.notifier.router.api.domain.PrClosedEvent
+import com.notifier.router.api.domain.PrCreatedEvent
+import com.notifier.router.api.domain.PrReviewRequestedEvent
+import com.notifier.router.api.domain.PrUpdatedEvent
 
 object GitHubWebhookAdapter {
-    fun parse(payload: String): Event {
-        val webhook = webhookMapper.readValue<GitHubWebhookPayload>(payload)
-        return when (webhook.action) {
-            "opened" -> parsePRCreated(webhook)
-            "review_requested" -> parsePRReviewRequested(webhook)
-            "synchronize" -> parsePRUpdated(webhook)
-            "closed" -> parsePRClosed(webhook)
-            "rerequested" -> parsePRCheckRerequested(webhook)
-            "completed" -> parsePRCheckCompleted(webhook)
-            else -> parseGenericEvent(webhook, payload)
+    fun parse(payload: String): NotificationEvent {
+        val w = webhookMapper.readValue<GitHubWebhookPayload>(payload)
+        return when (w.action) {
+            "opened" -> {
+                parsePRCreated(w)
+            }
+
+            "review_requested" -> {
+                parsePRReviewRequested(w)
+            }
+
+            "synchronize" -> {
+                parsePRUpdated(w)
+            }
+
+            "closed" -> {
+                parsePRClosed(w)
+            }
+
+            "rerequested" -> {
+                parsePRCheckRerequested(w)
+            }
+
+            "completed" -> {
+                parsePRCheckCompleted(w)
+            }
+
+            else -> {
+                GenericEvent(
+                    typeKey = w.action ?: "github_event",
+                    metadata =
+                        mapOf(
+                            "repo" to w.repository.fullName,
+                            "event_type" to (w.action ?: "unknown"),
+                        ),
+                    payload = mapOf("event_data" to payload),
+                )
+            }
         }
     }
 
-    private fun parsePRCreated(w: GitHubWebhookPayload): Event {
+    private fun parsePRCreated(w: GitHubWebhookPayload): PrCreatedEvent {
         val pr = w.pullRequest!!
-        return Event(
-            typeKey = "pr_created",
-            metadata =
-                mapOf(
-                    "author" to pr.user.login,
-                    "repo" to w.repository.fullName,
-                    "base_branch" to pr.base.ref,
-                ),
-            payload =
-                mapOf(
-                    "title" to pr.title,
-                    "description" to pr.body,
-                    "url" to pr.htmlUrl,
-                    "created_at" to pr.createdAt,
-                ),
+        return PrCreatedEvent(
+            author = pr.user.login,
+            repo = w.repository.fullName,
+            baseBranch = pr.base.ref,
+            title = pr.title,
+            description = pr.body,
+            url = pr.htmlUrl,
+            createdAt = pr.createdAt,
         )
     }
 
-    private fun parsePRReviewRequested(w: GitHubWebhookPayload): Event {
+    private fun parsePRReviewRequested(w: GitHubWebhookPayload): PrReviewRequestedEvent {
         val pr = w.pullRequest!!
-        return Event(
-            typeKey = "pr_review_requested",
-            metadata =
-                mapOf(
-                    "author" to pr.user.login,
-                    "repo" to w.repository.fullName,
-                    "reviewer" to (w.requestedReviewer?.login ?: ""),
-                    "base_branch" to pr.base.ref,
-                ),
-            payload =
-                mapOf(
-                    "title" to pr.title,
-                    "url" to pr.htmlUrl,
-                    "requested_at" to (w.requestedAt ?: ""),
-                ),
+        return PrReviewRequestedEvent(
+            author = pr.user.login,
+            repo = w.repository.fullName,
+            reviewer = w.requestedReviewer?.login ?: "",
+            baseBranch = pr.base.ref,
+            title = pr.title,
+            url = pr.htmlUrl,
+            requestedAt = w.requestedAt ?: "",
         )
     }
 
-    private fun parsePRUpdated(w: GitHubWebhookPayload): Event {
+    private fun parsePRUpdated(w: GitHubWebhookPayload): PrUpdatedEvent {
         val pr = w.pullRequest!!
-        return Event(
-            typeKey = "pr_updated",
-            metadata =
-                mapOf(
-                    "author" to pr.user.login,
-                    "repo" to w.repository.fullName,
-                    "base_branch" to pr.base.ref,
-                ),
-            payload =
-                mapOf(
-                    "title" to pr.title,
-                    "url" to pr.htmlUrl,
-                    "updated_at" to pr.updatedAt,
-                ),
+        return PrUpdatedEvent(
+            author = pr.user.login,
+            repo = w.repository.fullName,
+            baseBranch = pr.base.ref,
+            title = pr.title,
+            url = pr.htmlUrl,
+            updatedAt = pr.updatedAt,
         )
     }
 
-    private fun parsePRClosed(w: GitHubWebhookPayload): Event {
+    private fun parsePRClosed(w: GitHubWebhookPayload): PrClosedEvent {
         val pr = w.pullRequest!!
-        return Event(
-            typeKey = if (pr.merged) "pr_merged_master_success" else "pr_merged_master_error",
-            metadata =
-                mapOf(
-                    "author" to pr.user.login,
-                    "repo" to w.repository.fullName,
-                    "base_branch" to pr.base.ref,
-                ),
-            payload =
-                mapOf(
-                    "title" to pr.title,
-                    "url" to pr.htmlUrl,
-                    "merged_at" to (pr.mergedAt ?: ""),
-                    "merged_by" to (pr.mergedBy?.login ?: ""),
-                ),
+        return PrClosedEvent(
+            merged = pr.merged,
+            author = pr.user.login,
+            repo = w.repository.fullName,
+            baseBranch = pr.base.ref,
+            title = pr.title,
+            url = pr.htmlUrl,
+            mergedAt = pr.mergedAt ?: "",
+            mergedBy = pr.mergedBy?.login ?: "",
         )
     }
 
-    private fun parsePRCheckRerequested(w: GitHubWebhookPayload): Event {
+    private fun parsePRCheckRerequested(w: GitHubWebhookPayload): PrCheckReRequestedEvent {
         val pr = w.pullRequest!!
         val suite = w.checkSuite!!
-        return Event(
-            typeKey = "pr_checks_failed",
-            metadata =
-                mapOf(
-                    "author" to w.sender.login,
-                    "repo" to w.repository.fullName,
-                    "check_name" to suite.app.name,
-                    "base_branch" to pr.base.ref,
-                ),
-            payload =
-                mapOf(
-                    "check_suite_url" to suite.htmlUrl,
-                    "rerequested_at" to (w.requestedAt ?: ""),
-                ),
+        return PrCheckReRequestedEvent(
+            author = w.sender.login,
+            repo = w.repository.fullName,
+            checkName = suite.app.name,
+            baseBranch = pr.base.ref,
+            checkSuiteUrl = suite.htmlUrl,
+            reRequestedAt = w.requestedAt ?: "",
         )
     }
 
-    private fun parsePRCheckCompleted(w: GitHubWebhookPayload): Event {
+    private fun parsePRCheckCompleted(w: GitHubWebhookPayload): PrCheckCompletedEvent {
         val run = w.checkRun!!
         val pr = w.pullRequest!!
-        return Event(
-            typeKey =
-                if (run.conclusion == "success") "pr_checks_passed" else "pr_checks_failed",
-            metadata =
-                mapOf(
-                    "author" to w.sender.login,
-                    "repo" to w.repository.fullName,
-                    "check_name" to run.name,
-                    "base_branch" to pr.base.ref,
-                ),
-            payload =
-                mapOf(
-                    "check_run_url" to run.htmlUrl,
-                    "conclusion" to (run.conclusion ?: ""),
-                    "completed_at" to (run.completedAt ?: ""),
-                ),
+        return PrCheckCompletedEvent(
+            conclusion = run.conclusion ?: "",
+            author = w.sender.login,
+            repo = w.repository.fullName,
+            checkName = run.name,
+            baseBranch = pr.base.ref,
+            checkRunUrl = run.htmlUrl,
+            completedAt = run.completedAt ?: "",
         )
     }
-
-    private fun parseGenericEvent(
-        w: GitHubWebhookPayload,
-        rawPayload: String,
-    ) = Event(
-        typeKey = w.action ?: "github_event",
-        metadata =
-            mapOf(
-                "repo" to w.repository.fullName,
-                "event_type" to (w.action ?: "unknown"),
-            ),
-        payload = mapOf("event_data" to rawPayload),
-    )
 }

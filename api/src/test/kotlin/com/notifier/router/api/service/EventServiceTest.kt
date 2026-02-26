@@ -1,7 +1,7 @@
 package com.notifier.router.api.service
 
-import com.notifier.router.api.domain.Event
 import com.notifier.router.api.domain.Filter
+import com.notifier.router.api.domain.GenericEvent
 import com.notifier.router.api.domain.NotificationType
 import com.notifier.router.api.domain.Subscription
 import com.notifier.router.api.domain.User
@@ -43,7 +43,7 @@ class EventServiceTest {
         val userId2 = UUID.randomUUID()
 
         val event =
-            Event(
+            GenericEvent(
                 typeKey = "pr_created",
                 metadata = mapOf("repo" to "api"),
                 payload = mapOf("pr_url" to "https://github.com/pull/1"),
@@ -104,7 +104,8 @@ class EventServiceTest {
     fun `processEventAsync skips Novu trigger when no subscribers match`() {
         val typeId = UUID.randomUUID()
 
-        val event = Event(typeKey = "pr_created", metadata = emptyMap(), payload = emptyMap())
+        val event =
+            GenericEvent(typeKey = "pr_created", metadata = emptyMap(), payload = emptyMap())
         val notifType =
             NotificationType(
                 id = typeId,

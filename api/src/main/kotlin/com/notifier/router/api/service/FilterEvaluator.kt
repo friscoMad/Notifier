@@ -1,18 +1,18 @@
 package com.notifier.router.api.service
 
-import com.notifier.router.api.domain.Event
 import com.notifier.router.api.domain.Filter
+import com.notifier.router.api.domain.NotificationEvent
 import org.springframework.stereotype.Service
 
 @Service
 class FilterEvaluator {
     fun evaluate(
-        event: Event,
+        event: NotificationEvent,
         filters: List<Filter>,
     ): Boolean = filters.all { evaluateFilter(event, it) }
 
     private fun evaluateFilter(
-        event: Event,
+        event: NotificationEvent,
         filter: Filter,
     ): Boolean {
         val eventValue = event.metadata[filter.field]

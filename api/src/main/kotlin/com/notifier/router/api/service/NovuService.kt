@@ -11,7 +11,7 @@ import retrofit2.Retrofit
 
 @Service
 class NovuService(
-    @Value("\${novu.api-key:not-set}") private val apiKey: String,
+    @Value("\${novu.api.key:not-set}") private val apiKey: String,
     @Value("\${novu.api.url:}") private val apiUrl: String,
 ) {
     private val logger = LoggerFactory.getLogger(NovuService::class.java)

@@ -42,15 +42,15 @@ tasks.withType<KotlinCompile> {
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
-    
+
     // Optimize test execution by running tests in parallel forks
     maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).takeIf { it > 0 } ?: 1
-    
+
     // JVM arguments to speed up test execution
     jvmArgs(
         "-XX:+TieredCompilation",
         "-XX:TieredStopAtLevel=1",
-        "-Dspring.main.lazy-initialization=true"
+        "-Dspring.main.lazy-initialization=true",
     )
 }
 
@@ -61,4 +61,8 @@ ktlint {
     filter {
         exclude("**/build/**")
     }
+}
+
+tasks.withType<org.springframework.boot.gradle.tasks.run.BootRun> {
+    systemProperty("spring.profiles.active", "local")
 }

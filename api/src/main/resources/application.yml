@@ -10,21 +10,18 @@ spring:
     password: postgres
     driver-class-name: org.postgresql.Driver
   jpa:
-    hibernate.ddl-auto: none
+    hibernate.ddl-auto: update
     show-sql: false
     properties:
       hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
 
-flyway:
-  url: jdbc:postgresql://localhost:5432/notification_router
-  user: postgres
-  password: postgres
-  locations: classpath:db/migration
+  flyway:
+    enabled: false
 
 novu:
   api:
-    url: http://localhost:3000
-    key: test-api-key
+    url: http://localhost:3000/v1
+    key: b3011b1cfb026d088c1e6af49434d89c
 ---
 
 spring:

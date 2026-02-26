@@ -1,104 +1,85 @@
 package com.notifier.router.api.adapter
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.notifier.router.api.domain.Event
 
 object BuildkiteWebhookAdapter {
-    private val mapper = jacksonObjectMapper()
-
     fun parse(payload: String): Event {
-        val jsonNode = mapper.readTree(payload)
-
-        return when (jsonNode["event"]?.asText()) {
-            "job.finished" -> parseJobFinished(jsonNode)
-            "pipeline.updated" -> parsePipelineUpdated(jsonNode)
-            "build.finished" -> parseBuildFinished(jsonNode)
-            else -> parseGenericBuildkiteEvent(jsonNode)
+        val webhook = webhookMapper.readValue<BuildkitePayload>(payload)
+        return when (webhook.event) {
+            "job.finished" -> parseJobFinished(webhook)
+            "pipeline.updated" -> parsePipelineUpdated(webhook)
+            "build.finished" -> parseBuildFinished(webhook)
+            else -> parseGenericEvent(webhook, payload)
         }
     }
 
-    private fun parseJobFinished(jsonNode: JsonNode): Event {
-        val job = jsonNode["job"]
-        val build = jsonNode["build"]
-        val pipeline = jsonNode["pipeline"]
-
-        val typeKey = if (job["state"].asText() == "passed") "pr_checks_passed" else "pr_checks_failed"
-
+    private fun parseJobFinished(w: BuildkitePayload): Event {
+        val job = w.job!!
+        val build = w.build!!
         return Event(
-            typeKey = typeKey,
+            typeKey = if (job.state == "passed") "pr_checks_passed" else "pr_checks_failed",
             metadata =
                 mapOf(
-                    "service" to pipeline["slug"].asText(),
-                    "test_name" to job["name"].asText(),
-                    "team" to pipeline["team"].asText(),
-                    "status" to job["state"].asText(),
+                    "service" to w.pipeline.slug,
+                    "test_name" to job.name,
+                    "team" to (w.pipeline.team ?: ""),
+                    "status" to job.state,
                 ),
             payload =
                 mapOf(
-                    "job_url" to job["web_url"].asText(),
-                    "build_url" to build["web_url"].asText(),
-                    "finished_at" to job["finished_at"].asText(),
-                    "state" to job["state"].asText(),
+                    "job_url" to job.webUrl,
+                    "build_url" to build.webUrl,
+                    "finished_at" to (job.finishedAt ?: ""),
+                    "state" to job.state,
                 ),
         )
     }
 
-    private fun parsePipelineUpdated(jsonNode: JsonNode): Event {
-        val pipeline = jsonNode["pipeline"]
-
-        return Event(
+    private fun parsePipelineUpdated(w: BuildkitePayload) =
+        Event(
             typeKey = "pipeline_updated",
             metadata =
                 mapOf(
-                    "service" to pipeline["slug"].asText(),
-                    "team" to pipeline["team"].asText(),
+                    "service" to w.pipeline.slug,
+                    "team" to (w.pipeline.team ?: ""),
                 ),
             payload =
                 mapOf(
-                    "pipeline_url" to pipeline["web_url"].asText(),
-                    "updated_at" to jsonNode["updated_at"].asText(),
+                    "pipeline_url" to w.pipeline.webUrl,
+                    "updated_at" to (w.updatedAt ?: ""),
                 ),
         )
-    }
 
-    private fun parseBuildFinished(jsonNode: JsonNode): Event {
-        val build = jsonNode["build"]
-        val pipeline = jsonNode["pipeline"]
-
-        val typeKey = if (build["state"].asText() == "passed") "deploy_completed" else "deploy_failed"
-
+    private fun parseBuildFinished(w: BuildkitePayload): Event {
+        val build = w.build!!
         return Event(
-            typeKey = typeKey,
+            typeKey = if (build.state == "passed") "deploy_completed" else "deploy_failed",
             metadata =
                 mapOf(
-                    "service" to pipeline["slug"].asText(),
-                    "environment" to build["message"].asText(),
-                    "status" to build["state"].asText(),
+                    "service" to w.pipeline.slug,
+                    "environment" to build.message,
+                    "status" to build.state,
                 ),
             payload =
                 mapOf(
-                    "build_url" to build["web_url"].asText(),
-                    "finished_at" to build["finished_at"].asText(),
-                    "state" to build["state"].asText(),
+                    "build_url" to build.webUrl,
+                    "finished_at" to (build.finishedAt ?: ""),
+                    "state" to build.state,
                 ),
         )
     }
 
-    private fun parseGenericBuildkiteEvent(jsonNode: JsonNode): Event {
-        val pipeline = jsonNode["pipeline"]
-
-        return Event(
-            typeKey = jsonNode["event"]?.asText() ?: "buildkite_event",
-            metadata =
-                mapOf(
-                    "service" to pipeline["slug"].asText(),
-                    "event_type" to (jsonNode["event"]?.asText() ?: "unknown"),
-                ),
-            payload =
-                mapOf(
-                    "event_data" to jsonNode.toString(),
-                ),
-        )
-    }
+    private fun parseGenericEvent(
+        w: BuildkitePayload,
+        rawPayload: String,
+    ) = Event(
+        typeKey = w.event ?: "buildkite_event",
+        metadata =
+            mapOf(
+                "service" to w.pipeline.slug,
+                "event_type" to (w.event ?: "unknown"),
+            ),
+        payload = mapOf("event_data" to rawPayload),
+    )
 }

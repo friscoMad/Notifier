@@ -1,71 +1,66 @@
 package com.notifier.router.api.adapter
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.notifier.router.api.domain.Event
 
 object GitHubActionsWebhookAdapter {
-    private val mapper = jacksonObjectMapper()
-
     fun parse(payload: String): Event {
-        val json = mapper.readTree(payload)
-        return when (json["action"]?.asText()) {
-            "created", "in_progress" -> parseDeploymentStarted(json)
-            "completed" -> parseDeploymentCompleted(json)
-            else -> parseGenericEvent(json)
+        val webhook = webhookMapper.readValue<GitHubActionsPayload>(payload)
+        return when (webhook.action) {
+            "created", "in_progress" -> parseDeploymentStarted(webhook)
+            "completed" -> parseDeploymentCompleted(webhook)
+            else -> parseGenericEvent(webhook, payload)
         }
     }
 
-    private fun parseDeploymentStarted(json: JsonNode): Event {
-        val deployment = json["deployment"]
+    private fun parseDeploymentStarted(w: GitHubActionsPayload): Event {
+        val d = w.deployment!!
         return Event(
             typeKey = "deploy_started",
-            metadata = deployment.commonMetadata(),
+            metadata = d.commonMetadata(),
             payload =
                 mapOf(
-                    "deployment_url" to deployment["url"].asText(),
-                    "status" to (json["action"]?.asText() ?: "created"),
-                    "created_at" to deployment["created_at"].asText(),
+                    "deployment_url" to d.url,
+                    "status" to (w.action ?: "created"),
+                    "created_at" to d.createdAt,
                 ),
         )
     }
 
-    private fun parseDeploymentCompleted(json: JsonNode): Event {
-        val deployment = json["deployment"]
-        val status = json["deployment_status"]
+    private fun parseDeploymentCompleted(w: GitHubActionsPayload): Event {
+        val d = w.deployment!!
+        val s = w.deploymentStatus!!
         return Event(
             typeKey = "deploy_completed",
-            metadata =
-                deployment.commonMetadata() +
-                    mapOf(
-                        "status" to status["state"].asText(),
-                    ),
+            metadata = d.commonMetadata() + ("status" to s.state),
             payload =
                 mapOf(
-                    "deployment_url" to deployment["url"].asText(),
-                    "status_url" to status["url"].asText(),
-                    "status" to status["state"].asText(),
-                    "completed_at" to status["created_at"].asText(),
+                    "deployment_url" to d.url,
+                    "status_url" to s.url,
+                    "status" to s.state,
+                    "completed_at" to s.createdAt,
                 ),
         )
     }
 
-    private fun parseGenericEvent(json: JsonNode) =
-        Event(
-            typeKey = json["action"]?.asText() ?: "github_actions_event",
-            metadata =
-                mapOf(
-                    "repo" to json["repository"]["full_name"].asText(),
-                    "event_type" to (json["action"]?.asText() ?: "unknown"),
-                ),
-            payload = mapOf("event_data" to json.toString()),
-        )
+    private fun parseGenericEvent(
+        w: GitHubActionsPayload,
+        rawPayload: String,
+    ) = Event(
+        typeKey = w.action ?: "github_actions_event",
+        metadata =
+            mapOf(
+                "repo" to w.repository.fullName,
+                "event_type" to (w.action ?: "unknown"),
+            ),
+        payload = mapOf("event_data" to rawPayload),
+    )
 
-    private fun JsonNode.commonMetadata() =
+    private fun GitHubDeployment.commonMetadata() =
         mapOf(
-            "service" to this["environment"].asText(),
-            "environment" to this["environment"].asText(),
-            "author" to this["creator"]["login"].asText(),
-            "pipeline" to this["ref"].asText(),
+            "service" to environment,
+            "environment" to environment,
+            "author" to creator.login,
+            "pipeline" to ref,
         )
 }

@@ -34,16 +34,7 @@ import java.util.UUID
  * Integration tests that make real HTTP calls to the API endpoints, verifying the full Spring stack
  * (serialization, routing, JPA, etc.) using an embedded H2 database and a random server port.
  */
-@SpringBootTest(
-    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties =
-        [
-            "spring.datasource.url=jdbc:h2:mem:integrationdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
-            "spring.flyway.enabled=false",
-            "spring.jpa.hibernate.ddl-auto=create-drop",
-            "github.webhook.secret=",
-        ],
-)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 class HttpEndpointsIntegrationTest {
     @LocalServerPort private var port: Int = 0
@@ -220,8 +211,7 @@ class HttpEndpointsIntegrationTest {
                         "/api/v1/subscriptions",
                         SubscriptionDto(
                             userId = userId,
-                            notificationTypeId =
-                                seededTypeId.toString(),
+                            notificationTypeId = seededTypeId.toString(),
                             channels = listOf("slack_dm"),
                         ),
                         SubscriptionDto::class.java,
@@ -246,8 +236,7 @@ class HttpEndpointsIntegrationTest {
                         "/api/v1/subscriptions",
                         SubscriptionDto(
                             userId = userId,
-                            notificationTypeId =
-                                seededTypeId.toString(),
+                            notificationTypeId = seededTypeId.toString(),
                             channels = listOf("slack_dm"),
                         ),
                         SubscriptionDto::class.java,
@@ -364,8 +353,7 @@ class HttpEndpointsIntegrationTest {
                         ChannelSubscriptionDto(
                             slackChannelId = "C_DEL",
                             slackChannelName = "#del-channel",
-                            notificationTypeId =
-                                seededTypeId.toString(),
+                            notificationTypeId = seededTypeId.toString(),
                         ),
                         ChannelSubscriptionDto::class.java,
                     ).body!!

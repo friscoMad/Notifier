@@ -15,40 +15,32 @@ class NotificationTypeService(
     private val filterDefinitionRepository: FilterDefinitionRepository,
 ) {
     @Transactional(readOnly = true)
-    fun getAllNotificationTypes(): List<NotificationTypeDto> =
-        notificationTypeRepository
-            .findAll()
-            .map { mapToDto(it) }
+    fun getAllNotificationTypes(): List<NotificationTypeDto> = notificationTypeRepository.findAll().map { it.toDto() }
 
     @Transactional(readOnly = true)
-    fun getNotificationTypeByKey(typeKey: String): NotificationTypeDto? {
-        val notificationType = notificationTypeRepository.findByTypeKey(typeKey)
-        return notificationType?.let { mapToDto(it) }
-    }
+    fun getNotificationTypeByKey(typeKey: String): NotificationTypeDto? = notificationTypeRepository.findByTypeKey(typeKey)?.toDto()
 
     @Transactional(readOnly = true)
-    fun getFiltersForType(typeKey: String): List<FilterDefinitionDto> {
-        val notificationType = notificationTypeRepository.findByTypeKey(typeKey)
-        return notificationType?.let {
-            val filters = filterDefinitionRepository.findByNotificationTypeId(it.id)
-            filters.map { mapToDto(it) }
-        } ?: emptyList()
-    }
+    fun getFiltersForType(typeKey: String): List<FilterDefinitionDto> =
+        notificationTypeRepository.findByTypeKey(typeKey)?.let {
+            filterDefinitionRepository.findByNotificationTypeId(it.id).map { f -> f.toDto() }
+        }
+            ?: emptyList()
 
-    private fun mapToDto(notificationType: NotificationType): NotificationTypeDto =
+    private fun NotificationType.toDto() =
         NotificationTypeDto(
-            id = notificationType.id.toString(),
-            typeKey = notificationType.typeKey,
-            name = notificationType.name,
-            description = notificationType.description,
+            id = id.toString(),
+            typeKey = typeKey,
+            name = name,
+            description = description,
         )
 
-    private fun mapToDto(filterDefinition: FilterDefinition): FilterDefinitionDto =
+    private fun FilterDefinition.toDto() =
         FilterDefinitionDto(
-            id = filterDefinition.id.toString(),
-            notificationTypeId = filterDefinition.notificationTypeId.toString(),
-            field = filterDefinition.field,
-            fieldType = filterDefinition.fieldType,
-            operators = filterDefinition.operators,
+            id = id.toString(),
+            notificationTypeId = notificationTypeId.toString(),
+            field = field,
+            fieldType = fieldType,
+            operators = operators,
         )
 }

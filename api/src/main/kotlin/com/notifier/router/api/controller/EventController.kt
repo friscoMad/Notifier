@@ -16,17 +16,16 @@ class EventController(
 ) {
     @PostMapping
     fun processEvent(
-        @RequestBody eventDto: EventDto,
+        @RequestBody dto: EventDto,
     ): ResponseEntity<Void> {
-        val event =
-            Event(
-                typeKey = eventDto.typeKey,
-                metadata = eventDto.metadata,
-                payload = eventDto.payload,
-            )
-
-        eventService.processEventAsync(event)
-
+        eventService.processEventAsync(dto.toEvent())
         return ResponseEntity.accepted().build()
     }
+
+    private fun EventDto.toEvent() =
+        Event(
+            typeKey = typeKey,
+            metadata = metadata,
+            payload = payload,
+        )
 }

@@ -44,16 +44,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post 
  * WireMock stubs the Novu API's trigger endpoint and we assert on the actual JSON body and headers
  * sent over the wire.
  */
-@SpringBootTest(
-    properties =
-        [
-            "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
-            "spring.flyway.enabled=false",
-            "spring.jpa.hibernate.ddl-auto=create-drop",
-            "github.webhook.secret=",
-            "novu.api.key=test-wiremock-key",
-        ],
-)
+@SpringBootTest(properties = ["novu.api.key=test-wiremock-key"])
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

@@ -18,19 +18,16 @@ class ChannelSubscriptionController(
 ) {
     @PostMapping
     fun createChannelSubscription(
-        @RequestBody channelSubscriptionDto: ChannelSubscriptionDto,
-    ): ResponseEntity<ChannelSubscriptionDto> {
-        val createdSubscription = channelSubscriptionService.createChannelSubscription(channelSubscriptionDto)
-        return ResponseEntity.ok(createdSubscription)
-    }
+        @RequestBody dto: ChannelSubscriptionDto,
+    ): ResponseEntity<ChannelSubscriptionDto> = ResponseEntity.ok(channelSubscriptionService.createChannelSubscription(dto))
 
     @GetMapping("/channels/{slackChannelId}")
     fun getChannelSubscriptionsByChannelId(
         @PathVariable slackChannelId: String,
-    ): ResponseEntity<List<ChannelSubscriptionDto>> {
-        val subscriptions = channelSubscriptionService.getChannelSubscriptionsByChannelId(slackChannelId)
-        return ResponseEntity.ok(subscriptions)
-    }
+    ): ResponseEntity<List<ChannelSubscriptionDto>> =
+        ResponseEntity.ok(
+            channelSubscriptionService.getChannelSubscriptionsByChannelId(slackChannelId),
+        )
 
     @DeleteMapping("/{id}")
     fun deleteChannelSubscription(

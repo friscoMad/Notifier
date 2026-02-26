@@ -18,17 +18,12 @@ class UserController(
     @PostMapping
     fun createUser(
         @RequestBody userDto: UserDto,
-    ): ResponseEntity<UserDto> {
-        val createdUser = userService.createUser(userDto)
-        return ResponseEntity.ok(createdUser)
-    }
+    ): ResponseEntity<UserDto> = ResponseEntity.ok(userService.createUser(userDto))
 
     @GetMapping("/{slackId}")
     fun getUserBySlackId(
         @PathVariable slackId: String,
-    ): ResponseEntity<UserDto> {
-        val user = userService.getUserBySlackId(slackId)
-        return user?.let { ResponseEntity.ok(it) }
+    ): ResponseEntity<UserDto> =
+        userService.getUserBySlackId(slackId)?.let { ResponseEntity.ok(it) }
             ?: ResponseEntity.notFound().build()
-    }
 }

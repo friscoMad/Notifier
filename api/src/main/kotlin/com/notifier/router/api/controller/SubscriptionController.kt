@@ -19,28 +19,19 @@ class SubscriptionController(
 ) {
     @PostMapping
     fun createSubscription(
-        @RequestBody subscriptionDto: SubscriptionDto,
-    ): ResponseEntity<SubscriptionDto> {
-        val createdSubscription = subscriptionService.createSubscription(subscriptionDto)
-        return ResponseEntity.ok(createdSubscription)
-    }
+        @RequestBody dto: SubscriptionDto,
+    ): ResponseEntity<SubscriptionDto> = ResponseEntity.ok(subscriptionService.createSubscription(dto))
 
     @GetMapping("/users/{userId}")
     fun getSubscriptionsByUserId(
         @PathVariable userId: String,
-    ): ResponseEntity<List<SubscriptionDto>> {
-        val subscriptions = subscriptionService.getSubscriptionsByUserId(userId)
-        return ResponseEntity.ok(subscriptions)
-    }
+    ): ResponseEntity<List<SubscriptionDto>> = ResponseEntity.ok(subscriptionService.getSubscriptionsByUserId(userId))
 
     @PatchMapping("/{id}")
     fun updateSubscription(
         @PathVariable id: String,
-        @RequestBody subscriptionDto: SubscriptionDto,
-    ): ResponseEntity<SubscriptionDto> {
-        val updatedSubscription = subscriptionService.updateSubscription(id, subscriptionDto)
-        return ResponseEntity.ok(updatedSubscription)
-    }
+        @RequestBody dto: SubscriptionDto,
+    ): ResponseEntity<SubscriptionDto> = ResponseEntity.ok(subscriptionService.updateSubscription(id, dto))
 
     @DeleteMapping("/{id}")
     fun deleteSubscription(

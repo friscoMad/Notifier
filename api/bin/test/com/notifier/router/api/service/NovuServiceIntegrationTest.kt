@@ -34,15 +34,7 @@ import java.util.UUID
  * ArgumentCaptor.capture() returns null which is incompatible with Kotlin's non-nullable parameter
  * types.
  */
-@SpringBootTest(
-    properties =
-        [
-            "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
-            "spring.flyway.enabled=false",
-            "spring.jpa.hibernate.ddl-auto=create-drop",
-            "github.webhook.secret=",
-        ],
-)
+@SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class NovuServiceIntegrationTest {

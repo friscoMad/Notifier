@@ -8,99 +8,64 @@ object GitHubActionsWebhookAdapter {
     private val mapper = jacksonObjectMapper()
 
     fun parse(payload: String): Event {
-        val jsonNode = mapper.readTree(payload)
-
-        return when (jsonNode["action"]?.asText()) {
-            "created" -> parseDeploymentCreated(jsonNode)
-            "in_progress" -> parseDeploymentInProgress(jsonNode)
-            "completed" -> parseDeploymentCompleted(jsonNode)
-            else -> parseGenericGitHubActionsEvent(jsonNode)
+        val json = mapper.readTree(payload)
+        return when (json["action"]?.asText()) {
+            "created", "in_progress" -> parseDeploymentStarted(json)
+            "completed" -> parseDeploymentCompleted(json)
+            else -> parseGenericEvent(json)
         }
     }
 
-    private fun parseDeploymentCreated(jsonNode: JsonNode): Event {
-        val deployment = jsonNode["deployment"]
-        val repository = jsonNode["repository"]
-
+    private fun parseDeploymentStarted(json: JsonNode): Event {
+        val deployment = json["deployment"]
         return Event(
             typeKey = "deploy_started",
-            metadata =
-                mapOf(
-                    "service" to deployment["environment"].asText(),
-                    "environment" to deployment["environment"].asText(),
-                    "author" to deployment["creator"]["login"].asText(),
-                    "pipeline" to deployment["ref"].asText(),
-                ),
+            metadata = deployment.commonMetadata(),
             payload =
                 mapOf(
                     "deployment_url" to deployment["url"].asText(),
+                    "status" to (json["action"]?.asText() ?: "created"),
                     "created_at" to deployment["created_at"].asText(),
-                    "description" to deployment["description"].asText(),
                 ),
         )
     }
 
-    private fun parseDeploymentInProgress(jsonNode: JsonNode): Event {
-        val deployment = jsonNode["deployment"]
-        val repository = jsonNode["repository"]
-
-        return Event(
-            typeKey = "deploy_started",
-            metadata =
-                mapOf(
-                    "service" to deployment["environment"].asText(),
-                    "environment" to deployment["environment"].asText(),
-                    "author" to deployment["creator"]["login"].asText(),
-                    "pipeline" to deployment["ref"].asText(),
-                ),
-            payload =
-                mapOf(
-                    "deployment_url" to deployment["url"].asText(),
-                    "status" to "in_progress",
-                    "updated_at" to deployment["updated_at"].asText(),
-                ),
-        )
-    }
-
-    private fun parseDeploymentCompleted(jsonNode: JsonNode): Event {
-        val deployment = jsonNode["deployment"]
-        val repository = jsonNode["repository"]
-        val deploymentStatus = jsonNode["deployment_status"]
-
+    private fun parseDeploymentCompleted(json: JsonNode): Event {
+        val deployment = json["deployment"]
+        val status = json["deployment_status"]
         return Event(
             typeKey = "deploy_completed",
             metadata =
-                mapOf(
-                    "service" to deployment["environment"].asText(),
-                    "environment" to deployment["environment"].asText(),
-                    "author" to deployment["creator"]["login"].asText(),
-                    "pipeline" to deployment["ref"].asText(),
-                    "status" to deploymentStatus["state"].asText(),
-                ),
+                deployment.commonMetadata() +
+                    mapOf(
+                        "status" to status["state"].asText(),
+                    ),
             payload =
                 mapOf(
                     "deployment_url" to deployment["url"].asText(),
-                    "status_url" to deploymentStatus["url"].asText(),
-                    "status" to deploymentStatus["state"].asText(),
-                    "completed_at" to deploymentStatus["created_at"].asText(),
+                    "status_url" to status["url"].asText(),
+                    "status" to status["state"].asText(),
+                    "completed_at" to status["created_at"].asText(),
                 ),
         )
     }
 
-    private fun parseGenericGitHubActionsEvent(jsonNode: JsonNode): Event {
-        val repository = jsonNode["repository"]
-
-        return Event(
-            typeKey = jsonNode["action"]?.asText() ?: "github_actions_event",
+    private fun parseGenericEvent(json: JsonNode) =
+        Event(
+            typeKey = json["action"]?.asText() ?: "github_actions_event",
             metadata =
                 mapOf(
-                    "repo" to repository["full_name"].asText(),
-                    "event_type" to (jsonNode["action"]?.asText() ?: "unknown"),
+                    "repo" to json["repository"]["full_name"].asText(),
+                    "event_type" to (json["action"]?.asText() ?: "unknown"),
                 ),
-            payload =
-                mapOf(
-                    "event_data" to jsonNode.toString(),
-                ),
+            payload = mapOf("event_data" to json.toString()),
         )
-    }
+
+    private fun JsonNode.commonMetadata() =
+        mapOf(
+            "service" to this["environment"].asText(),
+            "environment" to this["environment"].asText(),
+            "author" to this["creator"]["login"].asText(),
+            "pipeline" to this["ref"].asText(),
+        )
 }

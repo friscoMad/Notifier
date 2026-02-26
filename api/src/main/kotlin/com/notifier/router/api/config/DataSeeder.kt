@@ -8,10 +8,6 @@ import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 import java.util.UUID
 
-/**
- * Seeds the database with essential data when running locally. This ensures the bot and API have
- * notification types to work with without needing manual database inserts.
- */
 @Component
 @Profile("local")
 class DataSeeder(
@@ -22,7 +18,18 @@ class DataSeeder(
     override fun run(vararg args: String?) {
         logger.info("Running DataSeeder for local profile...")
 
-        val types =
+        seedTypes
+            .filterNot { notificationTypeRepository.findByTypeKey(it.typeKey) != null }
+            .forEach {
+                notificationTypeRepository.save(it)
+                logger.info("Seeded Notification Type: ${it.typeKey}")
+            }
+
+        logger.info("DataSeeder completed.")
+    }
+
+    companion object {
+        private val seedTypes =
             listOf(
                 NotificationType(
                     id = UUID.fromString("00000000-0000-0000-0000-000000000001"),
@@ -35,7 +42,8 @@ class DataSeeder(
                     id = UUID.fromString("00000000-0000-0000-0000-000000000002"),
                     typeKey = "pr_merged",
                     name = "Pull Request Merged",
-                    description = "Triggered when a Pull Request is successfully merged",
+                    description =
+                        "Triggered when a Pull Request is successfully merged",
                 ),
                 NotificationType(
                     id = UUID.fromString("00000000-0000-0000-0000-000000000003"),
@@ -50,14 +58,5 @@ class DataSeeder(
                     description = "Triggered when a flaky test runs into issues on CI",
                 ),
             )
-
-        for (type in types) {
-            if (notificationTypeRepository.findByTypeKey(type.typeKey) == null) {
-                notificationTypeRepository.save(type)
-                logger.info("Seeded Notification Type: ${type.typeKey}")
-            }
-        }
-
-        logger.info("DataSeeder completed.")
     }
 }

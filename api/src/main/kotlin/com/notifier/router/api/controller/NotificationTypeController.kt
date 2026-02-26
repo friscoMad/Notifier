@@ -15,16 +15,11 @@ class NotificationTypeController(
     private val notificationTypeService: NotificationTypeService,
 ) {
     @GetMapping
-    fun getAllNotificationTypes(): ResponseEntity<List<NotificationTypeDto>> {
-        val notificationTypes = notificationTypeService.getAllNotificationTypes()
-        return ResponseEntity.ok(notificationTypes)
-    }
+    fun getAllNotificationTypes(): ResponseEntity<List<NotificationTypeDto>> =
+        ResponseEntity.ok(notificationTypeService.getAllNotificationTypes())
 
     @GetMapping("/{key}/filters")
     fun getFiltersForType(
         @PathVariable key: String,
-    ): ResponseEntity<List<FilterDefinitionDto>> {
-        val filters = notificationTypeService.getFiltersForType(key)
-        return ResponseEntity.ok(filters)
-    }
+    ): ResponseEntity<List<FilterDefinitionDto>> = ResponseEntity.ok(notificationTypeService.getFiltersForType(key))
 }

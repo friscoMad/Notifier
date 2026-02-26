@@ -12,35 +12,27 @@ class UserService(
     private val userRepository: UserRepository,
 ) {
     @Transactional
-    fun createUser(userDto: UserDto): UserDto {
-        val existingUser = userRepository.findBySlackId(userDto.slackId)
-        if (existingUser != null) {
-            return mapToDto(existingUser)
-        }
-        val user =
-            User(
-                id = UUID.randomUUID(),
-                slackId = userDto.slackId,
-                slackTeamId = userDto.slackTeamId,
-                email = userDto.email,
-                name = userDto.name,
-            )
+    fun createUser(dto: UserDto): UserDto =
+        userRepository.findBySlackId(dto.slackId)?.toDto()
+            ?: userRepository.save(dto.toDomain()).toDto()
 
-        val savedUser = userRepository.save(user)
-        return mapToDto(savedUser)
-    }
+    fun getUserBySlackId(slackId: String): UserDto? = userRepository.findBySlackId(slackId)?.toDto()
 
-    fun getUserBySlackId(slackId: String): UserDto? {
-        val user = userRepository.findBySlackId(slackId)
-        return user?.let { mapToDto(it) }
-    }
+    private fun UserDto.toDomain() =
+        User(
+            id = UUID.randomUUID(),
+            slackId = slackId,
+            slackTeamId = slackTeamId,
+            email = email,
+            name = name,
+        )
 
-    private fun mapToDto(user: User): UserDto =
+    private fun User.toDto() =
         UserDto(
-            id = user.id.toString(),
-            slackId = user.slackId,
-            slackTeamId = user.slackTeamId,
-            email = user.email,
-            name = user.name,
+            id = id.toString(),
+            slackId = slackId,
+            slackTeamId = slackTeamId,
+            email = email,
+            name = name,
         )
 }

@@ -1,0 +1,14 @@
+{
+    "action": "opened",
+    "repository": {
+        "name": "notifier-repo"
+    },
+    "pull_request": {
+        "user": {
+            "login": "johndoe"
+        },
+        "base": {
+            "ref": "main"
+        }
+    }
+}

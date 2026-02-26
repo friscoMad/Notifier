@@ -1,0 +1,39 @@
+{
+    "name": "PR Created",
+    "identifier": "pr-created",
+    "description": "Triggered when a new pull request is opened",
+    "active": true,
+    "draft": false,
+    "preferenceSettings": {
+        "email": true,
+        "sms": true,
+        "in_app": true,
+        "push": true,
+        "chat": true
+    },
+    "steps": [
+        {
+            "name": "In-App Notification",
+            "uuid": "in-app-step-1",
+            "template": {
+                "type": "inApp",
+                "content": "A new Pull Request was created by {{payload.pull_request.user.login}} in {{payload.repository.name}}",
+                "variables": [
+                    {
+                        "name": "payload.pull_request.user.login",
+                        "type": "String",
+                        "required": true
+                    },
+                    {
+                        "name": "payload.repository.name",
+                        "type": "String",
+                        "required": true
+                    }
+                ]
+            },
+            "active": true,
+            "filters": []
+        }
+    ],
+    "__version": "1.0.0"
+}

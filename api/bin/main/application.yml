@@ -21,7 +21,7 @@ spring:
 novu:
   api:
     url: http://localhost:3000/v1
-    key: b3011b1cfb026d088c1e6af49434d89c
+    key: ${NOVU_API_KEY:nvsk.local_development_api_key_for_testing_purposes_only_12345}
 ---
 
 spring:

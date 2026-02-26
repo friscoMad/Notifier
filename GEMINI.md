@@ -82,6 +82,7 @@ This project provides a unified notification router that allows developers to re
 - **Engine & Routing (`api` module):** `EventService` + `FilterEvaluator` connect incoming payloads to active subscriptions. `NovuService` dispatches via `co.novu:novu-java:1.6.0`.
 - **Security:** HMAC signature verification for GitHub webhooks.
 - **Testing:** E2E integration tests (MockBean payload verification + WireMock HTTP-level tests via SDK reflection).
+- **HTTP Integration Tests:** Full-stack HTTP tests via `TestRestTemplate` in `HttpEndpointsIntegrationTest`.
 
 **To Be Implemented:**
 - **Slack Bot (`bot` module):** Connect Slack Bolt SDK for Slash Commands (`/notifyme`) and Interactive Modals (View Submissions).
@@ -92,12 +93,21 @@ This project provides a unified notification router that allows developers to re
 
 1. **Always read `GEMINI.md` first** when starting work on this project.
 2. **Evaluate Tasks:** Review file structures using `list_dir` and read logic using `view_file` or `view_code_item`. Consult `docs/IMPLEMENTATION_PLAN.md` for specific in-progress items.
-3. **Use Kotlin:** Write idiomatic Kotlin. Follow Spring Boot best practices. Try utilizing constructor injection, `@Service`, `@RestController` and standard JPA repository functionalities where possible.
+3. **Use Kotlin Functional Style:** Write idiomatic Kotlin. Follow these patterns:
+   - **Expression-body functions** (`fun foo() = ...`) for single-expression methods — especially in controllers and mapping.
+   - **Extension functions** (`.toDto()`, `.toDomain()`) for domain↔DTO mapping instead of standalone `mapToDto()` functions.
+   - **Safe-call chains** (`?.let {}`, `?: return`, `?: throw`) instead of `if (x == null)` checks.
+   - **`.also {}` for side effects** in functional chains (e.g., logging or triggering after a pipeline).
+   - **`filterNot`/`forEach`** chains instead of imperative for-loops with if-checks.
+   - **No unnecessary local variables** — return directly from expressions.
+   - **No `@field:JsonProperty`** — Jackson infers field names from Kotlin data class properties.
+   - **Use `Filter` domain class directly in DTOs** — don't create separate DTO wrappers for simple value objects.
 4. **Testing Setup:** 
    - We leverage standard JUnit 5, Spring Boot Test, Mockito-Kotlin, and WireMock Standalone.
    - Run tests before committing: `./gradlew test`
    - *Crucial:* All unit tests should utilize `org.mockito.kotlin.*` whenever using mocks. Never use Java's `any(Class::class.java)` or `ArgumentCaptor.capture()` as they return `null` and crash Kotlin's non-nullable parameters. Use `org.mockito.kotlin.check {}` for argument verification instead.
    - **WireMock:** Always use the `WireMockServer` instance for `stubFor()`, `resetAll()`, and create a `WireMock(port)` client for `verifyThat()`. Never use static `WireMock.verify()` — it defaults to port 8080.
+   - **Shared test config:** Common H2/Flyway/ddl-auto properties are in `api/src/test/resources/application-test.yml`. Tests just need `@ActiveProfiles("test")` — do NOT duplicate properties in `@SpringBootTest(properties = [...])` unless they're test-specific overrides (e.g., `novu.api.key`).
 5. **Linting & Code Standards (Ktlint):**
    - Check formatting: `./gradlew ktlintCheck`
    - Auto-format code: `./gradlew ktlintFormat`
@@ -148,3 +158,28 @@ docker build -t notification-router/bot:dev ./bot
 kubectl set image deployment/notification-router-api api=notification-router/api:dev
 kubectl set image deployment/notification-router-bot bot=notification-router/bot:dev
 ```
+
+## 8. Codebase Patterns & Conventions
+
+### Service Layer Pattern
+All services follow a consistent pattern:
+- Constructor injection of repositories
+- Private `Domain.toDto()` and `Dto.toDomain()` extension functions for mapping
+- `@Transactional` / `@Transactional(readOnly = true)` on public methods
+- Expression-body for simple methods
+
+### Controller Layer Pattern
+All controllers:
+- Use expression-body functions wrapping `ResponseEntity.ok(service.method())`
+- No local variables for simple delegation methods
+- `DELETE` endpoints return `ResponseEntity.noContent().build()`
+
+### Adapter Pattern
+Webhook adapters are `object` singletons with:
+- Private `jacksonObjectMapper()` instance
+- A `parse(payload: String): Event` public entry point
+- `when` dispatch on action/event type
+- Shared metadata extraction via private `JsonNode` extension functions
+
+### Filter Evaluation
+`FilterEvaluator` evaluates `List<Filter>` against `Event.metadata` map. All filter matching uses `event.metadata[filter.field]` — no hardcoded field names. Operator matching is case-insensitive.

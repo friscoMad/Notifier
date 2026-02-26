@@ -16,6 +16,7 @@ import com.notifier.router.api.domain.User
 import com.notifier.router.api.repository.NotificationTypeRepository
 import com.notifier.router.api.repository.SubscriptionRepository
 import com.notifier.router.api.repository.UserRepository
+import java.util.UUID
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
@@ -29,9 +30,8 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
-import java.util.UUID
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post as mockPost
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 /**
  * Full end-to-end integration test that validates the ACTUAL HTTP request the Novu SDK sends over
@@ -45,14 +45,14 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post 
  * sent over the wire.
  */
 @SpringBootTest(
-    properties =
-        [
-            "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
-            "spring.flyway.enabled=false",
-            "spring.jpa.hibernate.ddl-auto=create-drop",
-            "github.webhook.secret=",
-            "novu.api-key=test-wiremock-key",
-        ],
+        properties =
+                [
+                        "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
+                        "spring.flyway.enabled=false",
+                        "spring.jpa.hibernate.ddl-auto=create-drop",
+                        "github.webhook.secret=",
+                        "novu.api.key=test-wiremock-key",
+                ],
 )
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -102,13 +102,13 @@ class NovuWireMockIntegrationTest {
 
         // Stub the Novu trigger endpoint to return 201
         wireMock.stubFor(
-            post(urlPathEqualTo("/v1/events/trigger"))
-                .willReturn(
-                    aResponse()
-                        .withStatus(201)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody(
-                            """
+                post(urlPathEqualTo("/v1/events/trigger"))
+                        .willReturn(
+                                aResponse()
+                                        .withStatus(201)
+                                        .withHeader("Content-Type", "application/json")
+                                        .withBody(
+                                                """
                             {
                               "data": {
                                 "acknowledged": true,
@@ -117,8 +117,8 @@ class NovuWireMockIntegrationTest {
                               }
                             }
                             """.trimIndent(),
+                                        ),
                         ),
-                ),
         )
     }
 
@@ -126,45 +126,45 @@ class NovuWireMockIntegrationTest {
     fun `webhook triggers actual HTTP POST to novu trigger endpoint via wiremock`() {
         // Setup data
         val prCreatedType =
-            notificationTypeRepository.save(
-                NotificationType(
-                    id = UUID.randomUUID(),
-                    typeKey = "pr_created",
-                    name = "PR Created",
-                    description = "Triggered when a new Pull Request is opened.",
-                ),
-            )
+                notificationTypeRepository.save(
+                        NotificationType(
+                                id = UUID.randomUUID(),
+                                typeKey = "pr_created",
+                                name = "PR Created",
+                                description = "Triggered when a new Pull Request is opened.",
+                        ),
+                )
 
         val testUser =
-            userRepository.save(
-                User(
-                    id = UUID.randomUUID(),
-                    slackId = "U_WIREMOCK_TEST",
-                    email = "wiremock@example.com",
-                    name = "WireMock Test User",
-                ),
-            )
+                userRepository.save(
+                        User(
+                                id = UUID.randomUUID(),
+                                slackId = "U_WIREMOCK_TEST",
+                                email = "wiremock@example.com",
+                                name = "WireMock Test User",
+                        ),
+                )
 
         subscriptionRepository.save(
-            Subscription(
-                id = UUID.randomUUID(),
-                userId = testUser.id,
-                notificationTypeId = prCreatedType.id,
-                channels = listOf("slack_dm"),
-                filters =
-                    listOf(
-                        Filter(
-                            field = "repo",
-                            operator = "EQ",
-                            value = "org/wiremock-repo",
-                        ),
-                    ),
-                enabled = true,
-            ),
+                Subscription(
+                        id = UUID.randomUUID(),
+                        userId = testUser.id,
+                        notificationTypeId = prCreatedType.id,
+                        channels = listOf("slack_dm"),
+                        filters =
+                                listOf(
+                                        Filter(
+                                                field = "repo",
+                                                operator = "EQ",
+                                                value = "org/wiremock-repo",
+                                        ),
+                                ),
+                        enabled = true,
+                ),
         )
 
         val webhookPayload =
-            """
+                """
             {
               "action": "opened",
               "pull_request": {
@@ -182,12 +182,12 @@ class NovuWireMockIntegrationTest {
             """.trimIndent()
 
         // Send the webhook
-        mockMvc
-            .perform(
-                mockPost("/api/v1/webhooks/github")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(webhookPayload),
-            ).andExpect(status().isAccepted)
+        mockMvc.perform(
+                        mockPost("/api/v1/webhooks/github")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(webhookPayload),
+                )
+                .andExpect(status().isAccepted)
 
         // Wait for async processing
         Thread.sleep(1500)
@@ -195,56 +195,56 @@ class NovuWireMockIntegrationTest {
         // Verify WireMock received the actual HTTP POST from the Novu SDK
         // using the instance client (not static WireMock.verify which defaults to port 8080)
         wireMockClient.verifyThat(
-            postRequestedFor(urlPathEqualTo("/v1/events/trigger"))
-                .withHeader("Authorization", equalTo("ApiKey test-wiremock-key"))
-                .withRequestBody(matchingJsonPath("$.name", equalTo("pr_created")))
-                .withRequestBody(
-                    matchingJsonPath("$.payload.title", equalTo("WireMock test PR")),
-                ),
+                postRequestedFor(urlPathEqualTo("/v1/events/trigger"))
+                        .withHeader("Authorization", equalTo("ApiKey test-wiremock-key"))
+                        .withRequestBody(matchingJsonPath("$.name", equalTo("pr_created")))
+                        .withRequestBody(
+                                matchingJsonPath("$.payload.title", equalTo("WireMock test PR")),
+                        ),
         )
     }
 
     @Test
     fun `non-matching webhook does not produce HTTP call to novu`() {
         val prCreatedType =
-            notificationTypeRepository.save(
-                NotificationType(
-                    id = UUID.randomUUID(),
-                    typeKey = "pr_created",
-                    name = "PR Created",
-                ),
-            )
+                notificationTypeRepository.save(
+                        NotificationType(
+                                id = UUID.randomUUID(),
+                                typeKey = "pr_created",
+                                name = "PR Created",
+                        ),
+                )
 
         val testUser =
-            userRepository.save(
-                User(
-                    id = UUID.randomUUID(),
-                    slackId = "U_NO_MATCH",
-                    email = "nomatch@example.com",
-                    name = "No Match User",
-                ),
-            )
+                userRepository.save(
+                        User(
+                                id = UUID.randomUUID(),
+                                slackId = "U_NO_MATCH",
+                                email = "nomatch@example.com",
+                                name = "No Match User",
+                        ),
+                )
 
         subscriptionRepository.save(
-            Subscription(
-                id = UUID.randomUUID(),
-                userId = testUser.id,
-                notificationTypeId = prCreatedType.id,
-                channels = listOf("slack_dm"),
-                filters =
-                    listOf(
-                        Filter(
-                            field = "repo",
-                            operator = "EQ",
-                            value = "org/specific-repo",
-                        ),
-                    ),
-                enabled = true,
-            ),
+                Subscription(
+                        id = UUID.randomUUID(),
+                        userId = testUser.id,
+                        notificationTypeId = prCreatedType.id,
+                        channels = listOf("slack_dm"),
+                        filters =
+                                listOf(
+                                        Filter(
+                                                field = "repo",
+                                                operator = "EQ",
+                                                value = "org/specific-repo",
+                                        ),
+                                ),
+                        enabled = true,
+                ),
         )
 
         val webhookPayload =
-            """
+                """
             {
               "action": "opened",
               "pull_request": {
@@ -261,12 +261,12 @@ class NovuWireMockIntegrationTest {
             }
             """.trimIndent()
 
-        mockMvc
-            .perform(
-                mockPost("/api/v1/webhooks/github")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(webhookPayload),
-            ).andExpect(status().isAccepted)
+        mockMvc.perform(
+                        mockPost("/api/v1/webhooks/github")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(webhookPayload),
+                )
+                .andExpect(status().isAccepted)
 
         Thread.sleep(1500)
 

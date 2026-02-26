@@ -68,6 +68,7 @@ This project provides a unified notification router that allows developers to re
   - [`phase1-infrastructure-setup.md`](docs/phase1-infrastructure-setup.md)
   - [`slack-commands.md`](docs/slack-commands.md)
   - [`testing-k3s.md`](docs/testing-k3s.md)
+  - [`troubleshooting.md`](docs/troubleshooting.md)
   - [`IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md)
 - `k8s/`: Kubernetes manifests.
 
@@ -75,15 +76,17 @@ This project provides a unified notification router that allows developers to re
 
 **Implemented:**
 - **Infrastructure:** K3s, PostgreSQL, Novu Helm.
-- **Core Models:** User management, subscriptions, preferences in DB.
+- **Core Models:** User management, subscriptions, preferences in DB. All domain classes have JPA annotations.
 - **API Structure:** Foundational Spring Boot setup across `api` and `bot` modules using Gradle/Ktlint.
 - **Webhook Adapters:** Controllers for GitHub, GitHub Actions, Buildkite are actively capturing payloads.
+- **Engine & Routing (`api` module):** `EventService` + `FilterEvaluator` connect incoming payloads to active subscriptions. `NovuService` dispatches via `co.novu:novu-java:1.6.0`.
+- **Security:** HMAC signature verification for GitHub webhooks.
+- **Testing:** E2E integration tests (MockBean payload verification + WireMock HTTP-level tests via SDK reflection).
 
 **To Be Implemented:**
-- **Engine & Routing (`api` module):** Create `EventService` and integrate `FilterEvaluator` to connect incoming payloads to active subscriptions. Utilize a new `NovuService` to dispatch via `co.novu:novu-java`.
 - **Slack Bot (`bot` module):** Connect Slack Bolt SDK for Slash Commands (`/notifyme`) and Interactive Modals (View Submissions).
-- **Security:** HMAC signature verification for webhooks (GitHub, Buildkite).
-- **Testing:** End-To-End verification logic mock or wiremock testing with Novu.
+- **Additional Webhook Adapters:** Buildkite signature verification.
+- **Novu Workflows:** Create Novu workflows matching notification type keys.
 
 ## 5. Antigravity Workflows & Guidelines
 
@@ -91,13 +94,20 @@ This project provides a unified notification router that allows developers to re
 2. **Evaluate Tasks:** Review file structures using `list_dir` and read logic using `view_file` or `view_code_item`. Consult `docs/IMPLEMENTATION_PLAN.md` for specific in-progress items.
 3. **Use Kotlin:** Write idiomatic Kotlin. Follow Spring Boot best practices. Try utilizing constructor injection, `@Service`, `@RestController` and standard JPA repository functionalities where possible.
 4. **Testing Setup:** 
-   - We leverage standard JUnit 5, Spring Boot Test, and Mockito-Kotlin.
+   - We leverage standard JUnit 5, Spring Boot Test, Mockito-Kotlin, and WireMock Standalone.
    - Run tests before committing: `./gradlew test`
-   - *Crucial:* All unit tests should utilize `org.mockito.kotlin.*` whenever using mocks. Never use Java's `any(Class::class.java)` as it lacks null-safety compatibility with Kotlin.
+   - *Crucial:* All unit tests should utilize `org.mockito.kotlin.*` whenever using mocks. Never use Java's `any(Class::class.java)` or `ArgumentCaptor.capture()` as they return `null` and crash Kotlin's non-nullable parameters. Use `org.mockito.kotlin.check {}` for argument verification instead.
+   - **WireMock:** Always use the `WireMockServer` instance for `stubFor()`, `resetAll()`, and create a `WireMock(port)` client for `verifyThat()`. Never use static `WireMock.verify()` — it defaults to port 8080.
 5. **Linting & Code Standards (Ktlint):**
    - Check formatting: `./gradlew ktlintCheck`
    - Auto-format code: `./gradlew ktlintFormat`
    - Always run `./gradlew ktlintFormat` after writing or modifying Kotlin files so the IDE state is clean.
+6. **Git on Windows:**
+   - Git commit hangs due to GPG signing. Always use `cmd /c` with `-c commit.gpgSign=false`: `cmd /c "git add . && git -c commit.gpgSign=false commit -m ""message"""`
+   - Never chain `git add` and `git commit` in PowerShell directly — it may hang.
+7. **Gradle on Windows:**
+   - The Gradle daemon can get stuck between test runs. Use `--no-daemon` for reliability, or `.\gradlew.bat --stop` before retrying.
+   - If a batch script prompt appears (`¿Desea terminar el trabajo por lotes?`), answer `S` (Sí) to terminate it.
 
 ## 6. Notification Types & Slack Commands
 

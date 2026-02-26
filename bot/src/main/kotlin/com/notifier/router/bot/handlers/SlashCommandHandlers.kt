@@ -5,6 +5,16 @@ import com.slack.api.bolt.App
 import com.slack.api.bolt.context.builtin.SlashCommandContext
 import com.slack.api.bolt.request.builtin.SlashCommandRequest
 import com.slack.api.bolt.response.Response
+import com.slack.api.model.block.Blocks.asBlocks
+import com.slack.api.model.block.Blocks.input
+import com.slack.api.model.block.Blocks.section
+import com.slack.api.model.block.composition.BlockCompositions.dispatchActionConfig
+import com.slack.api.model.block.composition.BlockCompositions.plainText
+import com.slack.api.model.block.element.BlockElements.staticSelect
+import com.slack.api.model.view.Views.view
+import com.slack.api.model.view.Views.viewClose
+import com.slack.api.model.view.Views.viewSubmit
+import com.slack.api.model.view.Views.viewTitle
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -30,11 +40,16 @@ class SlashCommandHandlers(
         val text = req.payload.text?.trim() ?: ""
         logger.info("Received /notifyme command with args: $text")
 
-        if (text.isEmpty() || text.equals("help", ignoreCase = true)) {
+        if (text.isEmpty()) {
+            return handleOpenModal(req, ctx)
+        }
+
+        if (text.equals("help", ignoreCase = true)) {
             val helpText =
                 """
                 *Notification Router Bot*
                 Usage:
+                `/notifyme` - Open interactive subscription modal
                 `/notifyme help` - Show this message
                 `/notifyme list` - List your active subscriptions
                 `/notifyme subscribe <type>` - Subscribe to a notification type
@@ -53,6 +68,53 @@ class SlashCommandHandlers(
             "unsubscribe" -> handleUnsubscribeCommand(parts.drop(1), req, ctx)
             else -> ctx.ack("Unknown command: $action. Use `/notifyme help` for usage.")
         }
+    }
+
+    private fun handleOpenModal(
+        req: SlashCommandRequest,
+        ctx: SlashCommandContext,
+    ): Response {
+        val triggerId = req.payload.triggerId
+        val types = apiClient.getNotificationTypes()
+
+        val options = types.map { type ->
+            val name = type["name"] as? String ?: "Unknown"
+            val key = type["typeKey"] as? String ?: "unknown"
+            com.slack.api.model.block.composition.BlockCompositions.option(plainText(name), key)
+        }
+
+        val modalView = view { v ->
+            v.callbackId("create_subscription_modal")
+                .type("modal")
+                .notifyOnClose(true)
+                .title(viewTitle { t -> t.type("plain_text").text("Configure Notifications") })
+                .submit(viewSubmit { s -> s.type("plain_text").text("Save") })
+                .close(viewClose { c -> c.type("plain_text").text("Cancel") })
+                .blocks(
+                    asBlocks(
+                        section { s ->
+                            s.blockId("type_block")
+                                .text(plainText("Which event do you want to be notified about?"))
+                                .accessory(
+                                    staticSelect { select ->
+                                        select.actionId("type_select")
+                                            .placeholder(plainText("Select an event..."))
+                                            .options(options)
+                                    }
+                                )
+                        }
+                    )
+                )
+        }
+
+        val response = ctx.client().viewsOpen { r -> r.triggerId(triggerId).view(modalView) }
+        
+        if (!response.isOk) {
+            logger.error("Failed to open modal: ${response.error}")
+            return ctx.ack("Could not open configuration modal. Please try again.")
+        }
+
+        return ctx.ack()
     }
 
     private fun handleListCommand(

@@ -4,6 +4,7 @@ import com.notifier.router.api.domain.Subscription
 import com.notifier.router.api.dto.SubscriptionDto
 import com.notifier.router.api.exception.SubscriptionNotFoundException
 import com.notifier.router.api.repository.SubscriptionRepository
+import com.notifier.router.api.repository.NotificationTypeRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -11,11 +12,15 @@ import java.util.UUID
 @Service
 class SubscriptionService(
     private val subscriptionRepository: SubscriptionRepository,
+    private val notificationTypeRepository: NotificationTypeRepository,
+    private val novuService: NovuService,
 ) {
     @Transactional
     fun createSubscription(dto: SubscriptionDto): SubscriptionDto {
         val subscription = dto.toDomain()
-        return subscriptionRepository.save(subscription).toDto()
+        val saved = subscriptionRepository.save(subscription)
+        syncWithNovu(saved)
+        return saved.toDto()
     }
 
     @Transactional
@@ -34,7 +39,21 @@ class SubscriptionService(
                 filters = dto.filters,
                 enabled = dto.enabled,
             )
-        return subscriptionRepository.save(updated).toDto()
+        val saved = subscriptionRepository.save(updated)
+        syncWithNovu(saved)
+        return saved.toDto()
+    }
+
+    private fun syncWithNovu(subscription: Subscription) {
+        val type = notificationTypeRepository.findById(subscription.notificationTypeId).orElse(null)
+            ?: return
+        
+        novuService.syncSubscriberPreferences(
+            subscriberId = subscription.userId.toString(),
+            workflowKey = type.typeKey,
+            channels = subscription.channels,
+            channelConfig = subscription.channelConfig
+        )
     }
 
     @Transactional

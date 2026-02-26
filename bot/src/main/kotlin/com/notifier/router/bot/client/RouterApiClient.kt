@@ -74,4 +74,20 @@ class RouterApiClient(
             false
         }
     }
+
+    fun getFiltersForType(typeKey: String): List<Map<String, Any>> {
+        val url = "$apiUrl/notification-types/$typeKey/filters"
+        return try {
+            val response =
+                restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    null,
+                    object : ParameterizedTypeReference<List<Map<String, Any>>>() {},
+                )
+            response.body ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
 }

@@ -16,9 +16,13 @@ import org.mockito.kotlin.whenever
 import java.util.Optional
 import java.util.UUID
 
+import com.notifier.router.api.repository.NotificationTypeRepository
+
 @ExtendWith(MockitoExtension::class)
 class SubscriptionServiceTest {
     @Mock private lateinit var subscriptionRepository: SubscriptionRepository
+    @Mock private lateinit var notificationTypeRepository: NotificationTypeRepository
+    @Mock private lateinit var novuService: NovuService
 
     @org.mockito.InjectMocks private lateinit var subscriptionService: SubscriptionService
 

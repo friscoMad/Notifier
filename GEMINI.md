@@ -176,10 +176,12 @@ All controllers:
 
 ### Adapter Pattern
 Webhook adapters are `object` singletons with:
-- Private `jacksonObjectMapper()` instance
-- A `parse(payload: String): Event` public entry point
-- `when` dispatch on action/event type
-- Shared metadata extraction via private `JsonNode` extension functions
+- A shared `webhookMapper` (in `WebhookPayloads.kt`) configured with `SNAKE_CASE` naming strategy — no `@JsonProperty` annotations needed.
+- Type-safe deserialization using `webhookMapper.readValue<PayloadType>(payload)`.
+- `when` dispatch on action/event type.
+- Adapters return subtypes of the `NotificationEvent` sealed interface (e.g., `PrCreatedEvent`, `DeployStartedEvent`) instead of raw maps.
 
-### Filter Evaluation
-`FilterEvaluator` evaluates `List<Filter>` against `Event.metadata` map. All filter matching uses `event.metadata[filter.field]` — no hardcoded field names. Operator matching is case-insensitive.
+### Event Model & Filter Evaluation
+- The core domain uses a `NotificationEvent` sealed interface.
+- Each event subtype guarantees type-safety for its specific fields, and implements `metadata` and `payload` as computed `Map<String, Any>` properties for downstream backward compatibility.
+- `FilterEvaluator` evaluates `List<Filter>` against the `NotificationEvent.metadata` map using `event.metadata[filter.field]`. Operator matching is case-insensitive.

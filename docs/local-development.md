@@ -4,7 +4,8 @@ This guide walks you through setting up the local Notification Router system fro
 
 ## Prerequisites
 - Docker Compose v2+
-- Java 17+ (or 21) installed natively
+- Java 21 (Pre-configured in system environment)
+- GitHub CLI (Pre-configured in system environment)
 - Node/npm (Optional—our setup scripts use a docker container if Node isn't present)
 
 ## 1. Start the Containers

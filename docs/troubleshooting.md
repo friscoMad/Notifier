@@ -89,19 +89,6 @@ data class Filter(
 ) : Serializable
 ```
 
-## 5. Git Commit Hangs on Windows (GPG Signing)
-
-**Symptom:** `git commit` hangs indefinitely with no output.
-
-**Cause:** GPG signing is enabled globally and the GPG agent prompts for a passphrase which blocks the terminal.
-
-**Fix:** Always use `cmd /c` and disable GPG signing:
-```powershell
-cmd /c "git add . && git -c commit.gpgSign=false commit -m ""message"""
-```
-
-Never chain `git add` and `git commit` in PowerShell directly — it may hang.
-
 ## 6. Gradle Daemon Gets Stuck on Windows
 
 **Symptom:** Gradle tasks hang or produce `¿Desea terminar el trabajo por lotes?` prompt.

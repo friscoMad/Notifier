@@ -116,6 +116,7 @@ This project provides a unified notification router that allows developers to re
    - Git commit hangs due to GPG signing. Always use `cmd /c` with `-c commit.gpgSign=false`: `cmd /c "git add . && git -c commit.gpgSign=false commit -m ""message"""`
    - Never chain `git add` and `git commit` in PowerShell directly — it may hang.
 7. **Gradle on Windows:**
+   - The environment is pre-configured with `JAVA_HOME` and `gh` CLI.
    - The Gradle daemon can get stuck between test runs. Use `--no-daemon` for reliability, or `.\gradlew.bat --stop` before retrying.
    - If a batch script prompt appears (`¿Desea terminar el trabajo por lotes?`), answer `S` (Sí) to terminate it.
 

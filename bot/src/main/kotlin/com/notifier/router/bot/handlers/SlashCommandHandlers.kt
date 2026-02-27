@@ -77,35 +77,7 @@ class SlashCommandHandlers(
         val triggerId = req.payload.triggerId
         val types = apiClient.getNotificationTypes()
 
-        val options = types.map { type ->
-            val name = type["name"] as? String ?: "Unknown"
-            val key = type["typeKey"] as? String ?: "unknown"
-            com.slack.api.model.block.composition.BlockCompositions.option(plainText(name), key)
-        }
-
-        val modalView = view { v ->
-            v.callbackId("create_subscription_modal")
-                .type("modal")
-                .notifyOnClose(true)
-                .title(viewTitle { t -> t.type("plain_text").text("Configure Notifications") })
-                .submit(viewSubmit { s -> s.type("plain_text").text("Save") })
-                .close(viewClose { c -> c.type("plain_text").text("Cancel") })
-                .blocks(
-                    asBlocks(
-                        section { s ->
-                            s.blockId("type_block")
-                                .text(plainText("Which event do you want to be notified about?"))
-                                .accessory(
-                                    staticSelect { select ->
-                                        select.actionId("type_select")
-                                            .placeholder(plainText("Select an event..."))
-                                            .options(options)
-                                    }
-                                )
-                        }
-                    )
-                )
-        }
+        val modalView = com.notifier.router.bot.view.ModalViewBuilder.buildInitialTypeSelectionModal(types)
 
         val response = ctx.client().viewsOpen { r -> r.triggerId(triggerId).view(modalView) }
         

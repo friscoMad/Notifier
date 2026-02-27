@@ -141,7 +141,6 @@ hs_err_pid*
 .kotlin/
 tmp_sdk/
 bin/
-.env
 local.properties
 test_bot_output*.txt
 build_output.txt

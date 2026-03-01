@@ -15,6 +15,11 @@ dependencies {
 
     // Slack SDK
     implementation(libs.slack.bolt.jakarta.servlet)
+    implementation(libs.slack.bolt.socket.mode)
+    implementation(libs.slack.api.model.kotlin.extension)
+    implementation(libs.slack.api.client.kotlin.extension)
+    implementation(libs.tyrus.standalone.client)
+    implementation(libs.javax.websocket.api)
 
     testImplementation(libs.spring.boot.starter.test)
     testImplementation(libs.mockito.kotlin)

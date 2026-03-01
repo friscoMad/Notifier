@@ -7,26 +7,16 @@ import com.slack.api.bolt.context.builtin.ViewSubmissionContext
 import com.slack.api.bolt.request.builtin.BlockActionRequest
 import com.slack.api.bolt.request.builtin.ViewSubmissionRequest
 import com.slack.api.bolt.response.Response
-import com.slack.api.model.block.Blocks.asBlocks
-import com.slack.api.model.block.Blocks.input
-import com.slack.api.model.block.Blocks.section
-import com.slack.api.model.block.composition.BlockCompositions.plainText
-import com.slack.api.model.block.element.BlockElements.checkboxes
-import com.slack.api.model.block.element.BlockElements.plainTextInput
-import com.slack.api.model.block.element.BlockElements.staticSelect
-import com.slack.api.model.view.View
+import com.slack.api.methods.request.views.ViewsUpdateRequest
 import com.slack.api.model.view.Views.view
-import com.slack.api.model.view.Views.viewClose
-import com.slack.api.model.view.Views.viewSubmit
-import com.slack.api.model.view.Views.viewTitle
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 @Component
 class ModalHandlers(
-    private val app: App,
-    private val apiClient: RouterApiClient,
+        private val app: App,
+        private val apiClient: RouterApiClient,
 ) {
     private val logger = LoggerFactory.getLogger(ModalHandlers::class.java)
 
@@ -37,14 +27,17 @@ class ModalHandlers(
         }
 
         app.viewSubmission("create_subscription_modal") {
-            req: ViewSubmissionRequest,
-            ctx: ViewSubmissionContext,
+                req: ViewSubmissionRequest,
+                ctx: ViewSubmissionContext,
             ->
             handleSubscriptionSubmission(req, ctx)
         }
     }
 
-    private fun handleTypeSelection(req: BlockActionRequest, ctx: ActionContext): Response {
+    private fun handleTypeSelection(
+            req: BlockActionRequest,
+            ctx: ActionContext,
+    ): Response {
         val selectedType = req.payload.actions[0].selectedOption.value
         logger.info("User selected notification type: $selectedType")
 
@@ -52,28 +45,33 @@ class ModalHandlers(
         val filters = apiClient.getFiltersForType(selectedType)
 
         val updateView =
-            com.notifier.router.bot.view.ModalViewBuilder.buildDynamicSubscriptionModal(
-                selectedTypeKey = selectedType,
-                availableTypes = availableTypes,
-                filters = filters,
-            )
+                com.notifier.router.bot.view.ModalViewBuilder.buildDynamicSubscriptionModal(
+                        selectedTypeKey = selectedType,
+                        availableTypes = availableTypes,
+                        filters = filters,
+                )
 
-        ctx.client().viewsUpdate { r ->
-            r.viewId(req.payload.view.id)
-                .hash(req.payload.view.hash)
-                .view(updateView)
-        }
+        ctx.client()
+                .viewsUpdate(
+                        ViewsUpdateRequest.builder()
+                                .viewId(req.payload.view.id)
+                                .hash(req.payload.view.hash)
+                                .view(updateView)
+                                .build()
+                )
 
         return ctx.ack()
     }
 
     private fun handleSubscriptionSubmission(
-        req: ViewSubmissionRequest,
-        ctx: ViewSubmissionContext,
+            req: ViewSubmissionRequest,
+            ctx: ViewSubmissionContext,
     ): Response {
         val typeKey = req.payload.view.privateMetadata
         if (typeKey.isNullOrEmpty()) {
-            return ctx.ackWithErrors(mapOf("type_block" to "You must select a notification type first."))
+            return ctx.ackWithErrors(
+                    mapOf("type_block" to "You must select a notification type first."),
+            )
         }
 
         val stateValues = req.payload.view.state.values
@@ -89,7 +87,8 @@ class ModalHandlers(
 
         // 2. Parse Channels
         val channelsState = stateValues["channels_block"]?.get("channels_checkboxes")
-        val selectedChannels = channelsState?.selectedOptions?.map { it.value } ?: listOf("slack_dm")
+        val selectedChannels =
+                channelsState?.selectedOptions?.map { it.value } ?: listOf("slack_dm")
 
         // 3. Parse Digest Settings
         val digestState = stateValues["digest_block"]?.get("digest_select")
@@ -108,15 +107,24 @@ class ModalHandlers(
             val fieldName = filterDef["field"] as String
             val blockId = "filter_block_$fieldName"
             val actionId = "filter_input_$fieldName"
-            
+
             val inputText = stateValues[blockId]?.get(actionId)?.value
             if (!inputText.isNullOrBlank()) {
                 // If they provided multiple comma-separated values, treat as IN, otherwise EQ
                 if (inputText.contains(",")) {
-                    val listValues = inputText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                    extractedFilters.add(mapOf("field" to fieldName, "operator" to "IN", "value" to listValues))
+                    val listValues =
+                            inputText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                    extractedFilters.add(
+                            mapOf("field" to fieldName, "operator" to "IN", "value" to listValues),
+                    )
                 } else {
-                    extractedFilters.add(mapOf("field" to fieldName, "operator" to "EQ", "value" to inputText.trim()))
+                    extractedFilters.add(
+                            mapOf(
+                                    "field" to fieldName,
+                                    "operator" to "EQ",
+                                    "value" to inputText.trim(),
+                            ),
+                    )
                 }
             }
         }
@@ -124,21 +132,24 @@ class ModalHandlers(
         val slackId = req.payload.user.id
         val teamId = req.payload.team?.id ?: ""
 
-        val payload = mapOf(
-            "userId" to slackId,
-            "slackId" to slackId,
-            "slackTeamId" to teamId,
-            "notificationTypeId" to typeId,
-            "channels" to selectedChannels,
-            "channelConfig" to channelConfig,
-            "filters" to extractedFilters
-        )
+        val payload =
+                mapOf(
+                        "userId" to slackId,
+                        "slackId" to slackId,
+                        "slackTeamId" to teamId,
+                        "notificationTypeId" to typeId,
+                        "channels" to selectedChannels,
+                        "channelConfig" to channelConfig,
+                        "filters" to extractedFilters,
+                )
 
         val response = apiClient.subscribe(payload)
         return if (response != null) {
             ctx.ack() // Close modal silently indicating success
         } else {
-            ctx.ackWithErrors(mapOf("channels_block" to "Failed to save subscription in the Router API."))
+            ctx.ackWithErrors(
+                    mapOf("channels_block" to "Failed to save subscription in the Router API."),
+            )
         }
     }
 }

@@ -2,9 +2,12 @@ package com.notifier.router.api.service
 
 import com.notifier.router.api.domain.Filter
 import com.notifier.router.api.domain.Subscription
+import com.notifier.router.api.domain.User
 import com.notifier.router.api.dto.SubscriptionDto
 import com.notifier.router.api.exception.SubscriptionNotFoundException
+import com.notifier.router.api.repository.NotificationTypeRepository
 import com.notifier.router.api.repository.SubscriptionRepository
+import com.notifier.router.api.repository.UserRepository
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
@@ -16,22 +19,25 @@ import org.mockito.kotlin.whenever
 import java.util.Optional
 import java.util.UUID
 
-import com.notifier.router.api.repository.NotificationTypeRepository
-
 @ExtendWith(MockitoExtension::class)
 class SubscriptionServiceTest {
     @Mock private lateinit var subscriptionRepository: SubscriptionRepository
+
     @Mock private lateinit var notificationTypeRepository: NotificationTypeRepository
+
+    @Mock private lateinit var userRepository: UserRepository
+
     @Mock private lateinit var novuService: NovuService
 
     @org.mockito.InjectMocks private lateinit var subscriptionService: SubscriptionService
 
     @Test
-    fun `test createSubscription saves new subscription`() {
+    fun `test createSubscription saves new subscription with Slack ID`() {
+        val slackId = "U12345"
         val subscriptionDto =
             SubscriptionDto(
                 id = null,
-                userId = "${UUID.randomUUID()}",
+                userId = slackId,
                 notificationTypeId = "${UUID.randomUUID()}",
                 channels = listOf("slack_dm"),
                 channelConfig = emptyMap(),
@@ -39,10 +45,13 @@ class SubscriptionServiceTest {
                 enabled = true,
             )
 
+        val userUuid = UUID.randomUUID()
+        val mockUser = User(id = userUuid, slackId = slackId)
+
         val savedDomain =
             Subscription(
                 id = UUID.randomUUID(),
-                userId = UUID.fromString(subscriptionDto.userId),
+                userId = userUuid,
                 notificationTypeId = UUID.fromString(subscriptionDto.notificationTypeId),
                 channels = subscriptionDto.channels,
                 channelConfig = subscriptionDto.channelConfig,
@@ -50,13 +59,15 @@ class SubscriptionServiceTest {
                 enabled = subscriptionDto.enabled,
             )
 
+        whenever(userRepository.findBySlackId(slackId)).thenReturn(mockUser)
         whenever(subscriptionRepository.save(any<Subscription>())).thenReturn(savedDomain)
 
         val result = subscriptionService.createSubscription(subscriptionDto)
 
+        verify(userRepository).findBySlackId(slackId)
         verify(subscriptionRepository).save(any())
+        assert(result.userId == slackId)
         assert(result.channels == subscriptionDto.channels)
-        assert(result.enabled == subscriptionDto.enabled)
     }
 
     @Test
@@ -84,6 +95,10 @@ class SubscriptionServiceTest {
                 enabled = false,
             )
 
+        val userUuid = existingDomain.userId
+        val mockUser = User(id = userUuid, slackId = "U12345")
+
+        whenever(userRepository.findById(userUuid)).thenReturn(Optional.of(mockUser))
         whenever(subscriptionRepository.findById(any())).thenReturn(Optional.of(existingDomain))
         whenever(subscriptionRepository.save(any<Subscription>())).thenAnswer { it.getArgument(0) }
 
@@ -126,35 +141,30 @@ class SubscriptionServiceTest {
     }
 
     @Test
-    fun `test getSubscriptionsByUserId returns user subscriptions`() {
-        val userId = UUID.randomUUID().toString()
+    fun `test getSubscriptionsByUserId returns subscriptions for Slack ID`() {
+        val slackId = "U12345"
+        val userUuid = UUID.randomUUID()
+        val mockUser = User(id = userUuid, slackId = slackId)
+
         val subscription1 =
             Subscription(
                 id = UUID.randomUUID(),
-                userId = UUID.fromString(userId),
+                userId = userUuid,
                 notificationTypeId = UUID.randomUUID(),
                 channels = listOf("slack_dm"),
                 channelConfig = emptyMap(),
                 filters = emptyList(),
                 enabled = true,
             )
-        val subscription2 =
-            Subscription(
-                id = UUID.randomUUID(),
-                userId = UUID.fromString(userId),
-                notificationTypeId = UUID.randomUUID(),
-                channels = listOf("email"),
-                channelConfig = emptyMap(),
-                filters = emptyList(),
-                enabled = true,
-            )
 
-        whenever(subscriptionRepository.findByUserId(any()))
-            .thenReturn(listOf(subscription1, subscription2))
+        whenever(userRepository.findBySlackId(slackId)).thenReturn(mockUser)
+        whenever(subscriptionRepository.findByUserId(userUuid)).thenReturn(listOf(subscription1))
 
-        val result = subscriptionService.getSubscriptionsByUserId(userId)
+        val result = subscriptionService.getSubscriptionsByUserId(slackId)
 
-        verify(subscriptionRepository).findByUserId(UUID.fromString(userId))
-        assert(result.size == 2)
+        verify(userRepository).findBySlackId(slackId)
+        verify(subscriptionRepository).findByUserId(userUuid)
+        assert(result.size == 1)
+        assert(result[0].userId == slackId)
     }
 }

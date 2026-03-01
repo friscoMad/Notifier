@@ -13,7 +13,7 @@ Write-Host "Seeding default Novu Admin User, Organization, and API Key..."
 # Load shared variables from .env
 $envFile = Join-Path $PSScriptRoot "..\.env"
 Get-Content $envFile | Where-Object { $_ -match '^\s*(?!#)([^=]+)=(.*)$' } | ForEach-Object {
-    Set-Variable -Name $Matches[1] -Value $Matches[2].Trim()
+  Set-Variable -Name $Matches[1] -Value $Matches[2].Trim()
 }
 
 $USER_ID = $NOVU_TEST_USER_ID
@@ -68,34 +68,29 @@ db.members.updateOne(
   { upsert: true }
 );
 
+// 1. Cleanup extra environments to avoid duplicate key errors on identifier and apiKeys.key
+db.environments.deleteMany({ 
+  name: 'Development', 
+  _id: { `$ne: ObjectId('69a0605ad18b1aabbc412d10') } 
+});
+
+// 2. Update the main Development environment with our local API key and link to user
 db.environments.updateOne(
-  { _parentId: null, _organizationId: ObjectId('$ORG_ID'), name: 'Development' },
-  { `$setOnInsert: {
-      _id: ObjectId('$ENV_DEV_ID'),
-      name: 'Development',
-      identifier: 'development',
+  { name: 'Development' },
+  { `$set: {
       apiKeys: [{
         key: '$API_KEY',
-        hash: '$HASH'
+        hash: '$HASH',
+        _userId: ObjectId('69a0605ad18b1aabbc412d06')
       }],
-      apiRateLimits: {
-        trigger: { burstAllowance: 0, windowDuration: 0, maximumLimit: 0 },
-        configuration: { burstAllowance: 0, windowDuration: 0, maximumLimit: 0 },
-        global: { burstAllowance: 0, windowDuration: 0, maximumLimit: 0 },
-        default: { burstAllowance: 0, windowDuration: 0, maximumLimit: 0 }
-      },
-      echo: { url: '' },
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      __v: 0
+      identifier: 'development'
     }
-  },
-  { upsert: true }
+  }
 );
 "@
 
 Write-Host "Executing MongoDB payload..."
-docker exec -i novu_mongodb mongosh --username root --password secret --authenticationDatabase admin novu-db --quiet --eval $MongoCommand
+docker exec -i novu_mongodb mongosh --username root --password secret --authenticationDatabase admin novu-db --quiet --eval "$MONGO_PAYLOAD"
 
 Write-Host "Novu User Setup Complete!"
 Write-Host "Admin Email: admin@notifier.local"
@@ -106,6 +101,8 @@ Write-Host "Running Novu Sync to deploy local workflows..."
 
 # We use a docker container because Windows machines typically won't have Node installed by default
 # to run `npx novu sync` natively.
-docker run --rm -v "$pwd\novu:/app/novu" -e NOVU_API_KEY="$API_KEY" -w /app node:18-alpine npx -y novu@latest sync --api-url http://host.docker.internal:3000
+# Legacy sync command for Novu v0.x JSON workflows
+# If this fails, you can manually create the workflows in the local dashboard at http://localhost:4000
+docker run --rm -v "$(Get-Location)/novu:/app/novu" -e NOVU_API_KEY="$API_KEY" -w /app node:18-alpine npx -y novu@0.19.0 sync --api-url http://host.docker.internal:3000 || Write-Host "Warning: Novu Sync failed. You may need to manually create workflows in the dashboard."
 
-Write-Host "Local Environment sync completed successfully!"
+Write-Host "Local Environment setup completed successfully!"

@@ -142,6 +142,8 @@ hs_err_pid*
 tmp_sdk/
 bin/
 local.properties
+.env
+**/application-local.yml
 test_bot_output*.txt
 build_output.txt
 test_output.txt

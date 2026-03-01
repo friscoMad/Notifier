@@ -10,8 +10,8 @@ import org.springframework.core.env.Environment
 class SlackBotConfiguration {
     @Bean
     fun loadSlackApp(env: Environment): App {
-        val botToken = env.getProperty("SLACK_BOT_TOKEN") ?: "xoxb-dummy-token"
-        val signingSecret = env.getProperty("SLACK_SIGNING_SECRET") ?: "dummy-secret"
+        val botToken = env.getProperty("slack.bot-token")?.trim() ?: "xoxb-dummy-token"
+        val signingSecret = env.getProperty("slack.signing-secret")?.trim() ?: "dummy-secret"
 
         val appConfig =
             AppConfig

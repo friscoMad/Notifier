@@ -15,17 +15,16 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
+import org.mockito.junit.jupiter.MockitoSettings
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.mockito.quality.Strictness
-import org.mockito.junit.jupiter.MockitoSettings
 
 @ExtendWith(MockitoExtension::class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ModalHandlersTest {
-
     @Mock
     private lateinit var app: App
 
@@ -35,17 +34,16 @@ class ModalHandlersTest {
     @InjectMocks
     private lateinit var handlers: ModalHandlers
 
-
     @Test
     fun `test handleTypeSelection generates dynamic modal with filters`() {
         val actionReq = mock<BlockActionRequest>()
         val actionCtx = mock<ActionContext>()
-        
+
         // Arrange
         val payload = mock<com.slack.api.app_backend.interactive_components.payload.BlockActionPayload>()
         val action = mock<com.slack.api.app_backend.interactive_components.payload.BlockActionPayload.Action>()
         val selectedOption = mock<com.slack.api.app_backend.interactive_components.payload.BlockActionPayload.Action.SelectedOption>()
-        
+
         whenever(action.selectedOption).thenReturn(selectedOption)
         whenever(selectedOption.value).thenReturn("pr_created")
         whenever(payload.actions).thenReturn(listOf(action))
@@ -53,7 +51,7 @@ class ModalHandlersTest {
         whenever(view.id).thenReturn("view_123")
         whenever(view.hash).thenReturn("hash_456")
         whenever(payload.view).thenReturn(view)
-        
+
         whenever(actionReq.payload).thenReturn(payload)
 
         // Mock API returns
@@ -68,7 +66,12 @@ class ModalHandlersTest {
         whenever(actionCtx.ack()).thenReturn(Response.ok())
 
         // Act
-        val method = ModalHandlers::class.java.getDeclaredMethod("handleTypeSelection", BlockActionRequest::class.java, ActionContext::class.java)
+        val method =
+            ModalHandlers::class.java.getDeclaredMethod(
+                "handleTypeSelection",
+                BlockActionRequest::class.java,
+                ActionContext::class.java,
+            )
         method.isAccessible = true
         val response = method.invoke(handlers, actionReq, actionCtx) as Response
 
@@ -77,6 +80,6 @@ class ModalHandlersTest {
         verify(apiClient).getNotificationTypes()
         verify(apiClient).getFiltersForType("pr_created")
         verify(actionCtx).client()
-        // We know the viewsUpdate is called as long as there is no exception. 
+        // We know the viewsUpdate is called as long as there is no exception.
     }
 }

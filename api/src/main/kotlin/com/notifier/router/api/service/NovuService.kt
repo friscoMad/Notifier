@@ -168,7 +168,9 @@ class NovuService(
         }
 
         try {
-            val restTemplate = org.springframework.web.client.RestTemplate()
+            val restTemplate =
+                org.springframework.web.client
+                    .RestTemplate()
             val headers = org.springframework.http.HttpHeaders()
             headers.set("Authorization", "ApiKey $apiKey")
             headers.contentType = org.springframework.http.MediaType.APPLICATION_JSON
@@ -177,22 +179,22 @@ class NovuService(
 
             // 1. Ensure subscriber exists first (upsert)
             val identifyUrl = "$baseUrl/subscribers"
-            val identifyPayload = mapOf(
-                "subscriberId" to subscriberId,
-                "firstName" to "User",
-                "lastName" to subscriberId.take(4)
-            )
+            val identifyPayload =
+                mapOf(
+                    "subscriberId" to subscriberId,
+                    "firstName" to "User",
+                    "lastName" to subscriberId.take(4),
+                )
             restTemplate.exchange(
                 identifyUrl,
                 org.springframework.http.HttpMethod.POST,
                 org.springframework.http.HttpEntity(identifyPayload, headers),
-                String::class.java
+                String::class.java,
             )
 
             // 2. We could update the preferences per channel using Novu's Subscriber Preference API.
             // Note: The template ID/Key is required for the PATCH endpoints in production environments.
             logger.info("Successfully synced subscriber $subscriberId to Novu. Channels: $channels, Config: $channelConfig")
-            
         } catch (e: Exception) {
             logger.error("Failed to sync preferences for $subscriberId", e)
         }

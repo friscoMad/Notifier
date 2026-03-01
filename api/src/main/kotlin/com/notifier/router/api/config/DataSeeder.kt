@@ -1,31 +1,50 @@
 package com.notifier.router.api.config
 
 import com.notifier.router.api.domain.NotificationType
+import com.notifier.router.api.repository.ChannelSubscriptionRepository
+import com.notifier.router.api.repository.FilterDefinitionRepository
 import com.notifier.router.api.repository.NotificationTypeRepository
+import com.notifier.router.api.repository.SubscriptionRepository
+import com.notifier.router.api.repository.UserRepository
 import org.slf4j.LoggerFactory
 import org.springframework.boot.CommandLineRunner
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
+import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 @Component
 @Profile("local")
 class DataSeeder(
     private val notificationTypeRepository: NotificationTypeRepository,
+    private val subscriptionRepository: SubscriptionRepository,
+    private val channelSubscriptionRepository: ChannelSubscriptionRepository,
+    private val userRepository: UserRepository,
+    private val filterDefinitionRepository: FilterDefinitionRepository,
 ) : CommandLineRunner {
     private val logger = LoggerFactory.getLogger(DataSeeder::class.java)
 
+    @Transactional
     override fun run(vararg args: String?) {
-        logger.info("Running DataSeeder for local profile...")
+        logger.info("Resetting and seeding data for local profile...")
 
-        seedTypes
-            .filterNot { notificationTypeRepository.findByTypeKey(it.typeKey) != null }
-            .forEach {
+        try {
+            // Deletion order respects foreign keys
+            subscriptionRepository.deleteAll()
+            channelSubscriptionRepository.deleteAll()
+            filterDefinitionRepository.deleteAll()
+            userRepository.deleteAll()
+            notificationTypeRepository.deleteAll()
+
+            seedTypes.forEach {
                 notificationTypeRepository.save(it)
                 logger.info("Seeded Notification Type: ${it.typeKey}")
             }
 
-        logger.info("DataSeeder completed.")
+            logger.info("DataSeeder completed successfully.")
+        } catch (e: Exception) {
+            logger.error("Error during DataSeeding: ${e.message}", e)
+        }
     }
 
     companion object {

@@ -7,6 +7,7 @@ This guide walks you through setting up the local Notification Router system fro
 - Java 21 (Pre-configured in system environment)
 - GitHub CLI (Pre-configured in system environment)
 - Node/npm (Optional—our setup scripts use a docker container if Node isn't present)
+- **Slack Workspace**: For testing, we recommend the [Slack Developer Program](https://api.slack.com/developer-program) which provides a free Enterprise Grid sandbox. Alternatively, a standard [Slack Free Plan](https://slack.com/get-started) workspace works for basic bot testing.
 
 ## 1. Start the Containers
 Navigate to the root directory and start the core infrastructure:
@@ -56,12 +57,36 @@ Run the core router application with Gradle:
 ./gradlew :api:bootRun
 ```
 
-Or on Windows:
+OR on Windows:
 ```powershell
 .\gradlew.bat :api:bootRun --no-daemon
 ```
 
-## 5. Send a Test Payload
+## 5. Slack Bot Local Development (Socket Mode)
+
+To speed up local development and avoid needing a public URL (like ngrok), you can use Slack **Socket Mode**.
+
+1. **Enable Socket Mode** in your [Slack App Settings](https://api.slack.com/apps):
+   - Go to **Settings > Basic Information > App-Level Tokens**.
+   - Create a token with `connections:write` scope (usually named `xapp-...`).
+   - Go to **Settings > Socket Mode** and enable it.
+   - Go to **Features > Event Subscriptions** and ensure events are enabled (Socket Mode handles them automatically).
+
+2. **Configure your environment**:
+   Add these to your `.env` file or export them:
+   ```env
+   SLACK_SOCKET_MODE_ENABLED=true
+   SLACK_APP_TOKEN=xapp-your-app-token
+   SLACK_BOT_TOKEN=xoxb-your-bot-token
+   ```
+
+3. **Run the Bot**:
+   ```bash
+   ./gradlew :bot:bootRun
+   ```
+   The bot will connect via WebSockets and start responding to commands and events immediately.
+
+## 6. Send a Test Payload
 You can trigger a test message through the Webhook controller. Assuming the app runs on `8080`:
 
 ```powershell

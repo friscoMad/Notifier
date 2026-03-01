@@ -8,3 +8,9 @@ logging:
 router:
   api:
     url: http://localhost:8080/api/v1
+
+slack:
+  socket-mode-enabled: ${SLACK_SOCKET_MODE_ENABLED:false}
+  bot-token: ${SLACK_BOT_TOKEN:xoxb-dummy-token}
+  app-token: ${SLACK_APP_TOKEN:xapp-dummy-token}
+  signing-secret: ${SLACK_SIGNING_SECRET:dummy-secret}

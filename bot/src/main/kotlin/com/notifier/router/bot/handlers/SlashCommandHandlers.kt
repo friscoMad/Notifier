@@ -5,24 +5,16 @@ import com.slack.api.bolt.App
 import com.slack.api.bolt.context.builtin.SlashCommandContext
 import com.slack.api.bolt.request.builtin.SlashCommandRequest
 import com.slack.api.bolt.response.Response
-import com.slack.api.model.block.Blocks.asBlocks
-import com.slack.api.model.block.Blocks.input
-import com.slack.api.model.block.Blocks.section
-import com.slack.api.model.block.composition.BlockCompositions.dispatchActionConfig
-import com.slack.api.model.block.composition.BlockCompositions.plainText
-import com.slack.api.model.block.element.BlockElements.staticSelect
+import com.slack.api.methods.request.views.ViewsOpenRequest
 import com.slack.api.model.view.Views.view
-import com.slack.api.model.view.Views.viewClose
-import com.slack.api.model.view.Views.viewSubmit
-import com.slack.api.model.view.Views.viewTitle
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 @Component
 class SlashCommandHandlers(
-    private val app: App,
-    private val apiClient: RouterApiClient,
+        private val app: App,
+        private val apiClient: RouterApiClient,
 ) {
     private val logger = LoggerFactory.getLogger(SlashCommandHandlers::class.java)
 
@@ -34,8 +26,8 @@ class SlashCommandHandlers(
     }
 
     private fun handleCommand(
-        req: SlashCommandRequest,
-        ctx: SlashCommandContext,
+            req: SlashCommandRequest,
+            ctx: SlashCommandContext,
     ): Response {
         val text = req.payload.text?.trim() ?: ""
         logger.info("Received /notifyme command with args: $text")
@@ -46,7 +38,7 @@ class SlashCommandHandlers(
 
         if (text.equals("help", ignoreCase = true)) {
             val helpText =
-                """
+                    """
                 *Notification Router Bot*
                 Usage:
                 `/notifyme` - Open interactive subscription modal
@@ -71,16 +63,24 @@ class SlashCommandHandlers(
     }
 
     private fun handleOpenModal(
-        req: SlashCommandRequest,
-        ctx: SlashCommandContext,
+            req: SlashCommandRequest,
+            ctx: SlashCommandContext,
     ): Response {
         val triggerId = req.payload.triggerId
         val types = apiClient.getNotificationTypes()
 
-        val modalView = com.notifier.router.bot.view.ModalViewBuilder.buildInitialTypeSelectionModal(types)
+        val modalView =
+                com.notifier.router.bot.view.ModalViewBuilder.buildInitialTypeSelectionModal(types)
 
-        val response = ctx.client().viewsOpen { r -> r.triggerId(triggerId).view(modalView) }
-        
+        val response =
+                ctx.client()
+                        .viewsOpen(
+                                ViewsOpenRequest.builder()
+                                        .triggerId(triggerId)
+                                        .view(modalView)
+                                        .build()
+                        )
+
         if (!response.isOk) {
             logger.error("Failed to open modal: ${response.error}")
             return ctx.ack("Could not open configuration modal. Please try again.")
@@ -90,8 +90,8 @@ class SlashCommandHandlers(
     }
 
     private fun handleListCommand(
-        req: SlashCommandRequest,
-        ctx: SlashCommandContext,
+            req: SlashCommandRequest,
+            ctx: SlashCommandContext,
     ): Response {
         val slackId = req.payload.userId
         val subs = apiClient.getSubscriptionsForUser(slackId)
@@ -110,13 +110,13 @@ class SlashCommandHandlers(
     }
 
     private fun handleSubscribeCommand(
-        args: List<String>,
-        req: SlashCommandRequest,
-        ctx: SlashCommandContext,
+            args: List<String>,
+            req: SlashCommandRequest,
+            ctx: SlashCommandContext,
     ): Response {
         if (args.isEmpty()) {
             return ctx.ack(
-                "Please specify a notification type. E.g., `/notifyme subscribe pr_created`",
+                    "Please specify a notification type. E.g., `/notifyme subscribe pr_created`",
             )
         }
 
@@ -126,7 +126,7 @@ class SlashCommandHandlers(
 
         if (match == null) {
             return ctx.ack(
-                "Invalid notification type: `$typeKey`. Available types are: ${availableTypes.map { it["typeKey"] }.joinToString()}",
+                    "Invalid notification type: `$typeKey`. Available types are: ${availableTypes.map { it["typeKey"] }.joinToString()}",
             )
         }
 
@@ -144,24 +144,24 @@ class SlashCommandHandlers(
         }
 
         val payload =
-            mapOf(
-                "userId" to
-                    req.payload
-                        .userId, // We pass slackId directly. In a real system the
-                // API resolves matching UUIDs or creates the user
-                // lazily.
-                "slackId" to req.payload.userId,
-                "slackTeamId" to req.payload.teamId,
-                "notificationTypeId" to typeId,
-                "channels" to listOf("slack_dm"),
-                "filters" to filters,
-            )
+                mapOf(
+                        "userId" to
+                                req.payload
+                                        .userId, // We pass slackId directly. In a real system the
+                        // API resolves matching UUIDs or creates the user
+                        // lazily.
+                        "slackId" to req.payload.userId,
+                        "slackTeamId" to req.payload.teamId,
+                        "notificationTypeId" to typeId,
+                        "channels" to listOf("slack_dm"),
+                        "filters" to filters,
+                )
 
         val response = apiClient.subscribe(payload)
         return if (response != null) {
             ctx.ack(
-                "Successfully subscribed to `$typeKey`" +
-                    (if (filters.isNotEmpty()) " with filters." else ""),
+                    "Successfully subscribed to `$typeKey`" +
+                            (if (filters.isNotEmpty()) " with filters." else ""),
             )
         } else {
             ctx.ack("Failed to subscribe to `$typeKey`. Please try again later.")
@@ -169,9 +169,9 @@ class SlashCommandHandlers(
     }
 
     private fun handleUnsubscribeCommand(
-        args: List<String>,
-        req: SlashCommandRequest,
-        ctx: SlashCommandContext,
+            args: List<String>,
+            req: SlashCommandRequest,
+            ctx: SlashCommandContext,
     ): Response {
         // Unsubscribe logic goes here...
         // For simplicity we will mock it

@@ -38,7 +38,7 @@ class SlashCommandHandlersTest {
 
     @Mock
     private lateinit var payload:
-            com.slack.api.app_backend.slash_commands.payload.SlashCommandPayload
+        com.slack.api.app_backend.slash_commands.payload.SlashCommandPayload
 
     @BeforeEach
     fun setup() {
@@ -59,21 +59,24 @@ class SlashCommandHandlersTest {
 
         val viewsOpenResponse = ViewsOpenResponse().apply { isOk = true }
         org.mockito
-                .kotlin
-                .doReturn(viewsOpenResponse)
-                .whenever(methodsClient)
-                .viewsOpen(any<ViewsOpenRequest>())
-        org.mockito.kotlin.doReturn(Response.ok()).whenever(ctx).ack()
+            .kotlin
+            .doReturn(viewsOpenResponse)
+            .whenever(methodsClient)
+            .viewsOpen(any<ViewsOpenRequest>())
+        org.mockito.kotlin
+            .doReturn(Response.ok())
+            .whenever(ctx)
+            .ack()
 
         // Act
         // Reflection is needed here to invoke the private handleCommand method since Bolt lambda
         // registration happens at startup.
         val method =
-                SlashCommandHandlers::class.java.getDeclaredMethod(
-                        "handleCommand",
-                        SlashCommandRequest::class.java,
-                        SlashCommandContext::class.java,
-                )
+            SlashCommandHandlers::class.java.getDeclaredMethod(
+                "handleCommand",
+                SlashCommandRequest::class.java,
+                SlashCommandContext::class.java,
+            )
         method.isAccessible = true
         val response = method.invoke(handlers, req, ctx) as Response
 
@@ -92,17 +95,17 @@ class SlashCommandHandlersTest {
 
         // Act
         val method =
-                SlashCommandHandlers::class.java.getDeclaredMethod(
-                        "handleCommand",
-                        SlashCommandRequest::class.java,
-                        SlashCommandContext::class.java,
-                )
+            SlashCommandHandlers::class.java.getDeclaredMethod(
+                "handleCommand",
+                SlashCommandRequest::class.java,
+                SlashCommandContext::class.java,
+            )
         method.isAccessible = true
         val response = method.invoke(handlers, req, ctx) as Response
 
         // Assert
         assertEquals(200, response.statusCode)
         verify(ctx)
-                .ack(org.mockito.kotlin.check<String> { assertTrue(it.contains("/notifyme help")) })
+            .ack(org.mockito.kotlin.check<String> { assertTrue(it.contains("/notifyme help")) })
     }
 }

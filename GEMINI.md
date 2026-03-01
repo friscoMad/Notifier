@@ -112,6 +112,8 @@ This project provides a unified notification router that allows developers to re
    - Check formatting: `./gradlew ktlintCheck`
    - Auto-format code: `./gradlew ktlintFormat`
    - Always run `./gradlew ktlintFormat` after writing or modifying Kotlin files so the IDE state is clean.
+   - **No Wildcard Imports**: Never use wildcard imports (e.g., `import jakarta.persistence.*`). Always use explicit imports to comply with linting rules. 
+   - **Verification Requirement**: Always run `./gradlew ktlintCheck` (and ensure it passes) before considering any coding task or refactoring finished.
 6. **Git on Windows:**
    - Git commit hangs due to GPG signing. Always use `cmd /c` with `-c commit.gpgSign=false`: `cmd /c "git add . && git -c commit.gpgSign=false commit -m ""message"""`
    - Never chain `git add` and `git commit` in PowerShell directly — it may hang.

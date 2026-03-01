@@ -15,16 +15,15 @@ class RouterApiClient(
     @Value("\${router.api.url:http://localhost:8080/api/v1}") private val apiUrl: String,
 ) {
     private val restTemplate = RestTemplate()
-    private val objectMapper = jacksonObjectMapper()
 
-    fun getNotificationTypes(): List<Map<String, Any>> {
+    fun getNotificationTypes(): List<Map<String, String>> {
         val url = "$apiUrl/notification-types"
         val response =
             restTemplate.exchange(
                 url,
                 HttpMethod.GET,
                 null,
-                object : ParameterizedTypeReference<List<Map<String, Any>>>() {},
+                object : ParameterizedTypeReference<List<Map<String, String>>>() {},
             )
         return response.body ?: emptyList()
     }

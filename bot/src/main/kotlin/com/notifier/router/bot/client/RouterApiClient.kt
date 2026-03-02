@@ -51,7 +51,7 @@ class RouterApiClient(
     }
 
     fun getSubscriptionsForUser(slackId: String): List<SubscriptionDto> {
-        val url = "$apiUrl/users/$slackId/subscriptions"
+        val url = "$apiUrl/subscriptions/users/$slackId"
         return try {
             val response =
                 restTemplate.exchange(

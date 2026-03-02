@@ -11,6 +11,7 @@ import com.slack.api.bolt.request.builtin.BlockActionRequest
 import com.slack.api.bolt.request.builtin.ViewSubmissionRequest
 import com.slack.api.bolt.response.Response
 import com.slack.api.methods.request.views.ViewsUpdateRequest
+import com.slack.api.model.kotlin_extension.block.withBlocks
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -149,7 +150,33 @@ class ModalHandlers(
 
         val response = apiClient.subscribe(subscriptionDto)
         return if (response != null) {
-            ctx.ack() // Close modal silently indicating success
+            val typeName = availableTypes.find { it.key == typeKey }?.name ?: typeKey
+            val filterSummary =
+                if (extractedFilters.isNotEmpty()) {
+                    "\nFilters:\n" +
+                        extractedFilters.joinToString("\n") {
+                            "• ${it.field} ${it.operator} ${it.value}"
+                        }
+                } else {
+                    ""
+                }
+
+            val confirmationMessage =
+                """
+                *Subscription Created!* ✅
+                You are now subscribed to: `$typeName`
+                Channels: ${selectedChannels.joinToString { "`$it`" }}
+                Digest: `$digestValue`$filterSummary
+                """.trimIndent()
+
+            ctx.client().chatPostMessage { r ->
+                r
+                    .channel(slackId)
+                    .text("Successfully subscribed to $typeName")
+                    .blocks(withBlocks { section { markdownText(confirmationMessage) } })
+            }
+
+            ctx.ack() // Close modal
         } else {
             ctx.ackWithErrors(
                 mapOf("channels_block" to "Failed to save subscription in the Router API."),

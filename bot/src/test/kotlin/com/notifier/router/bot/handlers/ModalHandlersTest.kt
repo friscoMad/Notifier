@@ -1,11 +1,16 @@
 package com.notifier.router.bot.handlers
 
 import com.notifier.router.bot.client.RouterApiClient
+import com.notifier.router.common.dto.NotificationTypeDto
+import com.slack.api.app_backend.interactive_components.payload.BlockActionPayload
+import com.slack.api.app_backend.interactive_components.payload.BlockActionPayload.Action
+import com.slack.api.app_backend.interactive_components.payload.BlockActionPayload.Action.SelectedOption
 import com.slack.api.bolt.App
 import com.slack.api.bolt.context.builtin.ActionContext
 import com.slack.api.bolt.request.builtin.BlockActionRequest
 import com.slack.api.bolt.response.Response
 import com.slack.api.methods.MethodsClient
+import com.slack.api.model.view.View
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -36,14 +41,14 @@ class ModalHandlersTest {
         val actionCtx = mock<ActionContext>()
 
         // Arrange
-        val payload = mock<com.slack.api.app_backend.interactive_components.payload.BlockActionPayload>()
-        val action = mock<com.slack.api.app_backend.interactive_components.payload.BlockActionPayload.Action>()
-        val selectedOption = mock<com.slack.api.app_backend.interactive_components.payload.BlockActionPayload.Action.SelectedOption>()
+        val payload = mock<BlockActionPayload>()
+        val action = mock<Action>()
+        val selectedOption = mock<SelectedOption>()
 
         whenever(action.selectedOption).thenReturn(selectedOption)
         whenever(selectedOption.value).thenReturn("pr_created")
         whenever(payload.actions).thenReturn(listOf(action))
-        val view = mock<com.slack.api.model.view.View>()
+        val view = mock<View>()
         whenever(view.id).thenReturn("view_123")
         whenever(view.hash).thenReturn("hash_456")
         whenever(payload.view).thenReturn(view)
@@ -51,10 +56,8 @@ class ModalHandlersTest {
         whenever(actionReq.payload).thenReturn(payload)
 
         // Mock API returns
-        val mockTypes = listOf(mapOf("name" to "PR Created", "typeKey" to "pr_created"))
-        val mockFilters = listOf(mapOf("field" to "repo", "type" to "string"))
+        val mockTypes = listOf(NotificationTypeDto(name = "PR Created", key = "pr_created"))
         whenever(apiClient.getNotificationTypes()).thenReturn(mockTypes)
-        whenever(apiClient.getFiltersForType("pr_created")).thenReturn(mockFilters)
 
         // Mock Slack Methods
         val methodsClient = mock<MethodsClient>()

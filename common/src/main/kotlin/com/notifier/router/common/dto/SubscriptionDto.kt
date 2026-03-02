@@ -1,6 +1,6 @@
-package com.notifier.router.api.dto
+package com.notifier.router.common.dto
 
-import com.notifier.router.api.domain.Filter
+import com.notifier.router.common.domain.Filter
 import jakarta.validation.constraints.NotBlank
 
 data class SubscriptionDto(

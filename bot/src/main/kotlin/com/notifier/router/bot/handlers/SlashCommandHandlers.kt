@@ -1,12 +1,13 @@
 package com.notifier.router.bot.handlers
 
 import com.notifier.router.bot.client.RouterApiClient
+import com.notifier.router.common.domain.Filter
+import com.notifier.router.common.dto.SubscriptionDto
 import com.slack.api.bolt.App
 import com.slack.api.bolt.context.builtin.SlashCommandContext
 import com.slack.api.bolt.request.builtin.SlashCommandRequest
 import com.slack.api.bolt.response.Response
 import com.slack.api.methods.request.views.ViewsOpenRequest
-import com.slack.api.model.view.Views.view
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -105,8 +106,8 @@ class SlashCommandHandlers(
 
         val sb = StringBuilder("*Your Subscriptions:*\n")
         subs.forEach { sub ->
-            val type = sub["notificationTypeId"] as? String ?: "Unknown"
-            val numFilters = (sub["filters"] as? List<*>)?.size ?: 0
+            val type = sub.notificationTypeId
+            val numFilters = sub.filters.size
             sb.append("• Type: $type | Filters: $numFilters active rules\n")
         }
         return ctx.ack(sb.toString())
@@ -125,42 +126,35 @@ class SlashCommandHandlers(
 
         val typeKey = args[0]
         val availableTypes = apiClient.getNotificationTypes()
-        val match = availableTypes.find { (it["typeKey"] as? String) == typeKey }
+        val match = availableTypes.find { it.key == typeKey }
 
         if (match == null) {
-            return ctx.ack(
-                "Invalid notification type: `$typeKey`. Available types are: ${availableTypes.map { it["typeKey"] }.joinToString()}",
-            )
+            val typeKeys = availableTypes.joinToString { it.key }
+            return ctx.ack("Invalid notification type: `$typeKey`. Available types are: $typeKeys")
         }
 
-        val typeId = match["id"] as String
-        val filters = mutableListOf<Map<String, Any>>()
+        val typeId = match.id!!
+        val filters = mutableListOf<Filter>()
 
         // Parse filter arguments (e.g., repo=api)
         if (args.size > 1) {
             for (i in 1 until args.size) {
                 val pair = args[i].split("=", limit = 2)
                 if (pair.size == 2) {
-                    filters.add(mapOf("field" to pair[0], "operator" to "EQ", "value" to pair[1]))
+                    filters.add(Filter(pair[0], "EQ", pair[1]))
                 }
             }
         }
 
-        val payload =
-            mapOf(
-                "userId" to
-                    req.payload
-                        .userId, // We pass slackId directly. In a real system the
-                // API resolves matching UUIDs or creates the user
-                // lazily.
-                "slackId" to req.payload.userId,
-                "slackTeamId" to req.payload.teamId,
-                "notificationTypeId" to typeId,
-                "channels" to listOf("slack_dm"),
-                "filters" to filters,
+        val subscriptionDto =
+            SubscriptionDto(
+                userId = req.payload.userId,
+                notificationTypeId = typeId,
+                channels = listOf("slack_dm"),
+                filters = filters,
             )
 
-        val response = apiClient.subscribe(payload)
+        val response = apiClient.subscribe(subscriptionDto)
         return if (response != null) {
             ctx.ack(
                 "Successfully subscribed to `$typeKey`" +

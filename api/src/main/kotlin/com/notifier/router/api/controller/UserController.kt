@@ -1,7 +1,7 @@
 package com.notifier.router.api.controller
 
-import com.notifier.router.api.dto.UserDto
 import com.notifier.router.api.service.UserService
+import com.notifier.router.common.dto.UserDto
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable

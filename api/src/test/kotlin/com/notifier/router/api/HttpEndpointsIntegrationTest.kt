@@ -1,16 +1,16 @@
 package com.notifier.router.api
 
-import com.notifier.router.api.domain.Filter
 import com.notifier.router.api.domain.NotificationType
-import com.notifier.router.api.dto.ChannelSubscriptionDto
-import com.notifier.router.api.dto.EventDto
-import com.notifier.router.api.dto.SubscriptionDto
-import com.notifier.router.api.dto.UserDto
 import com.notifier.router.api.repository.ChannelSubscriptionRepository
 import com.notifier.router.api.repository.NotificationTypeRepository
 import com.notifier.router.api.repository.SubscriptionRepository
 import com.notifier.router.api.repository.UserRepository
 import com.notifier.router.api.service.NovuService
+import com.notifier.router.common.domain.Filter
+import com.notifier.router.common.dto.ChannelSubscriptionDto
+import com.notifier.router.common.dto.EventDto
+import com.notifier.router.common.dto.SubscriptionDto
+import com.notifier.router.common.dto.UserDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -224,7 +224,8 @@ class HttpEndpointsIntegrationTest : BaseIntegrationTest() {
                     .body(
                         SubscriptionDto(
                             userId = userId,
-                            notificationTypeId = seededTypeId.toString(),
+                            notificationTypeId =
+                                seededTypeId.toString(),
                             channels = listOf("slack_dm"),
                         ),
                     ).exchange()
@@ -251,7 +252,8 @@ class HttpEndpointsIntegrationTest : BaseIntegrationTest() {
                     .body(
                         SubscriptionDto(
                             userId = userId,
-                            notificationTypeId = seededTypeId.toString(),
+                            notificationTypeId =
+                                seededTypeId.toString(),
                             channels = listOf("slack_dm"),
                         ),
                     ).exchange()
@@ -381,7 +383,8 @@ class HttpEndpointsIntegrationTest : BaseIntegrationTest() {
                         ChannelSubscriptionDto(
                             slackChannelId = "C_DEL",
                             slackChannelName = "#del-channel",
-                            notificationTypeId = seededTypeId.toString(),
+                            notificationTypeId =
+                                seededTypeId.toString(),
                         ),
                     ).exchange()
                     .expectStatus()

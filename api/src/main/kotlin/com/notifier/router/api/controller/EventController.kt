@@ -1,8 +1,8 @@
 package com.notifier.router.api.controller
 
 import com.notifier.router.api.domain.GenericEvent
-import com.notifier.router.api.dto.EventDto
 import com.notifier.router.api.service.EventService
+import com.notifier.router.common.dto.EventDto
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody

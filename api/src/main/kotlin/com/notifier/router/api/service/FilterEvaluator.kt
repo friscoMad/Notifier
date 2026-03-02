@@ -1,7 +1,7 @@
 package com.notifier.router.api.service
 
-import com.notifier.router.api.domain.Filter
 import com.notifier.router.api.domain.NotificationEvent
+import com.notifier.router.common.domain.Filter
 import org.springframework.stereotype.Service
 
 @Service
@@ -20,18 +20,15 @@ class FilterEvaluator {
             "EQ" -> {
                 eventValue == filter.value
             }
-
             "IN" -> {
                 (filter.value as? List<*>)?.contains(eventValue) == true
             }
-
             "CONTAINS" -> {
                 (eventValue as? String)?.contains(
                     filter.value as? String ?: "",
                     ignoreCase = true,
                 ) == true
             }
-
             else -> {
                 false
             }

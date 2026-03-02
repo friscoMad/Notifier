@@ -10,6 +10,7 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":common"))
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.data.jpa)
     implementation(libs.spring.boot.starter.validation)
@@ -21,6 +22,7 @@ dependencies {
     // PostgreSQL
     runtimeOnly(libs.postgresql)
     runtimeOnly(libs.flyway.postgresql)
+    runtimeOnly(libs.jackson2.module.kotlin)
 
     // Novu SDK
     implementation(libs.novu.java)

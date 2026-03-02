@@ -1,4 +1,4 @@
-package com.notifier.router.api.domain
+package com.notifier.router.common.domain
 
 import java.io.Serializable
 

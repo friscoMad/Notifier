@@ -1,13 +1,13 @@
 package com.notifier.router.api.service
 
 import com.notifier.router.api.BaseIntegrationTest
-import com.notifier.router.api.domain.Filter
 import com.notifier.router.api.domain.NotificationType
 import com.notifier.router.api.domain.Subscription
 import com.notifier.router.api.domain.User
 import com.notifier.router.api.repository.NotificationTypeRepository
 import com.notifier.router.api.repository.SubscriptionRepository
 import com.notifier.router.api.repository.UserRepository
+import com.notifier.router.common.domain.Filter
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach

@@ -1,8 +1,8 @@
 package com.notifier.router.api.controller
 
-import com.notifier.router.api.dto.FilterDefinitionDto
-import com.notifier.router.api.dto.NotificationTypeDto
 import com.notifier.router.api.service.NotificationTypeService
+import com.notifier.router.common.dto.FilterDefinitionDto
+import com.notifier.router.common.dto.NotificationTypeDto
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
@@ -23,20 +23,19 @@ class NotificationTypeControllerTest {
         val expectedDto =
             NotificationTypeDto(
                 id = "${java.util.UUID.randomUUID()}",
-                typeKey = "pr_created",
+                key = "pr_created",
                 name = "Pull Request Created",
                 description = "A pull request was created",
             )
 
-        whenever(notificationTypeService.getAllNotificationTypes())
-            .thenReturn(listOf(expectedDto))
+        whenever(notificationTypeService.getAllNotificationTypes()).thenReturn(listOf(expectedDto))
 
         val result = notificationTypeController.getAllNotificationTypes()
 
         assert(result.statusCode == HttpStatus.OK)
         assert(result.body != null)
         assert(result.body!!.size == 1)
-        assert(result.body!!.first().typeKey == "pr_created")
+        assert(result.body!!.first().key == "pr_created")
     }
 
     @Test
@@ -51,8 +50,7 @@ class NotificationTypeControllerTest {
                 operators = listOf("EQ", "IN"),
             )
 
-        whenever(notificationTypeService.getFiltersForType(any()))
-            .thenReturn(listOf(expectedDto))
+        whenever(notificationTypeService.getFiltersForType(any())).thenReturn(listOf(expectedDto))
 
         val result = notificationTypeController.getFiltersForType(typeKey)
 
@@ -66,8 +64,7 @@ class NotificationTypeControllerTest {
     fun `test getFiltersForType returns empty list when type not found`() {
         val typeKey = "unknown_type"
 
-        whenever(notificationTypeService.getFiltersForType(any()))
-            .thenReturn(emptyList())
+        whenever(notificationTypeService.getFiltersForType(any())).thenReturn(emptyList())
 
         val result = notificationTypeController.getFiltersForType(typeKey)
 

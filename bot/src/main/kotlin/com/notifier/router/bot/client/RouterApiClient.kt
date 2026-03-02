@@ -1,5 +1,8 @@
 package com.notifier.router.bot.client
 
+import com.notifier.router.common.dto.FilterDefinitionDto
+import com.notifier.router.common.dto.NotificationTypeDto
+import com.notifier.router.common.dto.SubscriptionDto
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpEntity
@@ -15,23 +18,23 @@ class RouterApiClient(
 ) {
     private val restTemplate = RestTemplate()
 
-    fun getNotificationTypes(): List<Map<String, String>> {
+    fun getNotificationTypes(): List<NotificationTypeDto> {
         val url = "$apiUrl/notification-types"
         val response =
             restTemplate.exchange(
                 url,
                 HttpMethod.GET,
                 null,
-                object : ParameterizedTypeReference<List<Map<String, String>>>() {},
+                object : ParameterizedTypeReference<List<NotificationTypeDto>>() {},
             )
         return response.body ?: emptyList()
     }
 
-    fun subscribe(payload: Map<String, Any>): Map<String, Any>? {
+    fun subscribe(dto: SubscriptionDto): SubscriptionDto? {
         val url = "$apiUrl/subscriptions"
         val headers = HttpHeaders()
         headers.contentType = MediaType.APPLICATION_JSON
-        val entity = HttpEntity(payload, headers)
+        val entity = HttpEntity(dto, headers)
 
         return try {
             val response =
@@ -39,7 +42,7 @@ class RouterApiClient(
                     url,
                     HttpMethod.POST,
                     entity,
-                    object : ParameterizedTypeReference<Map<String, Any>>() {},
+                    object : ParameterizedTypeReference<SubscriptionDto>() {},
                 )
             response.body
         } catch (e: Exception) {
@@ -47,7 +50,7 @@ class RouterApiClient(
         }
     }
 
-    fun getSubscriptionsForUser(slackId: String): List<Map<String, Any>> {
+    fun getSubscriptionsForUser(slackId: String): List<SubscriptionDto> {
         val url = "$apiUrl/users/$slackId/subscriptions"
         return try {
             val response =
@@ -55,7 +58,7 @@ class RouterApiClient(
                     url,
                     HttpMethod.GET,
                     null,
-                    object : ParameterizedTypeReference<List<Map<String, Any>>>() {},
+                    object : ParameterizedTypeReference<List<SubscriptionDto>>() {},
                 )
             response.body ?: emptyList()
         } catch (e: Exception) {
@@ -73,7 +76,7 @@ class RouterApiClient(
         }
     }
 
-    fun getFiltersForType(typeKey: String): List<Map<String, Any>> {
+    fun getFiltersForType(typeKey: String): List<FilterDefinitionDto> {
         val url = "$apiUrl/notification-types/$typeKey/filters"
         return try {
             val response =
@@ -81,7 +84,7 @@ class RouterApiClient(
                     url,
                     HttpMethod.GET,
                     null,
-                    object : ParameterizedTypeReference<List<Map<String, Any>>>() {},
+                    object : ParameterizedTypeReference<List<FilterDefinitionDto>>() {},
                 )
             response.body ?: emptyList()
         } catch (e: Exception) {

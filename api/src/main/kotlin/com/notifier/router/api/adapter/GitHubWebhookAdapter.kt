@@ -1,6 +1,5 @@
 package com.notifier.router.api.adapter
 
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.notifier.router.api.domain.GenericEvent
 import com.notifier.router.api.domain.NotificationEvent
 import com.notifier.router.api.domain.PrCheckCompletedEvent
@@ -9,6 +8,7 @@ import com.notifier.router.api.domain.PrClosedEvent
 import com.notifier.router.api.domain.PrCreatedEvent
 import com.notifier.router.api.domain.PrReviewRequestedEvent
 import com.notifier.router.api.domain.PrUpdatedEvent
+import tools.jackson.module.kotlin.readValue
 
 object GitHubWebhookAdapter {
     fun parse(payload: String): NotificationEvent {

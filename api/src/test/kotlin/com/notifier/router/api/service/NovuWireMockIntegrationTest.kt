@@ -10,13 +10,13 @@ import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import com.notifier.router.api.BaseIntegrationTest
-import com.notifier.router.api.domain.Filter
 import com.notifier.router.api.domain.NotificationType
 import com.notifier.router.api.domain.Subscription
 import com.notifier.router.api.domain.User
 import com.notifier.router.api.repository.NotificationTypeRepository
 import com.notifier.router.api.repository.SubscriptionRepository
 import com.notifier.router.api.repository.UserRepository
+import com.notifier.router.common.domain.Filter
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach

@@ -1,7 +1,7 @@
 package com.notifier.router.api.controller
 
-import com.notifier.router.api.dto.ChannelSubscriptionDto
 import com.notifier.router.api.service.ChannelSubscriptionService
+import com.notifier.router.common.dto.ChannelSubscriptionDto
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
@@ -15,8 +15,7 @@ import org.springframework.http.HttpStatus
 class ChannelSubscriptionControllerTest {
     @Mock private lateinit var channelSubscriptionService: ChannelSubscriptionService
 
-    @InjectMocks
-    private lateinit var channelSubscriptionController: ChannelSubscriptionController
+    @InjectMocks private lateinit var channelSubscriptionController: ChannelSubscriptionController
 
     @Test
     fun `test createChannelSubscription returns created subscription`() {

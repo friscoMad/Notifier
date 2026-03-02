@@ -1,5 +1,6 @@
 package com.notifier.router.api.domain
 
+import com.notifier.router.common.domain.Filter
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EntityListeners

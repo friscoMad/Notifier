@@ -1,8 +1,8 @@
 package com.notifier.router.api.service
 
 import com.notifier.router.api.domain.ChannelSubscription
-import com.notifier.router.api.dto.ChannelSubscriptionDto
 import com.notifier.router.api.repository.ChannelSubscriptionRepository
+import com.notifier.router.common.dto.ChannelSubscriptionDto
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID

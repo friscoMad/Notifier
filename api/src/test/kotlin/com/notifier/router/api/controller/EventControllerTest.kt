@@ -1,9 +1,9 @@
 package com.notifier.router.api.controller
 
-import com.notifier.router.api.dto.EventDto
 import com.notifier.router.api.service.EventService
 import com.notifier.router.api.service.FilterEvaluator
 import com.notifier.router.api.service.SubscriptionService
+import com.notifier.router.common.dto.EventDto
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith

@@ -1,6 +1,7 @@
 package com.notifier.router.bot.handlers
 
 import com.notifier.router.bot.client.RouterApiClient
+import com.notifier.router.common.dto.NotificationTypeDto
 import com.slack.api.bolt.App
 import com.slack.api.bolt.context.builtin.SlashCommandContext
 import com.slack.api.bolt.request.builtin.SlashCommandRequest
@@ -26,15 +27,20 @@ import org.mockito.quality.Strictness
 @ExtendWith(MockitoExtension::class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class SlashCommandHandlersTest {
-    @Mock private lateinit var app: App
+    @Mock
+    private lateinit var app: App
 
-    @Mock private lateinit var apiClient: RouterApiClient
+    @Mock
+    private lateinit var apiClient: RouterApiClient
 
-    @InjectMocks private lateinit var handlers: SlashCommandHandlers
+    @InjectMocks
+    private lateinit var handlers: SlashCommandHandlers
 
-    @Mock private lateinit var req: SlashCommandRequest
+    @Mock
+    private lateinit var req: SlashCommandRequest
 
-    @Mock private lateinit var ctx: SlashCommandContext
+    @Mock
+    private lateinit var ctx: SlashCommandContext
 
     @Mock
     private lateinit var payload:
@@ -51,7 +57,7 @@ class SlashCommandHandlersTest {
         whenever(payload.text).thenReturn("")
         whenever(payload.triggerId).thenReturn("trigger_123")
 
-        val mockTypes = listOf(mapOf("name" to "PR Created", "typeKey" to "pr_created"))
+        val mockTypes = listOf(NotificationTypeDto(name = "PR Created", key = "pr_created"))
         whenever(apiClient.getNotificationTypes()).thenReturn(mockTypes)
 
         val methodsClient = mock<MethodsClient>()
@@ -83,7 +89,7 @@ class SlashCommandHandlersTest {
         // Assert
         assertEquals(200, response.statusCode)
         verify(apiClient).getNotificationTypes()
-        verify(methodsClient).viewsOpen(any<com.slack.api.methods.request.views.ViewsOpenRequest>())
+        verify(methodsClient).viewsOpen(any<ViewsOpenRequest>())
         verify(ctx).ack()
     }
 

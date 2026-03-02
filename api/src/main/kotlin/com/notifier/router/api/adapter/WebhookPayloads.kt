@@ -1,12 +1,13 @@
 package com.notifier.router.api.adapter
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.databind.PropertyNamingStrategies
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import tools.jackson.databind.PropertyNamingStrategies
+import tools.jackson.databind.json.JsonMapper
+import tools.jackson.module.kotlin.jacksonMapperBuilder
 
 /** Shared ObjectMapper configured for snake_case JSON payloads. */
-val webhookMapper =
-    jacksonObjectMapper().apply { propertyNamingStrategy = PropertyNamingStrategies.SNAKE_CASE }
+val webhookMapper: JsonMapper =
+    jacksonMapperBuilder().propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE).build()
 
 /** Shared data classes for common webhook payload structures. */
 @JsonIgnoreProperties(ignoreUnknown = true)

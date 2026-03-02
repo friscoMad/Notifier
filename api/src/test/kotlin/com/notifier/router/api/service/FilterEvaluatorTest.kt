@@ -1,7 +1,7 @@
 package com.notifier.router.api.service
 
-import com.notifier.router.api.domain.Filter
 import com.notifier.router.api.domain.GenericEvent
+import com.notifier.router.common.domain.Filter
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

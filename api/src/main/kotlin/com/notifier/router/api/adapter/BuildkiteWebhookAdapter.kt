@@ -1,11 +1,11 @@
 package com.notifier.router.api.adapter
 
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.notifier.router.api.domain.BuildFinishedEvent
 import com.notifier.router.api.domain.GenericEvent
 import com.notifier.router.api.domain.JobFinishedEvent
 import com.notifier.router.api.domain.NotificationEvent
 import com.notifier.router.api.domain.PipelineUpdatedEvent
+import tools.jackson.module.kotlin.readValue
 
 object BuildkiteWebhookAdapter {
     fun parse(payload: String): NotificationEvent {

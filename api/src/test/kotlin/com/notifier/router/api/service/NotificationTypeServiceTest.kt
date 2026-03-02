@@ -46,8 +46,8 @@ class NotificationTypeServiceTest {
 
         verify(notificationTypeRepository).findAll()
         assert(result.size == 2)
-        assert(result.any { it.typeKey == "pr_created" })
-        assert(result.any { it.typeKey == "deploy_completed" })
+        assert(result.any { it.key == "pr_created" })
+        assert(result.any { it.key == "deploy_completed" })
     }
 
     @Test
@@ -68,7 +68,7 @@ class NotificationTypeServiceTest {
 
         verify(notificationTypeRepository).findByTypeKey(typeKey)
         assert(result != null)
-        assert(result!!.typeKey == typeKey)
+        assert(result!!.key == typeKey)
     }
 
     @Test

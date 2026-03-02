@@ -18,9 +18,10 @@ spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-
 spring-boot-starter-flyway = { module = "org.springframework.boot:spring-boot-starter-flyway" }
 spring-boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
 
-# Kotlin
+# Kotlin / Jackson
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
-jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
+jackson-module-kotlin = { module = "tools.jackson.module:jackson-module-kotlin" }
+jackson2-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
 
 # Database
 postgresql = { module = "org.postgresql:postgresql" }
@@ -46,6 +47,7 @@ slack-api-model-kotlin-extension = { module = "com.slack.api:slack-api-model-kot
 slack-api-client-kotlin-extension = { module = "com.slack.api:slack-api-client-kotlin-extension", version.ref = "slackBolt" }
 tyrus-standalone-client = { module = "org.glassfish.tyrus.bundles:tyrus-standalone-client", version = "1.19" }
 javax-websocket-api = { module = "javax.websocket:javax.websocket-api", version = "1.1" }
+jakarta-validation-api = { module = "jakarta.validation:jakarta.validation-api" }
 
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "springBoot" }

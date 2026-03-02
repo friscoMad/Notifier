@@ -1,11 +1,12 @@
 package com.notifier.router.api.service
 
 import com.notifier.router.api.domain.Subscription
-import com.notifier.router.api.dto.SubscriptionDto
+import com.notifier.router.api.domain.User
 import com.notifier.router.api.exception.SubscriptionNotFoundException
 import com.notifier.router.api.repository.NotificationTypeRepository
 import com.notifier.router.api.repository.SubscriptionRepository
 import com.notifier.router.api.repository.UserRepository
+import com.notifier.router.common.dto.SubscriptionDto
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -22,7 +23,7 @@ class SubscriptionService(
         val user =
             userRepository.findBySlackId(dto.userId)
                 ?: userRepository.save(
-                    com.notifier.router.api.domain.User(
+                    User(
                         id = UUID.randomUUID(),
                         slackId = dto.userId,
                     ),
@@ -81,7 +82,7 @@ class SubscriptionService(
             userRepository.findBySlackId(userId)
                 ?: try {
                     userRepository.findById(UUID.fromString(userId)).orElse(null)
-                } catch (e: IllegalArgumentException) {
+                } catch (_: IllegalArgumentException) {
                     null
                 }
 

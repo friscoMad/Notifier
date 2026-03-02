@@ -1,6 +1,8 @@
 package com.notifier.router.bot.handlers
 
 import com.notifier.router.bot.client.RouterApiClient
+import com.notifier.router.common.domain.Filter
+import com.notifier.router.common.dto.SubscriptionDto
 import com.slack.api.bolt.App
 import com.slack.api.bolt.context.builtin.ActionContext
 import com.slack.api.bolt.context.builtin.ViewSubmissionContext
@@ -8,7 +10,6 @@ import com.slack.api.bolt.request.builtin.BlockActionRequest
 import com.slack.api.bolt.request.builtin.ViewSubmissionRequest
 import com.slack.api.bolt.response.Response
 import com.slack.api.methods.request.views.ViewsUpdateRequest
-import com.slack.api.model.view.Views.view
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -83,7 +84,7 @@ class ModalHandlers(
 
         // 1. Resolve Type ID
         val availableTypes = apiClient.getNotificationTypes()
-        val typeId = availableTypes.find { it["typeKey"] == typeKey }?.get("id") as? String
+        val typeId = availableTypes.find { it.key == typeKey }?.id
 
         if (typeId == null) {
             return ctx.ackWithErrors(mapOf("type_block" to "Invalid notification type selected."))
@@ -105,10 +106,10 @@ class ModalHandlers(
 
         // 4. Parse Dynamic Filters
         val filterDefinitions = apiClient.getFiltersForType(typeKey)
-        val extractedFilters = mutableListOf<Map<String, Any>>()
+        val extractedFilters = mutableListOf<Filter>()
 
         filterDefinitions.forEach { filterDef ->
-            val fieldName = filterDef["field"] as String
+            val fieldName = filterDef.field
             val blockId = "filter_block_$fieldName"
             val actionId = "filter_input_$fieldName"
 
@@ -119,14 +120,14 @@ class ModalHandlers(
                     val listValues =
                         inputText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
                     extractedFilters.add(
-                        mapOf("field" to fieldName, "operator" to "IN", "value" to listValues),
+                        Filter(fieldName, "IN", listValues),
                     )
                 } else {
                     extractedFilters.add(
-                        mapOf(
-                            "field" to fieldName,
-                            "operator" to "EQ",
-                            "value" to inputText.trim(),
+                        Filter(
+                            fieldName,
+                            "EQ",
+                            inputText.trim(),
                         ),
                     )
                 }
@@ -136,18 +137,16 @@ class ModalHandlers(
         val slackId = req.payload.user.id
         val teamId = req.payload.team?.id ?: ""
 
-        val payload =
-            mapOf(
-                "userId" to slackId,
-                "slackId" to slackId,
-                "slackTeamId" to teamId,
-                "notificationTypeId" to typeId,
-                "channels" to selectedChannels,
-                "channelConfig" to channelConfig,
-                "filters" to extractedFilters,
+        val subscriptionDto =
+            SubscriptionDto(
+                userId = slackId,
+                notificationTypeId = typeId,
+                channels = selectedChannels,
+                channelConfig = channelConfig,
+                filters = extractedFilters,
             )
 
-        val response = apiClient.subscribe(payload)
+        val response = apiClient.subscribe(subscriptionDto)
         return if (response != null) {
             ctx.ack() // Close modal silently indicating success
         } else {

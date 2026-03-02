@@ -1,7 +1,7 @@
 package com.notifier.router.api.controller
 
-import com.notifier.router.api.dto.SubscriptionDto
 import com.notifier.router.api.service.SubscriptionService
+import com.notifier.router.common.dto.SubscriptionDto
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
@@ -31,8 +31,7 @@ class SubscriptionControllerTest {
 
         val expectedDto = subscriptionDto.copy(id = "${java.util.UUID.randomUUID()}")
 
-        whenever(subscriptionService.createSubscription(any()))
-            .thenReturn(expectedDto)
+        whenever(subscriptionService.createSubscription(any())).thenReturn(expectedDto)
 
         val result = subscriptionController.createSubscription(subscriptionDto)
 

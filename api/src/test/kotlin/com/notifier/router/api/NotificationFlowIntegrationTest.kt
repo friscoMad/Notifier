@@ -1,6 +1,5 @@
 package com.notifier.router.api
 
-import com.notifier.router.api.domain.Filter
 import com.notifier.router.api.domain.NotificationType
 import com.notifier.router.api.domain.Subscription
 import com.notifier.router.api.domain.User
@@ -8,6 +7,7 @@ import com.notifier.router.api.repository.NotificationTypeRepository
 import com.notifier.router.api.repository.SubscriptionRepository
 import com.notifier.router.api.repository.UserRepository
 import com.notifier.router.api.service.NovuService
+import com.notifier.router.common.domain.Filter
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.verify

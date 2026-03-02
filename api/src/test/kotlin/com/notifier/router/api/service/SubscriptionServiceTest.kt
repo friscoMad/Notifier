@@ -1,16 +1,17 @@
 package com.notifier.router.api.service
 
-import com.notifier.router.api.domain.Filter
 import com.notifier.router.api.domain.Subscription
 import com.notifier.router.api.domain.User
-import com.notifier.router.api.dto.SubscriptionDto
 import com.notifier.router.api.exception.SubscriptionNotFoundException
 import com.notifier.router.api.repository.NotificationTypeRepository
 import com.notifier.router.api.repository.SubscriptionRepository
 import com.notifier.router.api.repository.UserRepository
+import com.notifier.router.common.domain.Filter
+import com.notifier.router.common.dto.SubscriptionDto
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
+import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.Mockito.verify
 import org.mockito.junit.jupiter.MockitoExtension
@@ -29,7 +30,7 @@ class SubscriptionServiceTest {
 
     @Mock private lateinit var novuService: NovuService
 
-    @org.mockito.InjectMocks private lateinit var subscriptionService: SubscriptionService
+    @InjectMocks private lateinit var subscriptionService: SubscriptionService
 
     @Test
     fun `test createSubscription saves new subscription with Slack ID`() {

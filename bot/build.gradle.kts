@@ -9,6 +9,7 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":common"))
     implementation(libs.spring.boot.starter.web)
     implementation(libs.jackson.module.kotlin)
     implementation(libs.kotlin.reflect)

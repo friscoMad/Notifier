@@ -1,8 +1,8 @@
 package com.notifier.router.api.service
 
 import com.notifier.router.api.domain.User
-import com.notifier.router.api.dto.UserDto
 import com.notifier.router.api.repository.UserRepository
+import com.notifier.router.common.dto.UserDto
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock

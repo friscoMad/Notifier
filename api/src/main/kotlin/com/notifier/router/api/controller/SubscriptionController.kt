@@ -1,7 +1,7 @@
 package com.notifier.router.api.controller
 
-import com.notifier.router.api.dto.SubscriptionDto
 import com.notifier.router.api.service.SubscriptionService
+import com.notifier.router.common.dto.SubscriptionDto
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping

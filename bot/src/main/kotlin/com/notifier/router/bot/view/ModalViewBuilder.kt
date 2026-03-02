@@ -1,5 +1,7 @@
 package com.notifier.router.bot.view
 
+import com.notifier.router.common.dto.FilterDefinitionDto
+import com.notifier.router.common.dto.NotificationTypeDto
 import com.slack.api.model.kotlin_extension.block.withBlocks
 import com.slack.api.model.view.View
 import com.slack.api.model.view.Views.view
@@ -8,7 +10,7 @@ import com.slack.api.model.view.Views.viewSubmit
 import com.slack.api.model.view.Views.viewTitle
 
 object ModalViewBuilder {
-    fun buildInitialTypeSelectionModal(types: List<Map<String, String>>): View =
+    fun buildInitialTypeSelectionModal(types: List<NotificationTypeDto>): View =
         view { v ->
             v
                 .callbackId("create_subscription_modal")
@@ -29,8 +31,8 @@ object ModalViewBuilder {
                                     options {
                                         types.forEach { type ->
                                             option {
-                                                description(type["name"] ?: "Unknown")
-                                                description(type["typeKey"] ?: "unknown")
+                                                markdownText(type.name)
+                                                value(type.key)
                                             }
                                         }
                                     }
@@ -43,11 +45,11 @@ object ModalViewBuilder {
 
     fun buildDynamicSubscriptionModal(
         selectedTypeKey: String,
-        availableTypes: List<Map<String, String>>,
-        filters: List<Map<String, Any>>,
+        availableTypes: List<NotificationTypeDto>,
+        filters: List<FilterDefinitionDto>,
     ): View =
         view { v ->
-            val selectedType = availableTypes.find { it["typeKey"] == selectedTypeKey }
+            val selectedType = availableTypes.find { it.key == selectedTypeKey }
             val blocks =
                 withBlocks {
                     section {
@@ -60,15 +62,15 @@ object ModalViewBuilder {
                                 options {
                                     availableTypes.forEach { type ->
                                         option {
-                                            description(type.getOrDefault("name", "Unknown"))
-                                            value(type.getOrDefault("typeKey", "unknown"))
+                                            description(type.name)
+                                            value(type.key)
                                         }
                                     }
                                 }
                                 if (selectedType != null) {
                                     initialOption {
-                                        description(selectedType["name"].orEmpty())
-                                        value(selectedType["typeKey"].orEmpty())
+                                        description(selectedType.name)
+                                        value(selectedType.key)
                                     }
                                 }
                             }
@@ -77,14 +79,12 @@ object ModalViewBuilder {
 
                     // 2. Add Dynamic Filter Inputs
                     filters.forEach { filterDef ->
-                        val fieldName = filterDef["field"] as? String ?: "unknown"
+                        val fieldName = filterDef.field
                         input {
                             blockId("filter_block_$fieldName")
                             label("Filter by $fieldName (Optional)")
                             optional(true)
-                            plainTextInput {
-                                actionId("filter_input_$fieldName")
-                            }
+                            plainTextInput { actionId("filter_input_$fieldName") }
                         }
                     }
                     // 3. Add Delivery Channel Preferences

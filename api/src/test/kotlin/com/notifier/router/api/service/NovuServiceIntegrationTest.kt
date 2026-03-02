@@ -1,5 +1,6 @@
 package com.notifier.router.api.service
 
+import com.notifier.router.api.BaseIntegrationTest
 import com.notifier.router.api.domain.Filter
 import com.notifier.router.api.domain.NotificationType
 import com.notifier.router.api.domain.Subscription
@@ -16,11 +17,10 @@ import org.mockito.kotlin.check
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.mock.mockito.MockBean
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
-import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -36,8 +36,7 @@ import java.util.UUID
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
-class NovuServiceIntegrationTest {
+class NovuServiceIntegrationTest : BaseIntegrationTest() {
     @Autowired private lateinit var mockMvc: MockMvc
 
     @Autowired private lateinit var userRepository: UserRepository
@@ -46,7 +45,7 @@ class NovuServiceIntegrationTest {
 
     @Autowired private lateinit var subscriptionRepository: SubscriptionRepository
 
-    @MockBean private lateinit var novuService: NovuService
+    @MockitoBean private lateinit var novuService: NovuService
 
     private lateinit var testUser: User
     private lateinit var prCreatedType: NotificationType
@@ -133,12 +132,18 @@ class NovuServiceIntegrationTest {
                 },
                 check { capturedPayload ->
                     assertEquals("Add new feature", capturedPayload["title"])
-                    assertEquals("Description here", capturedPayload["description"])
+                    assertEquals(
+                        "Description here",
+                        capturedPayload["description"],
+                    )
                     assertEquals(
                         "https://github.com/org/my-repo/pull/42",
                         capturedPayload["url"],
                     )
-                    assertEquals("2025-06-01T10:00:00Z", capturedPayload["created_at"])
+                    assertEquals(
+                        "2025-06-01T10:00:00Z",
+                        capturedPayload["created_at"],
+                    )
                 },
             )
     }
@@ -237,7 +242,13 @@ class NovuServiceIntegrationTest {
                 notificationTypeId = prCreatedType.id,
                 channels = listOf("slack_dm"),
                 filters =
-                    listOf(Filter(field = "repo", operator = "EQ", value = "org/repo")),
+                    listOf(
+                        Filter(
+                            field = "repo",
+                            operator = "EQ",
+                            value = "org/repo",
+                        ),
+                    ),
                 enabled = false,
             ),
         )

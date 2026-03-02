@@ -18,16 +18,13 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.mock.mockito.MockBean
-import org.springframework.boot.test.web.client.TestRestTemplate
 import org.springframework.boot.test.web.server.LocalServerPort
-import org.springframework.http.HttpEntity
-import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpMethod
-import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
-import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.springframework.test.web.servlet.client.RestTestClient
+import org.springframework.test.web.servlet.client.expectBody
 import java.util.UUID
 
 /**
@@ -35,11 +32,11 @@ import java.util.UUID
  * (serialization, routing, JPA, etc.) using an embedded H2 database and a random server port.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ActiveProfiles("test")
-class HttpEndpointsIntegrationTest {
+@AutoConfigureRestTestClient
+class HttpEndpointsIntegrationTest : BaseIntegrationTest() {
     @LocalServerPort private var port: Int = 0
 
-    @Autowired private lateinit var restTemplate: TestRestTemplate
+    @Autowired private lateinit var restTemplate: RestTestClient
 
     @Autowired private lateinit var userRepository: UserRepository
 
@@ -49,17 +46,12 @@ class HttpEndpointsIntegrationTest {
 
     @Autowired private lateinit var channelSubscriptionRepository: ChannelSubscriptionRepository
 
-    @MockBean private lateinit var novuService: NovuService
+    @MockitoBean private lateinit var novuService: NovuService
 
     private lateinit var seededTypeId: UUID
 
     @BeforeEach
     fun setup() {
-        channelSubscriptionRepository.deleteAll()
-        subscriptionRepository.deleteAll()
-        notificationTypeRepository.deleteAll()
-        userRepository.deleteAll()
-
         val prCreatedType =
             NotificationType(
                 id = UUID.randomUUID(),
@@ -84,48 +76,58 @@ class HttpEndpointsIntegrationTest {
                     name = "Http User",
                 )
 
-            val response =
-                restTemplate.postForEntity(
-                    "/api/v1/users",
-                    dto,
-                    UserDto::class.java,
-                )
+            val result =
+                restTemplate
+                    .post()
+                    .uri("/api/v1/users")
+                    .body(dto)
+                    .exchange()
+                    .expectStatus()
+                    .isOk
+                    .expectBody<UserDto>()
+                    .returnResult()
 
-            assertEquals(HttpStatus.OK, response.statusCode)
-            assertNotNull(response.body?.id)
-            assertEquals("U_HTTP_1", response.body?.slackId)
-            assertEquals("http@test.com", response.body?.email)
+            val body = result.responseBody
+            assertNotNull(body?.id)
+            assertEquals("U_HTTP_1", body?.slackId)
+            assertEquals("http@test.com", body?.email)
         }
 
         @Test
         fun `GET users by slackId returns user`() {
-            val created =
+            val createdResult =
                 restTemplate
-                    .postForEntity(
-                        "/api/v1/users",
-                        UserDto(slackId = "U_GET_1", name = "Lookup User"),
-                        UserDto::class.java,
-                    ).body!!
+                    .post()
+                    .uri("/api/v1/users")
+                    .body(UserDto(slackId = "U_GET_1", name = "Lookup User"))
+                    .exchange()
+                    .expectStatus()
+                    .isOk
+                    .expectBody(UserDto::class.java)
+                    .returnResult()
+            val created = createdResult.responseBody!!
 
-            val response =
-                restTemplate.getForEntity(
-                    "/api/v1/users/${created.slackId}",
-                    UserDto::class.java,
-                )
+            val result =
+                restTemplate
+                    .get()
+                    .uri("/api/v1/users/${created.slackId}")
+                    .exchange()
+                    .expectStatus()
+                    .isOk
+                    .expectBody<UserDto>()
+                    .returnResult()
 
-            assertEquals(HttpStatus.OK, response.statusCode)
-            assertEquals(created.id, response.body?.id)
+            assertEquals(created.id, result.responseBody?.id)
         }
 
         @Test
         fun `GET users returns 404 for unknown slackId`() {
-            val response =
-                restTemplate.getForEntity(
-                    "/api/v1/users/UNKNOWN_SLACK_ID",
-                    String::class.java,
-                )
-
-            assertEquals(HttpStatus.NOT_FOUND, response.statusCode)
+            restTemplate
+                .get()
+                .uri("/api/v1/users/UNKNOWN_SLACK_ID")
+                .exchange()
+                .expectStatus()
+                .isNotFound
         }
     }
 
@@ -137,14 +139,17 @@ class HttpEndpointsIntegrationTest {
 
         @BeforeEach
         fun seedUser() {
-            val user =
+            val result =
                 restTemplate
-                    .postForEntity(
-                        "/api/v1/users",
-                        UserDto(slackId = "U_SUB_USER", name = "Sub User"),
-                        UserDto::class.java,
-                    ).body!!
-            userId = user.id!!
+                    .post()
+                    .uri("/api/v1/users")
+                    .body(UserDto(slackId = "U_SUB_USER", name = "Sub User"))
+                    .exchange()
+                    .expectStatus()
+                    .isOk
+                    .expectBody<UserDto>()
+                    .returnResult()
+            userId = result.responseBody!!.id!!
         }
 
         @Test
@@ -164,17 +169,21 @@ class HttpEndpointsIntegrationTest {
                         ),
                 )
 
-            val response =
-                restTemplate.postForEntity(
-                    "/api/v1/subscriptions",
-                    dto,
-                    SubscriptionDto::class.java,
-                )
+            val result =
+                restTemplate
+                    .post()
+                    .uri("/api/v1/subscriptions")
+                    .body(dto)
+                    .exchange()
+                    .expectStatus()
+                    .isOk
+                    .expectBody<SubscriptionDto>()
+                    .returnResult()
 
-            assertEquals(HttpStatus.OK, response.statusCode)
-            assertNotNull(response.body?.id)
-            assertEquals(userId, response.body?.userId)
-            assertEquals(1, response.body?.filters?.size)
+            val body = result.responseBody
+            assertNotNull(body?.id)
+            assertEquals(userId, body?.userId)
+            assertEquals(1, body?.filters?.size)
         }
 
         @Test
@@ -185,62 +194,72 @@ class HttpEndpointsIntegrationTest {
                     notificationTypeId = seededTypeId.toString(),
                     channels = listOf("slack_dm"),
                 )
-            restTemplate.postForEntity(
-                "/api/v1/subscriptions",
-                dto,
-                SubscriptionDto::class.java,
-            )
+            restTemplate
+                .post()
+                .uri("/api/v1/subscriptions")
+                .body(dto)
+                .exchange()
+                .expectStatus()
+                .isOk
 
-            val response =
-                restTemplate.exchange(
-                    "/api/v1/subscriptions/users/$userId",
-                    HttpMethod.GET,
-                    null,
-                    Array<SubscriptionDto>::class.java,
-                )
+            val result =
+                restTemplate
+                    .get()
+                    .uri("/api/v1/subscriptions/users/$userId")
+                    .exchange()
+                    .expectStatus()
+                    .isOk
+                    .expectBody<Array<SubscriptionDto>>()
+                    .returnResult()
 
-            assertEquals(HttpStatus.OK, response.statusCode)
-            assertTrue(response.body!!.isNotEmpty())
+            assertTrue(result.responseBody!!.isNotEmpty())
         }
 
         @Test
         fun `DELETE subscription returns 204`() {
             val created =
                 restTemplate
-                    .postForEntity(
-                        "/api/v1/subscriptions",
+                    .post()
+                    .uri("/api/v1/subscriptions")
+                    .body(
                         SubscriptionDto(
                             userId = userId,
                             notificationTypeId = seededTypeId.toString(),
                             channels = listOf("slack_dm"),
                         ),
-                        SubscriptionDto::class.java,
-                    ).body!!
+                    ).exchange()
+                    .expectStatus()
+                    .isOk
+                    .expectBody<SubscriptionDto>()
+                    .returnResult()
+                    .responseBody!!
 
-            val response =
-                restTemplate.exchange(
-                    "/api/v1/subscriptions/${created.id}",
-                    HttpMethod.DELETE,
-                    null,
-                    Void::class.java,
-                )
-
-            assertEquals(HttpStatus.NO_CONTENT, response.statusCode)
+            restTemplate
+                .delete()
+                .uri("/api/v1/subscriptions/${created.id}")
+                .exchange()
+                .expectStatus()
+                .isNoContent
         }
 
         @Test
         fun `PATCH subscription updates channels`() {
             val created =
                 restTemplate
-                    .postForEntity(
-                        "/api/v1/subscriptions",
+                    .post()
+                    .uri("/api/v1/subscriptions")
+                    .body(
                         SubscriptionDto(
                             userId = userId,
                             notificationTypeId = seededTypeId.toString(),
                             channels = listOf("slack_dm"),
                         ),
-                        SubscriptionDto::class.java,
-                    ).body!!
+                    ).exchange()
+                    .expectStatus()
+                    .isOk
+                    .expectBody<SubscriptionDto>()
+                    .returnResult()
+                    .responseBody!!
 
             val updateDto =
                 SubscriptionDto(
@@ -249,18 +268,18 @@ class HttpEndpointsIntegrationTest {
                     channels = listOf("slack_dm", "email"),
                 )
 
-            val headers = HttpHeaders()
-            headers.contentType = MediaType.APPLICATION_JSON
-            val response =
-                restTemplate.exchange(
-                    "/api/v1/subscriptions/${created.id}",
-                    HttpMethod.PATCH,
-                    HttpEntity(updateDto, headers),
-                    SubscriptionDto::class.java,
-                )
+            val result =
+                restTemplate
+                    .patch()
+                    .uri("/api/v1/subscriptions/${created.id}")
+                    .body(updateDto)
+                    .exchange()
+                    .expectStatus()
+                    .isOk
+                    .expectBody<SubscriptionDto>()
+                    .returnResult()
 
-            assertEquals(HttpStatus.OK, response.statusCode)
-            assertEquals(listOf("slack_dm", "email"), response.body?.channels)
+            assertEquals(listOf("slack_dm", "email"), result.responseBody?.channels)
         }
     }
 
@@ -270,28 +289,28 @@ class HttpEndpointsIntegrationTest {
     inner class NotificationTypeEndpoints {
         @Test
         fun `GET notification-types returns seeded types`() {
-            val response =
-                restTemplate.exchange(
-                    "/api/v1/notification-types",
-                    HttpMethod.GET,
-                    null,
-                    String::class.java,
-                )
+            val result =
+                restTemplate
+                    .get()
+                    .uri("/api/v1/notification-types")
+                    .exchange()
+                    .expectStatus()
+                    .isOk
+                    .expectBody<String>()
+                    .returnResult()
 
-            assertEquals(HttpStatus.OK, response.statusCode)
-            val body = response.body!!
+            val body = result.responseBody!!
             assertTrue(body.contains("pr_created"))
         }
 
         @Test
         fun `GET notification-types filters by key returns 200`() {
-            val response =
-                restTemplate.getForEntity(
-                    "/api/v1/notification-types/pr_created/filters",
-                    String::class.java,
-                )
-
-            assertEquals(HttpStatus.OK, response.statusCode)
+            restTemplate
+                .get()
+                .uri("/api/v1/notification-types/pr_created/filters")
+                .exchange()
+                .expectStatus()
+                .isOk
         }
     }
 
@@ -308,65 +327,75 @@ class HttpEndpointsIntegrationTest {
                     notificationTypeId = seededTypeId.toString(),
                 )
 
-            val response =
-                restTemplate.postForEntity(
-                    "/api/v1/channel-subscriptions",
-                    dto,
-                    ChannelSubscriptionDto::class.java,
-                )
+            val result =
+                restTemplate
+                    .post()
+                    .uri("/api/v1/channel-subscriptions")
+                    .body(dto)
+                    .exchange()
+                    .expectStatus()
+                    .isOk
+                    .expectBody<ChannelSubscriptionDto>()
+                    .returnResult()
 
-            assertEquals(HttpStatus.OK, response.statusCode)
-            assertNotNull(response.body?.id)
-            assertEquals("C12345", response.body?.slackChannelId)
+            val body = result.responseBody
+            assertNotNull(body?.id)
+            assertEquals("C12345", body?.slackChannelId)
         }
 
         @Test
         fun `GET channel-subscriptions by channelId returns results`() {
-            restTemplate.postForEntity(
-                "/api/v1/channel-subscriptions",
-                ChannelSubscriptionDto(
-                    slackChannelId = "C_LOOKUP",
-                    slackChannelName = "#lookup",
-                    notificationTypeId = seededTypeId.toString(),
-                ),
-                ChannelSubscriptionDto::class.java,
-            )
+            restTemplate
+                .post()
+                .uri("/api/v1/channel-subscriptions")
+                .body(
+                    ChannelSubscriptionDto(
+                        slackChannelId = "C_LOOKUP",
+                        slackChannelName = "#lookup",
+                        notificationTypeId = seededTypeId.toString(),
+                    ),
+                ).exchange()
+                .expectStatus()
+                .isOk
 
-            val response =
-                restTemplate.exchange(
-                    "/api/v1/channel-subscriptions/channels/C_LOOKUP",
-                    HttpMethod.GET,
-                    null,
-                    Array<ChannelSubscriptionDto>::class.java,
-                )
+            val result =
+                restTemplate
+                    .get()
+                    .uri("/api/v1/channel-subscriptions/channels/C_LOOKUP")
+                    .exchange()
+                    .expectStatus()
+                    .isOk
+                    .expectBody<Array<ChannelSubscriptionDto>>()
+                    .returnResult()
 
-            assertEquals(HttpStatus.OK, response.statusCode)
-            assertTrue(response.body!!.isNotEmpty())
+            assertTrue(result.responseBody!!.isNotEmpty())
         }
 
         @Test
         fun `DELETE channel-subscription returns 204`() {
             val created =
                 restTemplate
-                    .postForEntity(
-                        "/api/v1/channel-subscriptions",
+                    .post()
+                    .uri("/api/v1/channel-subscriptions")
+                    .body(
                         ChannelSubscriptionDto(
                             slackChannelId = "C_DEL",
                             slackChannelName = "#del-channel",
                             notificationTypeId = seededTypeId.toString(),
                         ),
-                        ChannelSubscriptionDto::class.java,
-                    ).body!!
+                    ).exchange()
+                    .expectStatus()
+                    .isOk
+                    .expectBody<ChannelSubscriptionDto>()
+                    .returnResult()
+                    .responseBody!!
 
-            val response =
-                restTemplate.exchange(
-                    "/api/v1/channel-subscriptions/${created.id}",
-                    HttpMethod.DELETE,
-                    null,
-                    Void::class.java,
-                )
-
-            assertEquals(HttpStatus.NO_CONTENT, response.statusCode)
+            restTemplate
+                .delete()
+                .uri("/api/v1/channel-subscriptions/${created.id}")
+                .exchange()
+                .expectStatus()
+                .isNoContent
         }
     }
 
@@ -383,14 +412,13 @@ class HttpEndpointsIntegrationTest {
                     payload = mapOf("title" to "Test PR"),
                 )
 
-            val response =
-                restTemplate.postForEntity(
-                    "/api/v1/events",
-                    dto,
-                    Void::class.java,
-                )
-
-            assertEquals(HttpStatus.ACCEPTED, response.statusCode)
+            restTemplate
+                .post()
+                .uri("/api/v1/events")
+                .body(dto)
+                .exchange()
+                .expectStatus()
+                .isAccepted
         }
     }
 
@@ -418,18 +446,14 @@ class HttpEndpointsIntegrationTest {
                 }
                 """.trimIndent()
 
-            val headers = HttpHeaders()
-            headers.contentType = MediaType.APPLICATION_JSON
-
-            val response =
-                restTemplate.exchange(
-                    "/api/v1/webhooks/github",
-                    HttpMethod.POST,
-                    HttpEntity(payload, headers),
-                    Void::class.java,
-                )
-
-            assertEquals(HttpStatus.ACCEPTED, response.statusCode)
+            restTemplate
+                .post()
+                .uri("/api/v1/webhooks/github")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(payload)
+                .exchange()
+                .expectStatus()
+                .isAccepted
         }
 
         @Test
@@ -457,18 +481,14 @@ class HttpEndpointsIntegrationTest {
                 }
                 """.trimIndent()
 
-            val headers = HttpHeaders()
-            headers.contentType = MediaType.APPLICATION_JSON
-
-            val response =
-                restTemplate.exchange(
-                    "/api/v1/webhooks/github-actions",
-                    HttpMethod.POST,
-                    HttpEntity(payload, headers),
-                    Void::class.java,
-                )
-
-            assertEquals(HttpStatus.ACCEPTED, response.statusCode)
+            restTemplate
+                .post()
+                .uri("/api/v1/webhooks/github-actions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(payload)
+                .exchange()
+                .expectStatus()
+                .isAccepted
         }
 
         @Test
@@ -495,34 +515,26 @@ class HttpEndpointsIntegrationTest {
                 }
                 """.trimIndent()
 
-            val headers = HttpHeaders()
-            headers.contentType = MediaType.APPLICATION_JSON
-
-            val response =
-                restTemplate.exchange(
-                    "/api/v1/webhooks/buildkite",
-                    HttpMethod.POST,
-                    HttpEntity(payload, headers),
-                    Void::class.java,
-                )
-
-            assertEquals(HttpStatus.ACCEPTED, response.statusCode)
+            restTemplate
+                .post()
+                .uri("/api/v1/webhooks/buildkite")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(payload)
+                .exchange()
+                .expectStatus()
+                .isAccepted
         }
 
         @Test
         fun `POST github webhook with malformed json returns 400`() {
-            val headers = HttpHeaders()
-            headers.contentType = MediaType.APPLICATION_JSON
-
-            val response =
-                restTemplate.exchange(
-                    "/api/v1/webhooks/github",
-                    HttpMethod.POST,
-                    HttpEntity("{invalid-json", headers),
-                    String::class.java,
-                )
-
-            assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
+            restTemplate
+                .post()
+                .uri("/api/v1/webhooks/github")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{invalid-json")
+                .exchange()
+                .expectStatus()
+                .isBadRequest
         }
     }
 }

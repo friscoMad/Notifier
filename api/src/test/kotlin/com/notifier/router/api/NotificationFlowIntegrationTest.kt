@@ -14,20 +14,18 @@ import org.mockito.Mockito.verify
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.mock.mockito.MockBean
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
-import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.util.UUID
 
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
-class NotificationFlowIntegrationTest {
+class NotificationFlowIntegrationTest : BaseIntegrationTest() {
     @Autowired private lateinit var mockMvc: MockMvc
 
     @Autowired private lateinit var userRepository: UserRepository
@@ -36,14 +34,10 @@ class NotificationFlowIntegrationTest {
 
     @Autowired private lateinit var subscriptionRepository: SubscriptionRepository
 
-    @MockBean private lateinit var novuService: NovuService
+    @MockitoBean private lateinit var novuService: NovuService
 
     @BeforeEach
     fun setup() {
-        subscriptionRepository.deleteAll()
-        notificationTypeRepository.deleteAll()
-        userRepository.deleteAll()
-
         // 1. Setup Notification Type
         val prCreatedType =
             NotificationType(
@@ -72,7 +66,13 @@ class NotificationFlowIntegrationTest {
                 notificationTypeId = prCreatedType.id,
                 channels = listOf("slack_dm"),
                 filters =
-                    listOf(Filter(field = "repo", operator = "EQ", value = "org/repo")),
+                    listOf(
+                        Filter(
+                            field = "repo",
+                            operator = "EQ",
+                            value = "org/repo",
+                        ),
+                    ),
                 enabled = true,
             )
         subscriptionRepository.save(subscription)
@@ -144,6 +144,7 @@ class NotificationFlowIntegrationTest {
         Thread.sleep(500)
 
         // Verify NovuService was NOT called (filter did not match)
-        verify(novuService, org.mockito.Mockito.never()).triggerWorkflow(any(), any(), any())
+        verify(novuService, org.mockito.Mockito.never())
+            .triggerWorkflow(any(), any(), any())
     }
 }

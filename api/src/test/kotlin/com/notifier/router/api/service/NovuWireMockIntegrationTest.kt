@@ -9,6 +9,7 @@ import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
+import com.notifier.router.api.BaseIntegrationTest
 import com.notifier.router.api.domain.Filter
 import com.notifier.router.api.domain.NotificationType
 import com.notifier.router.api.domain.Subscription
@@ -22,10 +23,9 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
-import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.servlet.MockMvc
@@ -46,9 +46,8 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post 
  */
 @SpringBootTest(properties = ["novu.api.key=test-wiremock-key"])
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class NovuWireMockIntegrationTest {
+class NovuWireMockIntegrationTest : BaseIntegrationTest() {
     companion object {
         private val wireMock = WireMockServer(wireMockConfig().dynamicPort())
 
@@ -122,7 +121,8 @@ class NovuWireMockIntegrationTest {
                     id = UUID.randomUUID(),
                     typeKey = "pr_created",
                     name = "PR Created",
-                    description = "Triggered when a new Pull Request is opened.",
+                    description =
+                        "Triggered when a new Pull Request is opened.",
                 ),
             )
 
@@ -184,13 +184,17 @@ class NovuWireMockIntegrationTest {
         Thread.sleep(1500)
 
         // Verify WireMock received the actual HTTP POST from the Novu SDK
-        // using the instance client (not static WireMock.verify which defaults to port 8080)
+        // using the instance client (not static WireMock.verify which defaults to port
+        // 8080)
         wireMockClient.verifyThat(
             postRequestedFor(urlPathEqualTo("/v1/events/trigger"))
                 .withHeader("Authorization", equalTo("ApiKey test-wiremock-key"))
                 .withRequestBody(matchingJsonPath("$.name", equalTo("pr_created")))
                 .withRequestBody(
-                    matchingJsonPath("$.payload.title", equalTo("WireMock test PR")),
+                    matchingJsonPath(
+                        "$.payload.title",
+                        equalTo("WireMock test PR"),
+                    ),
                 ),
         )
     }

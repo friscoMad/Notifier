@@ -16,7 +16,7 @@ import java.util.UUID
 @Entity
 @Table(
     name = "filter_definitions",
-    indexes = [Index(name = "idx_filter_def_type_id", columnList = "notificationTypeId")],
+    indexes = [Index(name = "idx_filter_def_type_id", columnList = "notification_type_id")],
 )
 @EntityListeners(AuditingEntityListener::class)
 data class FilterDefinition(

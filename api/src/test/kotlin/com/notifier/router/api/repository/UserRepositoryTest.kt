@@ -1,19 +1,15 @@
 package com.notifier.router.api.repository
 
 import com.notifier.router.api.domain.User
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import java.util.UUID
 
-@Disabled
 @DataJpaTest
 class UserRepositoryTest(
-    @Autowired private val entityManager: TestEntityManager,
     @Autowired private val userRepository: UserRepository,
-) {
+) : BaseRepositoryTest() {
     @Test
     fun `test find by slackId`() {
         val user =

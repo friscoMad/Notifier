@@ -1,18 +1,13 @@
 [versions]
 kotlin = "2.3.10"
-springBoot = "3.4.3"
+springBoot = "4.0.3"
 springDependencyManagement = "1.1.7"
-ktlintConfig = "1.8.0"
 ktlintPlugin = "14.0.1"
-jacksonKotlin = "2.18.2" # From Spring Boot, but good to have if needed standalone
-flyway = "11.3.1"
-postgresql = "42.7.5"
 novuJava = "1.6.0"
 slackBolt = "1.47.0"
 mockitoKotlin = "6.2.3"
-testcontainers = "1.20.4"
+testcontainers = "2.0.3"
 wiremock = "3.13.2"
-h2 = "2.3.232"
 
 [libraries]
 # Spring Boot
@@ -20,20 +15,24 @@ spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-start
 spring-boot-starter-data-jpa = { module = "org.springframework.boot:spring-boot-starter-data-jpa" }
 spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
 spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
-spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+spring-boot-starter-flyway = { module = "org.springframework.boot:spring-boot-starter-flyway" }
+spring-boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
 
 # Kotlin
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
 
 # Database
-flyway-core = { module = "org.flywaydb:flyway-core" }
 postgresql = { module = "org.postgresql:postgresql" }
-h2 = { module = "com.h2database:h2" }
+flyway-postgresql = { module = "org.flywaydb:flyway-database-postgresql" }
 
 # Testing
-testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter" }
-testcontainers-postgresql = { module = "org.testcontainers:postgresql" }
+spring-boot-starter-webmvc-test = { module = "org.springframework.boot:spring-boot-starter-webmvc-test" }
+spring-boot-starter-data-jpa-test = { module = "org.springframework.boot:spring-boot-starter-data-jpa-test" }
+spring-boot-starter-flyway-test = { module = "org.springframework.boot:spring-boot-starter-flyway-test" }
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter", version.ref = "testcontainers" }
+testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
 wiremock-standalone = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
 mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockitoKotlin" }
 

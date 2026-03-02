@@ -25,7 +25,7 @@ class DataSeeder(
     private val logger = LoggerFactory.getLogger(DataSeeder::class.java)
 
     @Transactional
-    override fun run(vararg args: String?) {
+    override fun run(vararg args: String) {
         logger.info("Resetting and seeding data for local profile...")
 
         try {

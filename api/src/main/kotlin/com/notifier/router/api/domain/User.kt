@@ -18,8 +18,8 @@ import java.util.UUID
 @Table(
     name = "users",
     uniqueConstraints =
-        [UniqueConstraint(name = "uc_user_slack_id", columnNames = ["slackId"])],
-    indexes = [Index(name = "idx_user_slack_id", columnList = "slackId")],
+        [UniqueConstraint(name = "uc_user_slack_id", columnNames = ["slack_id"])],
+    indexes = [Index(name = "idx_user_slack_id", columnList = "slack_id")],
 )
 @EntityListeners(AuditingEntityListener::class)
 data class User(

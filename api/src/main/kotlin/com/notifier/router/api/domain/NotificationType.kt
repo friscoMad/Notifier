@@ -19,8 +19,8 @@ import java.util.UUID
 @Table(
     name = "notification_types",
     uniqueConstraints =
-        [UniqueConstraint(name = "uc_notification_type_key", columnNames = ["typeKey"])],
-    indexes = [Index(name = "idx_notification_type_key", columnList = "typeKey")],
+        [UniqueConstraint(name = "uc_notification_type_key", columnNames = ["type_key"])],
+    indexes = [Index(name = "idx_notification_type_key", columnList = "type_key")],
 )
 @EntityListeners(AuditingEntityListener::class)
 data class NotificationType(

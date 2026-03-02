@@ -22,13 +22,16 @@ import java.util.UUID
         [
             UniqueConstraint(
                 name = "uc_channel_sub_channel_type",
-                columnNames = ["slackChannelId", "notificationTypeId"],
+                columnNames = ["slack_channel_id", "notification_type_id"],
             ),
         ],
     indexes =
         [
-            Index(name = "idx_channel_sub_channel_id", columnList = "slackChannelId"),
-            Index(name = "idx_channel_sub_type_id", columnList = "notificationTypeId"),
+            Index(name = "idx_channel_sub_channel_id", columnList = "slack_channel_id"),
+            Index(
+                name = "idx_channel_sub_type_id",
+                columnList = "notification_type_id",
+            ),
         ],
 )
 @EntityListeners(AuditingEntityListener::class)

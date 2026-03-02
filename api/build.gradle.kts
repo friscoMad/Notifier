@@ -13,24 +13,28 @@ dependencies {
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.data.jpa)
     implementation(libs.spring.boot.starter.validation)
+    implementation(libs.spring.boot.starter.flyway)
     implementation(libs.spring.boot.starter.actuator)
     implementation(libs.jackson.module.kotlin)
     implementation(libs.kotlin.reflect)
-    implementation(libs.flyway.core)
 
     // PostgreSQL
     runtimeOnly(libs.postgresql)
+    runtimeOnly(libs.flyway.postgresql)
 
     // Novu SDK
     implementation(libs.novu.java)
 
     // Test
+    testImplementation(libs.spring.boot.starter.data.jpa.test)
     testImplementation(libs.spring.boot.starter.test)
+    testImplementation(libs.spring.boot.starter.webmvc.test)
+    testImplementation(libs.spring.boot.testcontainers)
     testImplementation(libs.testcontainers.junit.jupiter)
+    testImplementation(libs.spring.boot.starter.flyway.test)
     testImplementation(libs.testcontainers.postgresql)
     testImplementation(libs.wiremock.standalone)
     testImplementation(libs.mockito.kotlin)
-    testImplementation(libs.h2)
 }
 
 tasks.withType<KotlinCompile> {
@@ -42,25 +46,6 @@ tasks.withType<KotlinCompile> {
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
-
-    // Optimize test execution by running tests in parallel forks
-    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).takeIf { it > 0 } ?: 1
-
-    // JVM arguments to speed up test execution
-    jvmArgs(
-        "-XX:+TieredCompilation",
-        "-XX:TieredStopAtLevel=1",
-        "-Dspring.main.lazy-initialization=true",
-    )
-}
-
-ktlint {
-    version.set("1.8.0")
-    verbose.set(true)
-    outputToConsole.set(true)
-    filter {
-        exclude("**/build/**")
-    }
 }
 
 tasks.withType<org.springframework.boot.gradle.tasks.run.BootRun> {

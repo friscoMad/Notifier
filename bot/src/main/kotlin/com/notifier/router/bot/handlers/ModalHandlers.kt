@@ -1,6 +1,7 @@
 package com.notifier.router.bot.handlers
 
 import com.notifier.router.bot.client.RouterApiClient
+import com.notifier.router.bot.view.ModalViewBuilder.buildDynamicSubscriptionModal
 import com.notifier.router.common.domain.Filter
 import com.notifier.router.common.dto.SubscriptionDto
 import com.slack.api.bolt.App
@@ -46,9 +47,9 @@ class ModalHandlers(
 
         val availableTypes = apiClient.getNotificationTypes()
         val filters = apiClient.getFiltersForType(selectedType)
-
+        logger.info("Available filters for type $selectedType: $filters")
         val updateView =
-            com.notifier.router.bot.view.ModalViewBuilder.buildDynamicSubscriptionModal(
+            buildDynamicSubscriptionModal(
                 selectedTypeKey = selectedType,
                 availableTypes = availableTypes,
                 filters = filters,

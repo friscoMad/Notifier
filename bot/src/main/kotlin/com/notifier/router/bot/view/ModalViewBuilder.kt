@@ -2,6 +2,7 @@ package com.notifier.router.bot.view
 
 import com.notifier.router.common.dto.FilterDefinitionDto
 import com.notifier.router.common.dto.NotificationTypeDto
+import com.slack.api.model.kotlin_extension.block.element.dsl.BlockElementInputDsl
 import com.slack.api.model.kotlin_extension.block.withBlocks
 import com.slack.api.model.view.View
 import com.slack.api.model.view.Views.view
@@ -23,20 +24,13 @@ object ModalViewBuilder {
                     withBlocks {
                         section {
                             blockId("type_block")
-                            markdownText("Which event do you want to be notified about?")
+                            plainText("Which event do you want to be notified about?")
                             accessory {
-                                staticSelect {
-                                    actionId("type_select")
-                                    placeholder("Select an event...")
-                                    options {
-                                        types.forEach { type ->
-                                            option {
-                                                markdownText(type.name)
-                                                value(type.key)
-                                            }
-                                        }
-                                    }
-                                }
+                                staticSelect(
+                                    actionId = "type_select",
+                                    placeholder = "Select an event...",
+                                    options = types.map { Option(it.name, it.key, it.description) },
+                                )
                             }
                         }
                     },
@@ -49,31 +43,18 @@ object ModalViewBuilder {
         filters: List<FilterDefinitionDto>,
     ): View =
         view { v ->
-            val selectedType = availableTypes.find { it.key == selectedTypeKey }
             val blocks =
                 withBlocks {
                     section {
                         blockId("type_block")
-                        markdownText("Which event do you want to be notified about?")
+                        plainText("Which event do you want to be notified about?")
                         accessory {
-                            staticSelect {
-                                actionId("type_select")
-                                placeholder("Select an event...")
-                                options {
-                                    availableTypes.forEach { type ->
-                                        option {
-                                            description(type.name)
-                                            value(type.key)
-                                        }
-                                    }
-                                }
-                                if (selectedType != null) {
-                                    initialOption {
-                                        description(selectedType.name)
-                                        value(selectedType.key)
-                                    }
-                                }
-                            }
+                            staticSelect(
+                                actionId = "type_select",
+                                placeholder = "Select an event...",
+                                options = availableTypes.map { Option(it.name, it.key, it.description) },
+                                initialValue = selectedTypeKey,
+                            )
                         }
                     }
 
@@ -95,17 +76,17 @@ object ModalViewBuilder {
                             actionId("channels_checkboxes")
                             options {
                                 option {
-                                    description("Email")
+                                    plainText("Email")
                                     value("email")
                                 }
                                 option {
-                                    description("Slack DM")
+                                    plainText("Slack DM")
                                     value("slack_dm")
                                 }
                             }
                             initialOptions {
                                 option {
-                                    description("Slack DM")
+                                    plainText("Slack DM")
                                     value("slack_dm")
                                 }
                             }
@@ -115,27 +96,16 @@ object ModalViewBuilder {
                     input {
                         blockId("digest_block")
                         label("Delivery Speed (Digesting)")
-                        staticSelect {
-                            actionId("digest_select")
-                            options {
-                                option {
-                                    description("Immediate")
-                                    value("inmediate")
-                                }
-                                option {
-                                    description("Daily (24h)")
-                                    value("24h")
-                                }
-                                option {
-                                    description("Half-Day (12h)")
-                                    value("12h")
-                                }
-                            }
-                            initialOption {
-                                description("Immediate")
-                                value("inmediate")
-                            }
-                        }
+                        staticSelect(
+                            actionId = "digest_select",
+                            options =
+                                listOf(
+                                    Option("Immediate", "immediate"),
+                                    Option("Daily (24h)", "24h"),
+                                    Option("Half-Day (12h)", "12h"),
+                                ),
+                            initialValue = "inmediate",
+                        )
                     }
                 }
             v
@@ -147,4 +117,40 @@ object ModalViewBuilder {
                 .close(viewClose { it.type("plain_text").text("Cancel") })
                 .blocks(blocks)
         }
+
+    private fun BlockElementInputDsl.staticSelect(
+        actionId: String,
+        placeholder: String? = null,
+        options: List<Option>,
+        initialValue: String? = null,
+    ) {
+        staticSelect {
+            actionId(actionId)
+            placeholder?.let { placeholder(it) }
+            options {
+                options.forEach { (text, value, desc) ->
+                    option {
+                        plainText(text)
+                        value(value)
+                        desc?.let { description(it) }
+                    }
+                }
+            }
+            if (initialValue != null) {
+                options.find { it.value == initialValue }?.let { (text, value, desc) ->
+                    initialOption {
+                        plainText(text)
+                        value(value)
+                        desc?.let { description(it) }
+                    }
+                }
+            }
+        }
+    }
+
+    data class Option(
+        val text: String,
+        val value: String,
+        val description: String? = null,
+    )
 }

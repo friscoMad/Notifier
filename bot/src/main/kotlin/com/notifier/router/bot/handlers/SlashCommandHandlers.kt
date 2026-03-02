@@ -1,6 +1,7 @@
 package com.notifier.router.bot.handlers
 
 import com.notifier.router.bot.client.RouterApiClient
+import com.notifier.router.bot.view.ModalViewBuilder
 import com.notifier.router.common.domain.Filter
 import com.notifier.router.common.dto.SubscriptionDto
 import com.slack.api.bolt.App
@@ -70,9 +71,7 @@ class SlashCommandHandlers(
         val triggerId = req.payload.triggerId
         val types = apiClient.getNotificationTypes()
 
-        val modalView =
-            com.notifier.router.bot.view.ModalViewBuilder
-                .buildInitialTypeSelectionModal(types)
+        val modalView = ModalViewBuilder.buildInitialTypeSelectionModal(types)
 
         val response =
             ctx
@@ -86,7 +85,7 @@ class SlashCommandHandlers(
                 )
 
         if (!response.isOk) {
-            logger.error("Failed to open modal: ${response.error}")
+            logger.error("Failed to open modal: ${response.error} ${response.responseMetadata}")
             return ctx.ack("Could not open configuration modal. Please try again.")
         }
 

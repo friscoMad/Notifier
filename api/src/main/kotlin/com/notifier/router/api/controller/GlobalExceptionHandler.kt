@@ -12,7 +12,7 @@ class GlobalExceptionHandler {
     private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
 
     @ExceptionHandler(Exception::class)
-    fun handleGeneralException(ex: Exception): ResponseEntity<ErrorResponse> {
+    fun handleGeneralException(ex: Exception): ResponseEntity<Unit> {
         logger.error("Unexpected error occurred: ${ex.message}", ex)
 
         val errorTrace = ex.stackTraceToString()
@@ -22,22 +22,6 @@ class GlobalExceptionHandler {
 
         return ResponseEntity
             .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(
-                ErrorResponse(
-                    timestamp = LocalDateTime.now(),
-                    status = HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                    error = "Internal Server Error",
-                    message = ex.message ?: "An unexpected error occurred",
-                    trace = errorTrace,
-                ),
-            )
+            .build()
     }
-
-    data class ErrorResponse(
-        val timestamp: LocalDateTime,
-        val status: Int,
-        val error: String,
-        val message: String,
-        val trace: String? = null,
-    )
 }

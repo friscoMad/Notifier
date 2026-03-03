@@ -5,10 +5,13 @@ import com.notifier.router.bot.view.ModalViewBuilder
 import com.notifier.router.common.domain.Filter
 import com.notifier.router.common.dto.SubscriptionDto
 import com.slack.api.bolt.App
+import com.slack.api.bolt.context.builtin.ActionContext
 import com.slack.api.bolt.context.builtin.SlashCommandContext
+import com.slack.api.bolt.request.builtin.BlockActionRequest
 import com.slack.api.bolt.request.builtin.SlashCommandRequest
 import com.slack.api.bolt.response.Response
 import com.slack.api.methods.request.views.ViewsOpenRequest
+import com.slack.api.model.kotlin_extension.block.withBlocks
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -24,6 +27,13 @@ class SlashCommandHandlers(
     fun registerHandlers() {
         app.command("/notifyme") { req: SlashCommandRequest, ctx: SlashCommandContext ->
             handleCommand(req, ctx)
+        }
+
+        app.blockAction("^delete_subscription_.*$".toPattern()) {
+            req: BlockActionRequest,
+            ctx: ActionContext,
+            ->
+            handleDeleteAction(req, ctx)
         }
     }
 
@@ -103,13 +113,80 @@ class SlashCommandHandlers(
             return ctx.ack("You have no active subscriptions.")
         }
 
-        val sb = StringBuilder("*Your Subscriptions:*\n")
-        subs.forEach { sub ->
-            val type = sub.notificationTypeId
-            val numFilters = sub.filters.size
-            sb.append("• Type: $type | Filters: $numFilters active rules\n")
+        val availableTypes = apiClient.getNotificationTypes()
+        val blocks =
+            withBlocks {
+                section { markdownText("*Your Subscriptions:*") }
+                divider()
+
+                subs.forEach { sub ->
+                    val typeName =
+                        availableTypes.find { it.id == sub.notificationTypeId }?.name
+                            ?: "Unknown Type"
+                    val channels = sub.channels.joinToString { "`$it`" }
+                    val status = if (sub.enabled) "✅ Enabled" else "❌ Disabled"
+
+                    section {
+                        markdownText(
+                            """
+                            *Type:* `$typeName` ($status)
+                            *Channels:* $channels
+                            """.trimIndent(),
+                        )
+                        accessory {
+                            button {
+                                text(text = "Delete", emoji = true)
+                                actionId("delete_subscription_${sub.id}")
+                                value(sub.id ?: "")
+                                style("danger")
+                            }
+                        }
+                    }
+
+                    if (sub.filters.isNotEmpty()) {
+                        context {
+                            elements {
+                                markdownText(
+                                    text =
+                                        "*Filters:* " +
+                                            sub.filters.joinToString(" | ") {
+                                                "`${it.field}` ${it.operator} `${it.value}`"
+                                            },
+                                )
+                            }
+                        }
+                    }
+                    divider()
+                }
+            }
+
+        ctx.client().chatPostMessage { r ->
+            r.channel(slackId).blocks(blocks).text("Your Notification Subscriptions")
         }
-        return ctx.ack(sb.toString())
+
+        return ctx.ack()
+    }
+
+    private fun handleDeleteAction(
+        req: BlockActionRequest,
+        ctx: ActionContext,
+    ): Response {
+        val subscriptionId = req.payload.actions[0].value
+        logger.info("User requested deletion of subscription: $subscriptionId")
+
+        val success = apiClient.unsubscribe(subscriptionId)
+        val message =
+            if (success) {
+                "✅ Subscription deleted successfully."
+            } else {
+                "❌ Failed to delete subscription. Please try again."
+            }
+
+        ctx.client().chatPostEphemeral { r ->
+            r.channel(req.payload.channel.id).user(req.payload.user.id).text(message)
+        }
+
+        return ctx.ack()
     }
 
     private fun handleSubscribeCommand(

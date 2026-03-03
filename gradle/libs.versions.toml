@@ -8,15 +8,20 @@ slackBolt = "1.47.0"
 mockitoKotlin = "6.2.3"
 testcontainers = "2.0.3"
 wiremock = "3.13.2"
+springShell = "3.4.1"
 
 [libraries]
 # Spring Boot
+spring-boot-starter-core = { module = "org.springframework.boot:spring-boot-starter" }
 spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
 spring-boot-starter-data-jpa = { module = "org.springframework.boot:spring-boot-starter-data-jpa" }
 spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
 spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator" }
 spring-boot-starter-flyway = { module = "org.springframework.boot:spring-boot-starter-flyway" }
 spring-boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
+
+# Spring Shell
+spring-shell-starter = { module = "org.springframework.shell:spring-shell-starter", version.ref = "springShell" }
 
 # Kotlin / Jackson
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }

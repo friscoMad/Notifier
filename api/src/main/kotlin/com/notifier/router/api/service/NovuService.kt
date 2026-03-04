@@ -17,6 +17,12 @@ class NovuService(
     private val logger = LoggerFactory.getLogger(NovuService::class.java)
     private lateinit var novuClient: Novu
 
+    /**
+     * In-memory registry mapping our typeKey (e.g. "pr_created") to Novu's auto-generated trigger
+     * identifier (e.g. "pull-request-created-whmu"). Populated by [ensureWorkflowExists].
+     */
+    private val workflowRegistry = mutableMapOf<String, String>()
+
     @PostConstruct
     fun init() {
         if (apiKey == "not-set" || apiKey.isBlank()) {
@@ -144,8 +150,12 @@ class NovuService(
         }
 
         try {
+            val novuIdentifier = workflowRegistry[workflowId] ?: workflowId
+            if (novuIdentifier != workflowId) {
+                logger.debug("Resolved typeKey $workflowId -> Novu identifier $novuIdentifier")
+            }
             val request = TriggerEventRequest()
-            request.name = workflowId
+            request.name = novuIdentifier
             request.to = subscriberIds
             request.payload = payload.toMutableMap()
 
@@ -163,19 +173,15 @@ class NovuService(
         channelConfig: Map<String, Any>,
     ) {
         if (!this::novuClient.isInitialized) {
-            logger.info("MOCK Sync Preferences for $subscriberId: workflow=$workflowKey, channels=$channels, config=$channelConfig")
+            logger.info(
+                "MOCK Sync Preferences for $subscriberId: workflow=$workflowKey, channels=$channels, config=$channelConfig",
+            )
             return
         }
 
         try {
-            val restTemplate =
-                org.springframework.web.client
-                    .RestTemplate()
-            val headers = org.springframework.http.HttpHeaders()
-            headers.set("Authorization", "ApiKey $apiKey")
-            headers.contentType = org.springframework.http.MediaType.APPLICATION_JSON
-
-            val baseUrl = if (apiUrl.isNotBlank()) apiUrl else "https://api.novu.co/v1"
+            val headers = createHeaders()
+            val baseUrl = getBaseUrl()
 
             // 1. Ensure subscriber exists first (upsert)
             val identifyUrl = "$baseUrl/subscribers"
@@ -185,18 +191,138 @@ class NovuService(
                     "firstName" to "User",
                     "lastName" to subscriberId.take(4),
                 )
-            restTemplate.exchange(
-                identifyUrl,
-                org.springframework.http.HttpMethod.POST,
-                org.springframework.http.HttpEntity(identifyPayload, headers),
-                String::class.java,
-            )
+            org.springframework.web.client
+                .RestTemplate()
+                .exchange(
+                    identifyUrl,
+                    org.springframework.http.HttpMethod.POST,
+                    org.springframework.http.HttpEntity(identifyPayload, headers),
+                    String::class.java,
+                )
 
-            // 2. We could update the preferences per channel using Novu's Subscriber Preference API.
-            // Note: The template ID/Key is required for the PATCH endpoints in production environments.
-            logger.info("Successfully synced subscriber $subscriberId to Novu. Channels: $channels, Config: $channelConfig")
+            // 2. We could update the preferences per channel using Novu's Subscriber Preference
+            // API.
+            // Note: The template ID/Key is required for the PATCH endpoints in production
+            // environments.
+            logger.info(
+                "Successfully synced subscriber $subscriberId to Novu. Channels: $channels, Config: $channelConfig",
+            )
         } catch (e: Exception) {
             logger.error("Failed to sync preferences for $subscriberId", e)
         }
     }
+
+    fun ensureWorkflowExists(
+        key: String,
+        name: String,
+    ) {
+        if (!this::novuClient.isInitialized) {
+            logger.warn("Novu client not initialized, skipping workflow check for $key")
+            return
+        }
+
+        try {
+            val baseUrl = getBaseUrl()
+            val headers = createHeaders()
+            val restTemplate =
+                org.springframework.web.client
+                    .RestTemplate()
+            logger.debug("Checking if Novu workflow exists: $key")
+
+            // 1. Check if workflow exists
+            val workflowsUrl = "$baseUrl/workflows"
+            val response =
+                restTemplate.exchange(
+                    workflowsUrl,
+                    org.springframework.http.HttpMethod.GET,
+                    org.springframework.http.HttpEntity<Unit>(headers),
+                    Map::class.java,
+                )
+
+            val data = response.body?.get("data") as? List<Map<String, Any>> ?: emptyList()
+
+            // Match by name since we use the typeKey as the workflow name in Novu
+            val matchingWorkflow = data.find { it["name"] == key }
+
+            if (matchingWorkflow != null) {
+                val triggers = matchingWorkflow["triggers"] as? List<Map<String, Any>>
+                val novuIdentifier = triggers?.firstOrNull()?.get("identifier") as? String
+                if (novuIdentifier != null) {
+                    workflowRegistry[key] = novuIdentifier
+                    logger.info("Registered existing Novu workflow: $key -> $novuIdentifier")
+                }
+                return
+            }
+
+            // 2. Resolve Notification Group ID (First one found or default)
+            val groupsUrl = "$baseUrl/notification-groups"
+            val groupsResponse =
+                restTemplate.exchange(
+                    groupsUrl,
+                    org.springframework.http.HttpMethod.GET,
+                    org.springframework.http.HttpEntity<Unit>(headers),
+                    Map::class.java,
+                )
+            val groupsData = groupsResponse.body?.get("data") as? List<Map<String, Any>>
+            val groupId =
+                groupsData?.firstOrNull()?.get("_id") as? String
+                    ?: return logger.error("Could not find any notification groups in Novu")
+
+            // 3. Create workflow using typeKey as the name for easy matching later
+            val createPayload =
+                mapOf(
+                    "name" to key,
+                    "notificationGroupId" to groupId,
+                    "steps" to
+                        listOf(
+                            mapOf(
+                                "template" to
+                                    mapOf(
+                                        "type" to "in_app",
+                                        "content" to "{{content}}",
+                                    ),
+                            ),
+                        ),
+                    "active" to true,
+                    "draft" to false,
+                    "critical" to false,
+                )
+
+            logger.debug("Creating Novu workflow $key")
+            val createResponse =
+                restTemplate.exchange(
+                    workflowsUrl,
+                    org.springframework.http.HttpMethod.POST,
+                    org.springframework.http.HttpEntity(createPayload, headers),
+                    Map::class.java,
+                )
+
+            // Extract the auto-generated trigger identifier from the response
+            val responseData = createResponse.body?.get("data") as? Map<String, Any>
+            val triggers = responseData?.get("triggers") as? List<Map<String, Any>>
+            val novuIdentifier = triggers?.firstOrNull()?.get("identifier") as? String
+            if (novuIdentifier != null) {
+                workflowRegistry[key] = novuIdentifier
+                logger.info("Provisioned Novu workflow: $key -> $novuIdentifier ($name)")
+            } else {
+                logger.warn("Created Novu workflow $key but could not extract trigger identifier")
+            }
+        } catch (e: org.springframework.web.client.RestClientResponseException) {
+            logger.error(
+                "Failed to ensure Novu workflow $key exists. Status: ${e.statusCode}, Response: ${e.responseBodyAsString}",
+                e,
+            )
+        } catch (e: Exception) {
+            logger.error("Failed to ensure Novu workflow $key exists", e)
+        }
+    }
+
+    private fun createHeaders(): org.springframework.http.HttpHeaders {
+        val headers = org.springframework.http.HttpHeaders()
+        headers.set("Authorization", "ApiKey $apiKey")
+        headers.contentType = org.springframework.http.MediaType.APPLICATION_JSON
+        return headers
+    }
+
+    private fun getBaseUrl() = if (apiUrl.isNotBlank()) apiUrl else "https://api.novu.co/v1"
 }

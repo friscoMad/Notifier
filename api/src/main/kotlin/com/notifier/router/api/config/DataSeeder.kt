@@ -10,6 +10,7 @@ import com.notifier.router.api.repository.UserRepository
 import org.slf4j.LoggerFactory
 import org.springframework.boot.CommandLineRunner
 import org.springframework.context.annotation.Profile
+import org.springframework.core.Ordered
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -22,7 +23,8 @@ class DataSeeder(
     private val channelSubscriptionRepository: ChannelSubscriptionRepository,
     private val userRepository: UserRepository,
     private val filterDefinitionRepository: FilterDefinitionRepository,
-) : CommandLineRunner {
+) : CommandLineRunner,
+    Ordered {
     private val logger = LoggerFactory.getLogger(DataSeeder::class.java)
 
     @Transactional
@@ -52,6 +54,8 @@ class DataSeeder(
             logger.error("Error during DataSeeding: ${e.message}", e)
         }
     }
+
+    override fun getOrder(): Int = 10
 
     companion object {
         private val seedData: List<Pair<NotificationType, List<FilterDefinition>>> =

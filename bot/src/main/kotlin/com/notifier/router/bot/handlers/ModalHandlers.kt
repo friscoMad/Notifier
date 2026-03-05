@@ -1,9 +1,12 @@
 package com.notifier.router.bot.handlers
 
 import com.notifier.router.bot.client.RouterApiClient
+import com.notifier.router.bot.service.ChannelSubscribeResult
+import com.notifier.router.bot.service.SubscribeResult
+import com.notifier.router.bot.service.SubscriptionService
+import com.notifier.router.bot.view.ModalViewBuilder
 import com.notifier.router.bot.view.ModalViewBuilder.buildDynamicSubscriptionModal
 import com.notifier.router.common.domain.Filter
-import com.notifier.router.common.dto.SubscriptionDto
 import com.slack.api.bolt.App
 import com.slack.api.bolt.context.builtin.ActionContext
 import com.slack.api.bolt.context.builtin.ViewSubmissionContext
@@ -20,6 +23,7 @@ import org.springframework.stereotype.Component
 class ModalHandlers(
     private val app: App,
     private val apiClient: RouterApiClient,
+    private val subscriptionService: SubscriptionService,
 ) {
     private val logger = LoggerFactory.getLogger(ModalHandlers::class.java)
 
@@ -46,14 +50,18 @@ class ModalHandlers(
                 .selectedOption.value
         logger.info("User selected notification type: $selectedType")
 
+        // Preserve channel context from the current view's metadata
+        val meta = ModalViewBuilder.decodeMetadata(req.payload.view.privateMetadata)
+
         val availableTypes = apiClient.getNotificationTypes()
         val filters = apiClient.getFiltersForType(selectedType)
-        logger.info("Available filters for type $selectedType: $filters")
         val updateView =
             buildDynamicSubscriptionModal(
                 selectedTypeKey = selectedType,
                 availableTypes = availableTypes,
                 filters = filters,
+                channelId = meta.channelId,
+                channelName = meta.channelName,
             )
 
         ctx
@@ -74,113 +82,125 @@ class ModalHandlers(
         req: ViewSubmissionRequest,
         ctx: ViewSubmissionContext,
     ): Response {
-        val typeKey = req.payload.view.privateMetadata
-        if (typeKey.isNullOrEmpty()) {
-            return ctx.ackWithErrors(
-                mapOf("type_block" to "You must select a notification type first."),
-            )
+        val meta = ModalViewBuilder.decodeMetadata(req.payload.view.privateMetadata)
+        val typeKey = meta.typeKey
+        if (typeKey.isBlank()) {
+            return ctx.ackWithErrors(mapOf("type_block" to "You must select a notification type first."))
         }
 
         val stateValues = req.payload.view.state.values
         logger.info("Received view submission for type $typeKey")
 
-        // 1. Resolve Type ID
         val availableTypes = apiClient.getNotificationTypes()
-        val typeId = availableTypes.find { it.key == typeKey }?.id
+        val typeId =
+            availableTypes.find { it.key == typeKey }?.id
+                ?: return ctx.ackWithErrors(mapOf("type_block" to "Invalid notification type selected."))
 
-        if (typeId == null) {
-            return ctx.ackWithErrors(mapOf("type_block" to "Invalid notification type selected."))
-        }
+        val typeName = availableTypes.find { it.key == typeKey }?.name ?: typeKey
 
-        // 2. Parse Channels
-        val channelsState = stateValues["channels_block"]?.get("channels_checkboxes")
+        // Parse selected delivery channels
         val selectedChannels =
-            channelsState?.selectedOptions?.map { it.value } ?: listOf("slack_dm")
+            stateValues["channels_block"]
+                ?.get("channels_checkboxes")
+                ?.selectedOptions
+                ?.map { it.value }
+                ?: listOf("slack_dm")
 
-        // 3. Parse Digest Settings
-        val digestState = stateValues["digest_block"]?.get("digest_select")
-        val digestValue = digestState?.selectedOption?.value ?: "immediate"
+        // Parse digest settings
+        val digestValue = stateValues["digest_block"]?.get("digest_select")?.selectedOption?.value ?: "immediate"
         val channelConfig = mutableMapOf<String, Any>()
         if (digestValue != "immediate") {
             channelConfig["digest"] = true
             channelConfig["digestInterval"] = digestValue
         }
 
-        // 4. Parse Dynamic Filters
+        // Parse dynamic filters
         val filterDefinitions = apiClient.getFiltersForType(typeKey)
         val extractedFilters = mutableListOf<Filter>()
-
         filterDefinitions.forEach { filterDef ->
             val fieldName = filterDef.field
-            val blockId = "filter_block_$fieldName"
-            val actionId = "filter_input_$fieldName"
-
-            val inputText = stateValues[blockId]?.get(actionId)?.value
+            val inputText = stateValues["filter_block_$fieldName"]?.get("filter_input_$fieldName")?.value
             if (!inputText.isNullOrBlank()) {
-                // If they provided multiple comma-separated values, treat as IN, otherwise EQ
                 if (inputText.contains(",")) {
-                    val listValues =
-                        inputText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                    extractedFilters.add(
-                        Filter(fieldName, "IN", listValues),
-                    )
+                    extractedFilters.add(Filter(fieldName, "IN", inputText.split(",").map { it.trim() }.filter { it.isNotEmpty() }))
                 } else {
-                    extractedFilters.add(
-                        Filter(
-                            fieldName,
-                            "EQ",
-                            inputText.trim(),
-                        ),
-                    )
+                    extractedFilters.add(Filter(fieldName, "EQ", inputText.trim()))
                 }
             }
         }
 
         val slackId = req.payload.user.id
-        val teamId = req.payload.team?.id ?: ""
 
-        val subscriptionDto =
-            SubscriptionDto(
-                userId = slackId,
-                notificationTypeId = typeId,
-                channels = selectedChannels,
-                channelConfig = channelConfig,
-                filters = extractedFilters,
-            )
+        // Separate DM channels from channel subscriptions
+        val dmChannels = selectedChannels.filter { !it.startsWith("channel:") }
+        val channelEntries = selectedChannels.filter { it.startsWith("channel:") }
 
-        val response = apiClient.subscribe(subscriptionDto)
-        return if (response != null) {
-            val typeName = availableTypes.find { it.key == typeKey }?.name ?: typeKey
-            val filterSummary =
-                if (extractedFilters.isNotEmpty()) {
-                    "\nFilters:\n" +
-                        extractedFilters.joinToString("\n") {
-                            "• ${it.field} ${it.operator} ${it.value}"
-                        }
-                } else {
-                    ""
+        val results = mutableListOf<String>()
+        var anyFailure = false
+
+        // User DM subscription
+        if (dmChannels.isNotEmpty()) {
+            when (
+                subscriptionService.subscribeAndActivate(
+                    userId = slackId,
+                    notificationTypeId = typeId,
+                    channels = dmChannels,
+                    filters = extractedFilters,
+                    channelConfig = channelConfig,
+                )
+            ) {
+                is SubscribeResult.Success -> results.add("✅ You'll receive `$typeName` notifications via DM")
+                SubscribeResult.Failure -> {
+                    results.add("❌ Failed to create DM subscription")
+                    anyFailure = true
                 }
+            }
+        }
 
-            val confirmationMessage =
-                """
-                *Subscription Created!* ✅
-                You are now subscribed to: `$typeName`
-                Channels: ${selectedChannels.joinToString { "`$it`" }}
-                Digest: `$digestValue`$filterSummary
-                """.trimIndent()
+        // Channel subscriptions
+        channelEntries.forEach { entry ->
+            val channelId = entry.removePrefix("channel:")
+            val channelName = meta.channelName ?: channelId
+            when (
+                subscriptionService.subscribeChannelAndActivate(
+                    channelId = channelId,
+                    channelName = channelName,
+                    notificationTypeId = typeId,
+                    filters = extractedFilters,
+                )
+            ) {
+                is ChannelSubscribeResult.Success -> results.add("✅ *#$channelName* will receive `$typeName` notifications")
+                ChannelSubscribeResult.Failure -> {
+                    results.add("❌ Failed to subscribe *#$channelName*")
+                    anyFailure = true
+                }
+            }
+        }
 
-            ctx.client().chatPostMessage { r ->
-                r
-                    .channel(slackId)
-                    .text("Successfully subscribed to $typeName")
-                    .blocks(withBlocks { section { markdownText(confirmationMessage) } })
+        if (anyFailure && results.all { it.startsWith("❌") }) {
+            return ctx.ackWithErrors(mapOf("channels_block" to "Failed to save subscription. Please try again."))
+        }
+
+        val filterSummary =
+            if (extractedFilters.isNotEmpty()) {
+                "\nFilters: " + extractedFilters.joinToString(" | ") { "`${it.field}` ${it.operator} `${it.value}`" }
+            } else {
+                ""
             }
 
-            ctx.ack() // Close modal
-        } else {
-            ctx.ackWithErrors(
-                mapOf("channels_block" to "Failed to save subscription in the Router API."),
-            )
+        val confirmationMessage =
+            """
+            *Subscription Created!* ✅
+            Event: `$typeName`
+            ${results.joinToString("\n")}$filterSummary
+            """.trimIndent()
+
+        ctx.client().chatPostMessage { r ->
+            r
+                .channel(slackId)
+                .text("Subscribed to $typeName")
+                .blocks(withBlocks { section { markdownText(confirmationMessage) } })
         }
+        return ctx.ack()
     }
 }

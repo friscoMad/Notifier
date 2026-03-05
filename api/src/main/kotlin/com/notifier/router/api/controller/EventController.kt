@@ -26,6 +26,6 @@ class EventController(
         GenericEvent(
             typeKey = typeKey,
             metadata = metadata,
-            payload = payload,
+            rawPayload = payload,
         )
 }

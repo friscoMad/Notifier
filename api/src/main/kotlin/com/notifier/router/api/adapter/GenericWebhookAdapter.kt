@@ -11,7 +11,7 @@ object GenericWebhookAdapter {
         GenericEvent(
             typeKey = eventType,
             metadata = mapOf("event_type" to eventType),
-            payload = mapOf("event_data" to payload),
+            rawPayload = mapOf("event_data" to payload),
         )
 
     fun parseCustomEvent(
@@ -22,6 +22,6 @@ object GenericWebhookAdapter {
         GenericEvent(
             typeKey = typeKey,
             metadata = metadata,
-            payload = mapOf("event_data" to payload),
+            rawPayload = mapOf("event_data" to payload),
         )
 }

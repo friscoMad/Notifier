@@ -1,0 +1,85 @@
+package com.notifier.router.bot.service
+
+import com.notifier.router.bot.client.RouterApiClient
+import com.notifier.router.common.domain.Filter
+import com.notifier.router.common.dto.ChannelSubscriptionDto
+import com.notifier.router.common.dto.SubscriptionDto
+import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
+
+@Service
+class SubscriptionService(
+    private val apiClient: RouterApiClient,
+) {
+    private val logger = LoggerFactory.getLogger(javaClass)
+
+    fun subscribeAndActivate(
+        userId: String,
+        notificationTypeId: String,
+        channels: List<String>,
+        filters: List<Filter> = emptyList(),
+        channelConfig: Map<String, Any> = emptyMap(),
+    ): SubscribeResult {
+        val subscription =
+            apiClient.subscribe(
+                SubscriptionDto(
+                    userId = userId,
+                    notificationTypeId = notificationTypeId,
+                    channels = channels,
+                    channelConfig = channelConfig,
+                    filters = filters,
+                ),
+            ) ?: return SubscribeResult.Failure
+
+        try {
+            logger.info("Creating Slack endpoint for subscriber $userId")
+            apiClient.createSlackEndpoint(userId)
+        } catch (e: Exception) {
+            logger.warn("Could not create Slack endpoint for $userId: ${e.message}", e)
+        }
+
+        return SubscribeResult.Success(subscription)
+    }
+
+    fun subscribeChannelAndActivate(
+        channelId: String,
+        channelName: String,
+        notificationTypeId: String,
+        filters: List<Filter> = emptyList(),
+    ): ChannelSubscribeResult {
+        val subscription =
+            apiClient.subscribeChannel(
+                ChannelSubscriptionDto(
+                    slackChannelId = channelId,
+                    slackChannelName = channelName,
+                    notificationTypeId = notificationTypeId,
+                    filters = filters,
+                ),
+            ) ?: return ChannelSubscribeResult.Failure
+
+        try {
+            logger.info("Creating Slack endpoint for channel $channelId")
+            apiClient.createSlackEndpoint(channelId)
+        } catch (e: Exception) {
+            logger.warn("Could not create Slack endpoint for channel $channelId: ${e.message}", e)
+        }
+
+        return ChannelSubscribeResult.Success(subscription)
+    }
+}
+
+sealed interface SubscribeResult {
+    data class Success(
+        val subscription: SubscriptionDto,
+    ) : SubscribeResult
+
+    data object Failure : SubscribeResult
+}
+
+sealed interface ChannelSubscribeResult {
+    data class Success(
+        val subscription: ChannelSubscriptionDto,
+    ) : ChannelSubscribeResult
+
+    data object Failure : ChannelSubscribeResult
+}

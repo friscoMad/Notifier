@@ -11,12 +11,42 @@ import com.slack.api.model.view.Views.viewSubmit
 import com.slack.api.model.view.Views.viewTitle
 
 object ModalViewBuilder {
-    fun buildInitialTypeSelectionModal(types: List<NotificationTypeDto>): View =
+    /** Metadata serialized into view privateMetadata to survive modal updates. */
+    data class ModalMetadata(
+        val typeKey: String = "",
+        val channelId: String? = null,
+        val channelName: String? = null,
+    )
+
+    /** Encodes metadata as `typeKey|channelId|channelName` (pipe-delimited). */
+    fun encodeMetadata(metadata: ModalMetadata): String = "${metadata.typeKey}|${metadata.channelId ?: ""}|${metadata.channelName ?: ""}"
+
+    fun decodeMetadata(raw: String?): ModalMetadata {
+        if (raw.isNullOrBlank()) return ModalMetadata()
+        val parts = raw.split("|", limit = 3)
+        return if (parts.size == 3) {
+            ModalMetadata(
+                typeKey = parts[0],
+                channelId = parts[1].ifBlank { null },
+                channelName = parts[2].ifBlank { null },
+            )
+        } else {
+            // Legacy: raw string was just the typeKey
+            ModalMetadata(typeKey = raw)
+        }
+    }
+
+    fun buildInitialTypeSelectionModal(
+        types: List<NotificationTypeDto>,
+        channelId: String? = null,
+        channelName: String? = null,
+    ): View =
         view { v ->
             v
                 .callbackId("create_subscription_modal")
                 .type("modal")
                 .notifyOnClose(true)
+                .privateMetadata(encodeMetadata(ModalMetadata(channelId = channelId, channelName = channelName)))
                 .title(viewTitle { it.type("plain_text").text("Configure Notifications") })
                 .submit(viewSubmit { it.type("plain_text").text("Save") })
                 .close(viewClose { it.type("plain_text").text("Cancel") })
@@ -33,6 +63,15 @@ object ModalViewBuilder {
                                 )
                             }
                         }
+                        if (channelId != null) {
+                            context {
+                                elements {
+                                    markdownText(
+                                        "Opened in *#$channelName* — you can subscribe this channel after selecting an event type.",
+                                    )
+                                }
+                            }
+                        }
                     },
                 )
         }
@@ -41,6 +80,8 @@ object ModalViewBuilder {
         selectedTypeKey: String,
         availableTypes: List<NotificationTypeDto>,
         filters: List<FilterDefinitionDto>,
+        channelId: String? = null,
+        channelName: String? = null,
     ): View =
         view { v ->
             val blocks =
@@ -58,7 +99,6 @@ object ModalViewBuilder {
                         }
                     }
 
-                    // 2. Add Dynamic Filter Inputs
                     filters.forEach { filterDef ->
                         val fieldName = filterDef.field
                         input {
@@ -68,7 +108,7 @@ object ModalViewBuilder {
                             plainTextInput { actionId("filter_input_$fieldName") }
                         }
                     }
-                    // 3. Add Delivery Channel Preferences
+
                     input {
                         blockId("channels_block")
                         label("Delivery Channels")
@@ -76,23 +116,25 @@ object ModalViewBuilder {
                             actionId("channels_checkboxes")
                             options {
                                 option {
-                                    plainText("Email")
-                                    value("email")
-                                }
-                                option {
-                                    plainText("Slack DM")
+                                    plainText("Slack DM (you)")
                                     value("slack_dm")
+                                }
+                                if (channelId != null) {
+                                    option {
+                                        plainText("#$channelName")
+                                        value("channel:$channelId")
+                                    }
                                 }
                             }
                             initialOptions {
                                 option {
-                                    plainText("Slack DM")
+                                    plainText("Slack DM (you)")
                                     value("slack_dm")
                                 }
                             }
                         }
                     }
-                    // 4. Add Digest Speed Select
+
                     input {
                         blockId("digest_block")
                         label("Delivery Speed (Digesting)")
@@ -104,14 +146,14 @@ object ModalViewBuilder {
                                     Option("Daily (24h)", "24h"),
                                     Option("Half-Day (12h)", "12h"),
                                 ),
-                            initialValue = "inmediate",
+                            initialValue = "immediate",
                         )
                     }
                 }
             v
                 .callbackId("create_subscription_modal")
                 .type("modal")
-                .privateMetadata(selectedTypeKey)
+                .privateMetadata(encodeMetadata(ModalMetadata(typeKey = selectedTypeKey, channelId = channelId, channelName = channelName)))
                 .title(viewTitle { it.type("plain_text").text("Configure Notifications") })
                 .submit(viewSubmit { it.type("plain_text").text("Save") })
                 .close(viewClose { it.type("plain_text").text("Cancel") })

@@ -21,17 +21,17 @@ import org.springframework.web.client.RestTemplate
 @SpringBootApplication
 open class WebhookSimulatorApp {
     @Bean
-    open fun customPromptProvider(): PromptProvider = PromptProvider {
-        AttributedString(
+    open fun customPromptProvider(): PromptProvider =
+        PromptProvider {
+            AttributedString(
                 "notifier-simulator:>",
-                AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN)
-        )
-    }
+                AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN),
+            )
+        }
 }
 
 @ShellComponent
 open class WebhookSimulator {
-
     private val logger = LoggerFactory.getLogger(WebhookSimulator::class.java)
     private val restTemplate: RestTemplate = RestTemplate()
     private val mapper = jacksonObjectMapper()
@@ -41,59 +41,62 @@ open class WebhookSimulator {
 
     @ShellMethod(value = "Simulate a GitHub Pull Request Created event", key = ["gh-pr", "gh"])
     fun sendGitHubPr(
-            @ShellOption(defaultValue = "owner/repo") repo: String,
-            @ShellOption(defaultValue = "octocat") author: String,
-            @ShellOption(defaultValue = "Initial commit") title: String
+        @ShellOption(defaultValue = "owner/repo") repo: String,
+        @ShellOption(defaultValue = "octocat") author: String,
+        @ShellOption(defaultValue = "Initial commit") title: String,
     ): String {
         val payload =
-                mapOf(
-                        "action" to "opened",
-                        "pull_request" to
-                                mapOf(
-                                        "title" to title,
-                                        "user" to mapOf("login" to author),
-                                        "base" to mapOf("ref" to "main")
-                                ),
-                        "repository" to mapOf("full_name" to repo)
-                )
+            mapOf(
+                "action" to "opened",
+                "pull_request" to
+                    mapOf(
+                        "title" to title,
+                        "user" to mapOf("login" to author),
+                        "base" to mapOf("ref" to "main"),
+                    ),
+                "repository" to mapOf("full_name" to repo),
+            )
 
         return sendRequest("$apiBaseUrl/github", payload, "sha256=dummy-secret")
     }
 
     @ShellMethod(value = "Simulate a Buildkite Deployment Started event", key = ["bk-deploy", "bk"])
     fun sendBuildkiteDeploy(
-            @ShellOption(defaultValue = "api") service: String,
-            @ShellOption(defaultValue = "production") env: String
+        @ShellOption(defaultValue = "api") service: String,
+        @ShellOption(defaultValue = "production") env: String,
     ): String {
         val payload =
-                mapOf(
-                        "event" to "build.running",
-                        "pipeline" to mapOf("name" to service),
-                        "build" to mapOf("id" to "01234567-89ab-cdef"),
-                        "metadata" to mapOf("environment" to env)
-                )
+            mapOf(
+                "event" to "build.running",
+                "pipeline" to mapOf("name" to service),
+                "build" to mapOf("id" to "01234567-89ab-cdef"),
+                "metadata" to mapOf("environment" to env),
+            )
 
         return sendRequest("$apiBaseUrl/buildkite", payload)
     }
 
     @ShellMethod(
-            value = "Send a custom JSON payload to a specific endpoint",
-            key = ["custom", "send"]
+        value = "Send a custom JSON payload to a specific endpoint",
+        key = ["custom", "send"],
     )
     fun sendCustom(
-            @ShellOption(help = "Endpoint relative to base URL (e.g., github, buildkite)")
-            endpoint: String,
-            @ShellOption(help = "Raw JSON payload") json: String
-    ): String {
-        return try {
+        @ShellOption(help = "Endpoint relative to base URL (e.g., github, buildkite)")
+        endpoint: String,
+        @ShellOption(help = "Raw JSON payload") json: String,
+    ): String =
+        try {
             val payload = mapper.readValue(json, Map::class.java)
             sendRequest("$apiBaseUrl/$endpoint", payload)
         } catch (e: Exception) {
             "\u001B[31mInvalid JSON: ${e.message}\u001B[0m"
         }
-    }
 
-    private fun sendRequest(url: String, payload: Any, githubSecret: String? = null): String {
+    private fun sendRequest(
+        url: String,
+        payload: Any,
+        githubSecret: String? = null,
+    ): String {
         val json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(payload)
         val sb = StringBuilder()
         sb.append("\n\u001B[36mSending to $url:\u001B[0m\n")
@@ -110,7 +113,7 @@ open class WebhookSimulator {
         return try {
             val response = restTemplate.postForEntity(url, entity, String::class.java)
             val statusColor =
-                    if (response.statusCode.is2xxSuccessful) "\u001B[32m" else "\u001B[31m"
+                if (response.statusCode.is2xxSuccessful) "\u001B[32m" else "\u001B[31m"
             sb.append("${statusColor}Response: ${response.statusCode}\u001B[0m\n")
             sb.append(response.body ?: "No body").toString()
         } catch (e: Exception) {
@@ -121,7 +124,7 @@ open class WebhookSimulator {
 
 fun main(args: Array<String>) {
     SpringApplicationBuilder(WebhookSimulatorApp::class.java)
-            .web(WebApplicationType.NONE)
-            .properties("spring.shell.interactive.enabled=true")
-            .run(*args)
+        .web(WebApplicationType.NONE)
+        .properties("spring.shell.interactive.enabled=true")
+        .run(*args)
 }

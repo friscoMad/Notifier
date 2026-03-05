@@ -143,6 +143,7 @@ tmp_sdk/
 bin/
 local.properties
 **/application-local.yml
+.env.local
 test_bot_output*.txt
 build_output.txt
 test_output.txt

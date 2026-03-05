@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew :api:ktlintFormat:*)",
+      "Bash(./gradlew :bot:ktlintFormat:*)",
+      "Bash(curl:*)",
+      "Bash(xargs grep:*)",
+      "WebSearch",
+      "WebFetch(domain:docs.novu.co)",
+      "Bash(./gradlew ktlintFormat:*)",
+      "Bash(./gradlew ktlintCheck:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(python3:*)",
+      "Bash(inkscape:*)",
+      "Bash(pip show:*)",
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Bash(./gradlew :bot:ktlintCheck:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker exec:*)",
+      "Bash(./gradlew :api:compileKotlin:*)",
+      "Bash(docker compose:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd:*)",
+      "Bash(powershell:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:novu-python.readthedocs.io)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:socket.dev)",
+      "WebFetch(domain:novu-preview.mintlify.app)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:novu.co)",
+      "Bash(./gradlew :bot:compileKotlin:*)"
+    ]
+  }
+}

@@ -30,23 +30,38 @@ class EventService(
                         "Notification type ${event.typeKey} not found. Skipping.",
                     )
 
-            // Trigger for matching user subscriptions
-            subscriptionRepository
-                .findByNotificationTypeId(typeId)
-                .filter { it.enabled && filterEvaluator.evaluate(event, it.filters) }
-                .map { it.userId }
-                .distinct()
-                .let { userRepository.findAllById(it) }
-                .map { it.slackId }
-                .also { triggerIfNotEmpty(event.typeKey, it, event.payload, "users") }
+            // Collect matching user Slack IDs
+            val userSlackIds =
+                subscriptionRepository
+                    .findByNotificationTypeId(typeId)
+                    .filter { it.enabled && filterEvaluator.evaluate(event, it.filters) }
+                    .map { it.userId }
+                    .distinct()
+                    .let { userRepository.findAllById(it) }
+                    .map { it.slackId }
 
-            // Trigger for matching channel subscriptions
-            channelSubscriptionRepository
-                .findByNotificationTypeId(typeId)
-                .filter { filterEvaluator.evaluate(event, it.filters) }
-                .map { it.slackChannelId }
-                .distinct()
-                .also { triggerIfNotEmpty(event.typeKey, it, event.payload, "channels") }
+            // Collect matching Channel IDs
+            val channelSlackIds =
+                channelSubscriptionRepository
+                    .findByNotificationTypeId(typeId)
+                    .filter { filterEvaluator.evaluate(event, it.filters) }
+                    .map { it.slackChannelId }
+                    .distinct()
+
+            val allTargets = (userSlackIds + channelSlackIds).distinct()
+
+            if (allTargets.isEmpty()) {
+                logger.info(
+                    "No active subscriptions found for event ${event.typeKey}. Skipping trigger.",
+                )
+                return
+            }
+
+            logger.info(
+                "Triggering Novu for event ${event.typeKey} with ${userSlackIds.size} users and ${channelSlackIds.size} channels",
+            )
+
+            triggerIfNotEmpty(event.typeKey, allTargets, event.payload, "targets")
         } catch (e: Exception) {
             logger.error("Error processing event ${event.typeKey}", e)
         }

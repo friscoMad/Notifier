@@ -24,6 +24,10 @@ novu:
   api:
     url: http://localhost:3000/v1
     key: nvsk.local_development_api_key_for_testing_purposes_only_12345
+  slack:
+    client-id: ${SLACK_CLIENT_ID:}
+    client-secret: ${SLACK_CLIENT_SECRET:}
+    application-id: ${SLACK_APP_ID:}
 ---
 
 spring:

@@ -26,7 +26,7 @@ object GitHubActionsWebhookAdapter {
                             "repo" to w.repository.fullName,
                             "event_type" to (w.action ?: "unknown"),
                         ),
-                    payload = mapOf("event_data" to payload),
+                    rawPayload = mapOf("event_data" to payload),
                 )
             }
         }

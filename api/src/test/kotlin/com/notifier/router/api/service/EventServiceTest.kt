@@ -46,7 +46,7 @@ class EventServiceTest {
             GenericEvent(
                 typeKey = "pr_created",
                 metadata = mapOf("repo" to "api"),
-                payload = mapOf("pr_url" to "https://github.com/pull/1"),
+                rawPayload = mapOf("pr_url" to "https://github.com/pull/1"),
             )
 
         val notifType =
@@ -105,7 +105,7 @@ class EventServiceTest {
         val typeId = UUID.randomUUID()
 
         val event =
-            GenericEvent(typeKey = "pr_created", metadata = emptyMap(), payload = emptyMap())
+            GenericEvent(typeKey = "pr_created", metadata = emptyMap())
         val notifType =
             NotificationType(
                 id = typeId,

@@ -12,13 +12,14 @@ x-novu-env: &novu-env
   VITE_API_HOSTNAME: http://localhost:3000
   VITE_WEBSOCKET_HOSTNAME: http://localhost:3002
   # The VITE_LEGACY_DASHBOARD_URL must be set to the host and port of your web container.
-  API_ROOT_URL: http://localhost:3000
+  API_ROOT_URL: https://marguerite-dreamful-guillermina.ngrok-free.dev
   FRONT_BASE_URL: http://localhost:4000
   # Configuration
   IS_API_IDEMPOTENCY_ENABLED: 'false'
   IS_API_RATE_LIMITING_ENABLED: 'false'
   IS_NEW_MESSAGES_API_RESPONSE_ENABLED: 'true'
   IS_V2_ENABLED: 'true'
+  IS_SLACK_TEAMS_ENABLED: 'true'
   # Secrets
   JWT_SECRET: "your-secret-jwt-key"
   SUBSCRIBER_WIDGET_JWT_EXPIRATION_TIME: "15d"
@@ -119,7 +120,7 @@ services:
     environment:
       <<: *novu-env
       PORT: 3004
-      API_ROOT_URL: http://api:3000
+      API_ROOT_URL: https://marguerite-dreamful-guillermina.ngrok-free.dev
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3004/v1/health-check || exit 1"]
       interval: 20s

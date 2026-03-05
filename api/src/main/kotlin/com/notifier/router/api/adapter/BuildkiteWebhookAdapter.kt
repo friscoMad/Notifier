@@ -31,7 +31,7 @@ object BuildkiteWebhookAdapter {
                             "service" to w.pipeline.slug,
                             "event_type" to (w.event ?: "unknown"),
                         ),
-                    payload = mapOf("event_data" to payload),
+                    rawPayload = mapOf("event_data" to payload),
                 )
             }
         }

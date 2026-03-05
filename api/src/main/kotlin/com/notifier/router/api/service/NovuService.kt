@@ -3,25 +3,57 @@ package com.notifier.router.api.service
 import co.novu.api.events.requests.TriggerEventRequest
 import co.novu.common.base.Novu
 import co.novu.common.base.NovuConfig
+import com.notifier.router.api.config.LoggingInterceptor
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.http.HttpEntity
+import org.springframework.http.HttpMethod
+import org.springframework.http.client.BufferingClientHttpRequestFactory
+import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.stereotype.Service
+import org.springframework.web.client.RestTemplate
 import retrofit2.Retrofit
 
 @Service
 class NovuService(
     @Value("\${novu.api.key:not-set}") private val apiKey: String,
     @Value("\${novu.api.url:}") private val apiUrl: String,
+    @Value("\${novu.slack.client-id:}") private val slackClientId: String,
+    @Value("\${novu.slack.client-secret:}") private val slackClientSecret: String,
+    @Value("\${novu.slack.application-id:}") private val slackApplicationId: String,
+    @Value("\${novu.slack.bot-token:}") private val slackBotToken: String,
+    @Value("\${novu.slack.workspace-id:}") private val slackWorkspaceId: String,
+    @Value("\${novu.slack.workspace-name:Slack Workspace}") private val slackWorkspaceName: String,
 ) {
     private val logger = LoggerFactory.getLogger(NovuService::class.java)
     private lateinit var novuClient: Novu
+    private val restTemplate =
+        RestTemplate(BufferingClientHttpRequestFactory(SimpleClientHttpRequestFactory())).apply {
+            interceptors = listOf(LoggingInterceptor())
+        }
 
     /**
      * In-memory registry mapping our typeKey (e.g. "pr_created") to Novu's auto-generated trigger
      * identifier (e.g. "pull-request-created-whmu"). Populated by [ensureWorkflowExists].
      */
     private val workflowRegistry = mutableMapOf<String, String>()
+
+    /**
+     * The Novu integration identifier for Slack (e.g. "slack-abc123").
+     * Set by [ensureSlackIntegrationExists].
+     */
+    private var slackIntegrationIdentifier: String? = null
+
+    /**
+     * The Novu channel connection identifier for the Slack workspace (e.g. "chconn-abc123").
+     * Set by [ensureSlackWorkspaceConnectionExists]. Referenced when creating per-subscriber
+     * channel endpoints so Novu can resolve the bot token at delivery time.
+     */
+    private var slackConnectionIdentifier: String? = null
+
+    /** Tracks subscribers already upserted into Novu (avoids redundant API calls). */
+    private val knownSubscribers = mutableSetOf<String>()
 
     @PostConstruct
     fun init() {
@@ -150,6 +182,8 @@ class NovuService(
         }
 
         try {
+            subscriberIds.forEach { ensureSubscriberExists(it) }
+
             val novuIdentifier = workflowRegistry[workflowId] ?: workflowId
             if (novuIdentifier != workflowId) {
                 logger.debug("Resolved typeKey $workflowId -> Novu identifier $novuIdentifier")
@@ -191,19 +225,14 @@ class NovuService(
                     "firstName" to "User",
                     "lastName" to subscriberId.take(4),
                 )
-            org.springframework.web.client
-                .RestTemplate()
+            restTemplate
                 .exchange(
                     identifyUrl,
-                    org.springframework.http.HttpMethod.POST,
-                    org.springframework.http.HttpEntity(identifyPayload, headers),
+                    HttpMethod.POST,
+                    HttpEntity(identifyPayload, headers),
                     String::class.java,
                 )
 
-            // 2. We could update the preferences per channel using Novu's Subscriber Preference
-            // API.
-            // Note: The template ID/Key is required for the PATCH endpoints in production
-            // environments.
             logger.info(
                 "Successfully synced subscriber $subscriberId to Novu. Channels: $channels, Config: $channelConfig",
             )
@@ -224,9 +253,7 @@ class NovuService(
         try {
             val baseUrl = getBaseUrl()
             val headers = createHeaders()
-            val restTemplate =
-                org.springframework.web.client
-                    .RestTemplate()
+            val restTemplate = restTemplate
             logger.debug("Checking if Novu workflow exists: $key")
 
             // 1. Check if workflow exists
@@ -234,8 +261,8 @@ class NovuService(
             val response =
                 restTemplate.exchange(
                     workflowsUrl,
-                    org.springframework.http.HttpMethod.GET,
-                    org.springframework.http.HttpEntity<Unit>(headers),
+                    HttpMethod.GET,
+                    HttpEntity<Unit>(headers),
                     Map::class.java,
                 )
 
@@ -249,6 +276,38 @@ class NovuService(
                 val novuIdentifier = triggers?.firstOrNull()?.get("identifier") as? String
                 if (novuIdentifier != null) {
                     workflowRegistry[key] = novuIdentifier
+                }
+
+                // Ensure workflow has in_app and chat steps (remove push if present)
+                val steps = matchingWorkflow["steps"] as? List<Map<String, Any>> ?: emptyList()
+                val hasInAppStep = steps.any { (it["template"] as? Map<*, *>)?.get("type") == "in_app" }
+                val hasChatStep = steps.any { (it["template"] as? Map<*, *>)?.get("type") == "chat" }
+                val hasPushStep = steps.any { (it["template"] as? Map<*, *>)?.get("type") == "push" }
+
+                if (!hasChatStep || hasPushStep) {
+                    logger.info("Workflow $key needs patching (hasChatStep=$hasChatStep, hasPushStep=$hasPushStep)")
+                    val workflowId = matchingWorkflow["_id"] as? String
+                    if (workflowId != null) {
+                        val cleanSteps =
+                            steps
+                                .filter { (it["template"] as? Map<*, *>)?.get("type") != "push" }
+                                .let { filtered ->
+                                    if (!hasChatStep) {
+                                        filtered +
+                                            mapOf("template" to mapOf("type" to "chat", "content" to "{{content}}"))
+                                    } else {
+                                        filtered
+                                    }
+                                }
+                        restTemplate.exchange(
+                            "$workflowsUrl/$workflowId",
+                            HttpMethod.PUT,
+                            HttpEntity(matchingWorkflow + mapOf("steps" to cleanSteps), headers),
+                            Map::class.java,
+                        )
+                        logger.info("Patched workflow $key: removed push, ensured chat step")
+                    }
+                } else {
                     logger.info("Registered existing Novu workflow: $key -> $novuIdentifier")
                 }
                 return
@@ -259,8 +318,8 @@ class NovuService(
             val groupsResponse =
                 restTemplate.exchange(
                     groupsUrl,
-                    org.springframework.http.HttpMethod.GET,
-                    org.springframework.http.HttpEntity<Unit>(headers),
+                    HttpMethod.GET,
+                    HttpEntity<Unit>(headers),
                     Map::class.java,
                 )
             val groupsData = groupsResponse.body?.get("data") as? List<Map<String, Any>>
@@ -282,6 +341,13 @@ class NovuService(
                                         "content" to "{{content}}",
                                     ),
                             ),
+                            mapOf(
+                                "template" to
+                                    mapOf(
+                                        "type" to "chat",
+                                        "content" to "{{content}}",
+                                    ),
+                            ),
                         ),
                     "active" to true,
                     "draft" to false,
@@ -292,8 +358,8 @@ class NovuService(
             val createResponse =
                 restTemplate.exchange(
                     workflowsUrl,
-                    org.springframework.http.HttpMethod.POST,
-                    org.springframework.http.HttpEntity(createPayload, headers),
+                    HttpMethod.POST,
+                    HttpEntity(createPayload, headers),
                     Map::class.java,
                 )
 
@@ -314,6 +380,240 @@ class NovuService(
             )
         } catch (e: Exception) {
             logger.error("Failed to ensure Novu workflow $key exists", e)
+        }
+    }
+
+    fun ensureSlackIntegrationExists() {
+        if (!this::novuClient.isInitialized) {
+            logger.warn("Novu client not initialized, skipping Slack integration check")
+            return
+        }
+
+        if (slackClientId.isBlank() || slackClientSecret.isBlank() || slackApplicationId.isBlank()) {
+            logger.warn("novu.slack credentials not configured — skipping Slack integration setup")
+            return
+        }
+
+        try {
+            val baseUrl = getBaseUrl()
+            val headers = createHeaders()
+            val integrationsUrl = "$baseUrl/integrations"
+            val credentials =
+                mapOf(
+                    "clientId" to slackClientId,
+                    "secretKey" to slackClientSecret,
+                    "applicationId" to slackApplicationId,
+                    "token" to slackBotToken,
+                )
+
+            val existing =
+                (
+                    restTemplate
+                        .exchange(integrationsUrl, HttpMethod.GET, HttpEntity<Unit>(headers), Map::class.java)
+                        .body
+                        ?.get("data") as? List<Map<String, Any>> ?: emptyList()
+                ).filter { it["providerId"] == "slack" && it["channel"] == "chat" }
+
+            val integration: Map<*, *>
+            if (existing.isNotEmpty()) {
+                // Update credentials on the existing integration — do NOT delete it,
+                // as that would orphan all channel endpoints referencing its identifier.
+                val existingId = existing[0]["_id"] as String
+                integration =
+                    restTemplate
+                        .exchange(
+                            "$integrationsUrl/$existingId",
+                            HttpMethod.PUT,
+                            HttpEntity(mapOf("credentials" to credentials, "active" to true), headers),
+                            Map::class.java,
+                        ).body
+                        ?.get("data") as? Map<*, *> ?: existing[0]
+                logger.info("Updated existing Slack integration: ${integration["identifier"]}")
+
+                // Delete any extra integrations beyond the first
+                existing.drop(1).forEach { old ->
+                    restTemplate.exchange(
+                        "$integrationsUrl/${old["_id"]}",
+                        HttpMethod.DELETE,
+                        HttpEntity<Unit>(headers),
+                        Map::class.java,
+                    )
+                    logger.info("Deleted duplicate Slack integration: ${old["identifier"]}")
+                }
+            } else {
+                integration =
+                    restTemplate
+                        .exchange(
+                            integrationsUrl,
+                            HttpMethod.POST,
+                            HttpEntity(
+                                mapOf(
+                                    "providerId" to "slack",
+                                    "channel" to "chat",
+                                    "name" to "Slack",
+                                    "active" to true,
+                                    "credentials" to credentials,
+                                ),
+                                headers,
+                            ),
+                            Map::class.java,
+                        ).body
+                        ?.get("data") as? Map<*, *> ?: return logger.error("Failed to create Slack integration")
+                logger.info("Created Slack integration: ${integration["identifier"]}")
+            }
+
+            slackIntegrationIdentifier = integration["identifier"] as? String
+        } catch (e: org.springframework.web.client.RestClientResponseException) {
+            logger.error("Failed to provision Slack integration. Status: ${e.statusCode}, Body: ${e.responseBodyAsString}")
+        } catch (e: Exception) {
+            logger.error("Failed to provision Slack integration", e)
+        }
+    }
+
+    /**
+     * Resolves the Slack channel connection identifier lazily.
+     *
+     * Reuses any existing connection (all subscribers can reference the same connection since
+     * the bot token is workspace-wide). If none exists, creates one for [subscriberId].
+     * The result is cached in [slackConnectionIdentifier] for subsequent calls.
+     */
+    private fun resolveSlackConnectionIdentifier(subscriberId: String): String {
+        slackConnectionIdentifier?.let { return it }
+
+        val integrationId =
+            slackIntegrationIdentifier
+                ?: throw IllegalStateException("Slack integration not initialized")
+        val baseUrl = getBaseUrl()
+        val headers = createHeaders()
+        val connectionsUrl = "$baseUrl/channel-connections"
+
+        // Find any existing Slack connection — one connection serves all subscribers
+        val existing =
+            (
+                restTemplate
+                    .exchange(connectionsUrl, HttpMethod.GET, HttpEntity<Unit>(headers), Map::class.java)
+                    .body
+                    ?.get("data") as? List<Map<String, Any>> ?: emptyList()
+            ).filter { it["providerId"] == "slack" }
+
+        if (existing.isNotEmpty()) {
+            val connId = existing[0]["identifier"] as? String ?: throw IllegalStateException("Connection has no identifier")
+            slackConnectionIdentifier = connId
+            logger.info("Reusing existing Slack connection $connId")
+            return connId
+        }
+
+        // Create a new connection. subscriberId is required by the API.
+        val workspaceId = slackWorkspaceId.ifBlank { "unknown" }
+        val created =
+            restTemplate
+                .exchange(
+                    connectionsUrl,
+                    HttpMethod.POST,
+                    HttpEntity(
+                        mapOf(
+                            "subscriberId" to subscriberId,
+                            "integrationIdentifier" to integrationId,
+                            "workspace" to mapOf("id" to workspaceId, "name" to slackWorkspaceName),
+                            "auth" to mapOf("accessToken" to slackBotToken),
+                        ),
+                        headers,
+                    ),
+                    Map::class.java,
+                ).body
+                ?.get("data") as? Map<*, *>
+                ?: throw IllegalStateException("Failed to create Slack channel connection")
+
+        val connId = created["identifier"] as? String ?: throw IllegalStateException("Created connection has no identifier")
+        slackConnectionIdentifier = connId
+        logger.info("Created Slack connection $connId for subscriber $subscriberId (workspace=$workspaceId)")
+        return connId
+    }
+
+    /**
+     * Creates a Slack channel endpoint for the given ID.
+     * Detects whether it is a user DM (IDs starting with U/W → slack_user) or a Slack
+     * channel/group (IDs starting with C/G → slack_channel) and creates the appropriate
+     * endpoint type. Deletes stale endpoints first so delivery always uses the current
+     * integration and connection.
+     */
+    fun createSlackEndpoint(subscriberId: String) {
+        ensureSubscriberExists(subscriberId)
+
+        val integrationId =
+            slackIntegrationIdentifier
+                ?: throw IllegalStateException("Slack integration not initialized — cannot create channel endpoint")
+        val connectionId = resolveSlackConnectionIdentifier(subscriberId)
+
+        val isSlackChannel = subscriberId.startsWith("C") || subscriberId.startsWith("G")
+        val endpointType = if (isSlackChannel) "slack_channel" else "slack_user"
+        val endpointBody = if (isSlackChannel) mapOf("channelId" to subscriberId) else mapOf("userId" to subscriberId)
+
+        val baseUrl = getBaseUrl()
+        val headers = createHeaders()
+
+        // Delete stale endpoints for this subscriber (wrong integration or missing connection)
+        try {
+            val stale =
+                (
+                    restTemplate
+                        .exchange(
+                            "$baseUrl/channel-endpoints?subscriberId=$subscriberId",
+                            HttpMethod.GET,
+                            HttpEntity<Unit>(headers),
+                            Map::class.java,
+                        ).body
+                        ?.get("data") as? List<Map<String, Any>> ?: emptyList()
+                ).filter {
+                    it["integrationIdentifier"] != integrationId || it["connectionIdentifier"] == null
+                }
+            stale.forEach { endpoint ->
+                restTemplate.exchange(
+                    "$baseUrl/channel-endpoints/${endpoint["identifier"]}",
+                    HttpMethod.DELETE,
+                    HttpEntity<Unit>(headers),
+                    Map::class.java,
+                )
+                logger.debug("Deleted stale channel endpoint: ${endpoint["identifier"]}")
+            }
+        } catch (e: Exception) {
+            logger.warn("Could not clean up stale channel endpoints for $subscriberId", e)
+        }
+
+        val payload =
+            mapOf(
+                "subscriberId" to subscriberId,
+                "integrationIdentifier" to integrationId,
+                "connectionIdentifier" to connectionId,
+                "type" to endpointType,
+                "endpoint" to endpointBody,
+            )
+        restTemplate.exchange(
+            "$baseUrl/channel-endpoints",
+            HttpMethod.POST,
+            HttpEntity(payload, headers),
+            Map::class.java,
+        )
+        logger.info("Created Slack $endpointType endpoint for $subscriberId (connection=$connectionId)")
+    }
+
+    /**
+     * Upserts the subscriber in Novu so it exists when a workflow is triggered.
+     * Slack credentials (webhookUrl) are set automatically by the OAuth callback — not here.
+     */
+    private fun ensureSubscriberExists(subscriberId: String) {
+        if (subscriberId in knownSubscribers) return
+        try {
+            restTemplate.exchange(
+                "${getBaseUrl()}/subscribers",
+                HttpMethod.POST,
+                HttpEntity(mapOf("subscriberId" to subscriberId), createHeaders()),
+                Map::class.java,
+            )
+            knownSubscribers.add(subscriberId)
+            logger.debug("Upserted subscriber $subscriberId in Novu")
+        } catch (e: Exception) {
+            logger.warn("Could not upsert subscriber $subscriberId in Novu", e)
         }
     }
 

@@ -28,6 +28,7 @@ data class PrCreatedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
+                "content" to "PR opened by $author: $title ($repo)",
                 "title" to title,
                 "description" to description,
                 "url" to url,
@@ -54,7 +55,13 @@ data class PrReviewRequestedEvent(
                 "base_branch" to baseBranch,
             )
     override val payload
-        get() = mapOf<String, Any>("title" to title, "url" to url, "requested_at" to requestedAt)
+        get() =
+            mapOf<String, Any>(
+                "content" to "$reviewer requested to review: $title",
+                "title" to title,
+                "url" to url,
+                "requested_at" to requestedAt,
+            )
 }
 
 data class PrUpdatedEvent(
@@ -69,7 +76,13 @@ data class PrUpdatedEvent(
     override val metadata
         get() = mapOf("author" to author, "repo" to repo, "base_branch" to baseBranch)
     override val payload
-        get() = mapOf<String, Any>("title" to title, "url" to url, "updated_at" to updatedAt)
+        get() =
+            mapOf<String, Any>(
+                "content" to "PR updated by $author: $title ($repo)",
+                "title" to title,
+                "url" to url,
+                "updated_at" to updatedAt,
+            )
 }
 
 data class PrClosedEvent(
@@ -88,6 +101,7 @@ data class PrClosedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
+                "content" to "PR ${if (merged) "merged" else "closed"}: $title ($repo)",
                 "title" to title,
                 "url" to url,
                 "merged_at" to mergedAt,
@@ -117,6 +131,7 @@ data class PrCheckReRequestedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
+                "content" to "Check $checkName re-requested on $repo",
                 "check_suite_url" to checkSuiteUrl,
                 "rerequested_at" to reRequestedAt,
             )
@@ -143,6 +158,7 @@ data class PrCheckCompletedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
+                "content" to "Check $checkName $conclusion on $repo",
                 "check_run_url" to checkRunUrl,
                 "conclusion" to conclusion,
                 "completed_at" to completedAt,
@@ -172,6 +188,7 @@ data class DeployStartedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
+                "content" to "Deploy of $service to $environment started",
                 "deployment_url" to deploymentUrl,
                 "status" to status,
                 "created_at" to createdAt,
@@ -201,6 +218,7 @@ data class DeployCompletedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
+                "content" to "Deploy of $service to $environment: $status",
                 "deployment_url" to deploymentUrl,
                 "status_url" to statusUrl,
                 "status" to status,
@@ -231,6 +249,7 @@ data class JobFinishedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
+                "content" to "Build $status for $service ($testName)",
                 "job_url" to jobUrl,
                 "build_url" to buildUrl,
                 "finished_at" to finishedAt,
@@ -248,7 +267,12 @@ data class PipelineUpdatedEvent(
     override val metadata
         get() = mapOf("service" to service, "team" to team)
     override val payload
-        get() = mapOf<String, Any>("pipeline_url" to pipelineUrl, "updated_at" to updatedAt)
+        get() =
+            mapOf<String, Any>(
+                "content" to "Pipeline updated for $service",
+                "pipeline_url" to pipelineUrl,
+                "updated_at" to updatedAt,
+            )
 }
 
 data class BuildFinishedEvent(
@@ -269,6 +293,7 @@ data class BuildFinishedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
+                "content" to "Build $status for $service on $environment",
                 "build_url" to buildUrl,
                 "finished_at" to finishedAt,
                 "state" to status,
@@ -281,5 +306,8 @@ data class BuildFinishedEvent(
 data class GenericEvent(
     override val typeKey: String,
     override val metadata: Map<String, Any> = emptyMap(),
-    override val payload: Map<String, Any> = emptyMap(),
-) : NotificationEvent
+    private val rawPayload: Map<String, Any> = emptyMap(),
+) : NotificationEvent {
+    override val payload
+        get() = mapOf("content" to "Notification: $typeKey") + rawPayload
+}

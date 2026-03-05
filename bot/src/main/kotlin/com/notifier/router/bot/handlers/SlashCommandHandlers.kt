@@ -1,9 +1,11 @@
 package com.notifier.router.bot.handlers
 
 import com.notifier.router.bot.client.RouterApiClient
+import com.notifier.router.bot.service.ChannelSubscribeResult
+import com.notifier.router.bot.service.SubscribeResult
+import com.notifier.router.bot.service.SubscriptionService
 import com.notifier.router.bot.view.ModalViewBuilder
 import com.notifier.router.common.domain.Filter
-import com.notifier.router.common.dto.SubscriptionDto
 import com.slack.api.bolt.App
 import com.slack.api.bolt.context.builtin.ActionContext
 import com.slack.api.bolt.context.builtin.SlashCommandContext
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Component
 class SlashCommandHandlers(
     private val app: App,
     private val apiClient: RouterApiClient,
+    private val subscriptionService: SubscriptionService,
 ) {
     private val logger = LoggerFactory.getLogger(SlashCommandHandlers::class.java)
 
@@ -56,8 +59,9 @@ class SlashCommandHandlers(
                 `/notifyme` - Open interactive subscription modal
                 `/notifyme help` - Show this message
                 `/notifyme list` - List your active subscriptions
-                `/notifyme subscribe <type>` - Subscribe to a notification type
+                `/notifyme subscribe <type>` - Subscribe to a notification type (DM)
                 `/notifyme subscribe <type> <field>=<value>` - Subscribe with filters (e.g. `repo=api`)
+                `/notifyme channel #channel <type>` - Subscribe a channel to a notification type
                 `/notifyme unsubscribe <type>` - Unsubscribe from a notification type
                 """.trimIndent()
             return ctx.ack(helpText)
@@ -69,6 +73,7 @@ class SlashCommandHandlers(
         return when (action) {
             "list" -> handleListCommand(req, ctx)
             "subscribe" -> handleSubscribeCommand(parts.drop(1), req, ctx)
+            "channel" -> handleChannelSubscribeCommand(parts.drop(1), req, ctx)
             "unsubscribe" -> handleUnsubscribeCommand(parts.drop(1), req, ctx)
             else -> ctx.ack("Unknown command: $action. Use `/notifyme help` for usage.")
         }
@@ -81,7 +86,11 @@ class SlashCommandHandlers(
         val triggerId = req.payload.triggerId
         val types = apiClient.getNotificationTypes()
 
-        val modalView = ModalViewBuilder.buildInitialTypeSelectionModal(types)
+        // Pass channel context so the modal can offer channel subscription when opened in a channel
+        val channelId = req.payload.channelId?.takeIf { it.startsWith("C") || it.startsWith("G") }
+        val channelName = req.payload.channelName?.takeIf { channelId != null }
+
+        val modalView = ModalViewBuilder.buildInitialTypeSelectionModal(types, channelId, channelName)
 
         val response =
             ctx
@@ -222,22 +231,80 @@ class SlashCommandHandlers(
             }
         }
 
-        val subscriptionDto =
-            SubscriptionDto(
+        val filtersSuffix = if (filters.isNotEmpty()) " with filters" else ""
+        return when (
+            subscriptionService.subscribeAndActivate(
                 userId = req.payload.userId,
                 notificationTypeId = typeId,
                 channels = listOf("slack_dm"),
                 filters = filters,
             )
+        ) {
+            is SubscribeResult.Success ->
+                ctx.ack("✅ Subscribed to `$typeKey`$filtersSuffix. You'll receive notifications here.")
+            SubscribeResult.Failure ->
+                ctx.ack("❌ Failed to subscribe to `$typeKey`. Please try again later.")
+        }
+    }
 
-        val response = apiClient.subscribe(subscriptionDto)
-        return if (response != null) {
-            ctx.ack(
-                "Successfully subscribed to `$typeKey`" +
-                    (if (filters.isNotEmpty()) " with filters." else ""),
+    private fun handleChannelSubscribeCommand(
+        args: List<String>,
+        req: SlashCommandRequest,
+        ctx: SlashCommandContext,
+    ): Response {
+        if (args.size < 2) {
+            return ctx.ack("Usage: `/notifyme channel #channel <type>` (e.g. `/notifyme channel #dev-alerts pr_created`)")
+        }
+
+        val channelArg = args[0]
+        val mentionMatch =
+            Regex("<#([A-Z0-9]+)\\|([^>]+)>").find(channelArg)
+                ?: return ctx.ack("Please mention the channel using #channel-name (e.g. `/notifyme channel #dev-alerts pr_created`)")
+
+        val channelId = mentionMatch.groupValues[1]
+        val channelName = mentionMatch.groupValues[2]
+
+        // Verify the bot is a member before subscribing
+        val infoResponse = ctx.client().conversationsInfo { it.channel(channelId) }
+        if (!infoResponse.isOk) {
+            return ctx.ack(
+                "Could not look up <#$channelId|$channelName>. Make sure I'm invited first: `/invite @NotifyMe` in that channel.",
             )
-        } else {
-            ctx.ack("Failed to subscribe to `$typeKey`. Please try again later.")
+        }
+        if (infoResponse.channel?.isMember != true) {
+            return ctx.ack(
+                "I'm not in <#$channelId|$channelName> yet.\n" +
+                    "Run `/invite @NotifyMe` in that channel, then try again.",
+            )
+        }
+
+        val typeKey = args[1]
+        val availableTypes = apiClient.getNotificationTypes()
+        val match =
+            availableTypes.find { it.key == typeKey }
+                ?: run {
+                    val typeKeys = availableTypes.joinToString { it.key }
+                    return ctx.ack("Unknown notification type: `$typeKey`. Available: $typeKeys")
+                }
+
+        val filters = mutableListOf<Filter>()
+        for (i in 2 until args.size) {
+            val pair = args[i].split("=", limit = 2)
+            if (pair.size == 2) filters.add(Filter(pair[0], "EQ", pair[1]))
+        }
+
+        return when (
+            subscriptionService.subscribeChannelAndActivate(
+                channelId = channelId,
+                channelName = channelName,
+                notificationTypeId = match.id!!,
+                filters = filters,
+            )
+        ) {
+            is ChannelSubscribeResult.Success ->
+                ctx.ack("✅ <#$channelId|$channelName> is now subscribed to `$typeKey` notifications.")
+            ChannelSubscribeResult.Failure ->
+                ctx.ack("❌ Failed to subscribe <#$channelId|$channelName> to `$typeKey`. Please try again.")
         }
     }
 

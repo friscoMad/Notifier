@@ -1,0 +1,14 @@
+# Detekt configuration — built-in defaults + formatting (replaces ktlint)
+# buildUponDefaultConfig = true is set in Gradle, so all default rules are active.
+# This file only adds the formatting rule set on top.
+
+config:
+  validation: true
+  warningsAsErrors: false
+
+# ── Formatting (detekt-formatting wraps ktlint) ───────────────────────────────
+
+formatting:
+  active: true
+  android: false
+  autoCorrect: true

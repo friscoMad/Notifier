@@ -552,9 +552,9 @@ class NovuService(
         val baseUrl = getBaseUrl()
         val headers = createHeaders()
 
-        // Delete stale endpoints for this subscriber (wrong integration or missing connection)
-        try {
-            val stale =
+        // Fetch all existing endpoints for this subscriber
+        val existing =
+            try {
                 (
                     restTemplate
                         .exchange(
@@ -564,10 +564,25 @@ class NovuService(
                             Map::class.java,
                         ).body
                         ?.get("data") as? List<Map<String, Any>> ?: emptyList()
-                ).filter {
-                    it["integrationIdentifier"] != integrationId || it["connectionIdentifier"] == null
-                }
-            stale.forEach { endpoint ->
+                )
+            } catch (e: Exception) {
+                logger.warn("Could not fetch channel endpoints for $subscriberId", e)
+                emptyList()
+            }
+
+        // If a valid endpoint already exists, nothing to do
+        val alreadyValid =
+            existing.any {
+                it["integrationIdentifier"] == integrationId && it["connectionIdentifier"] != null
+            }
+        if (alreadyValid) {
+            logger.debug("Slack endpoint already up-to-date for $subscriberId, skipping")
+            return
+        }
+
+        // Delete stale endpoints (wrong integration or missing connection)
+        try {
+            existing.forEach { endpoint ->
                 restTemplate.exchange(
                     "$baseUrl/channel-endpoints/${endpoint["identifier"]}",
                     HttpMethod.DELETE,

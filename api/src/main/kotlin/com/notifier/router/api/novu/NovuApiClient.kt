@@ -52,7 +52,7 @@ class NovuApiClient(
 
     fun listWorkflows(): List<NovuWorkflow> =
         restTemplate
-            .exchange("$baseUrl/notification-templates", HttpMethod.GET, HttpEntity<Unit>(headers()), Map::class.java)
+            .exchange("$baseUrl/workflows", HttpMethod.GET, HttpEntity<Unit>(headers()), Map::class.java)
             .body
             .dataRawList()
             .map { restTemplate.objectMapper().convertValue(it, NovuWorkflow::class.java) }
@@ -60,7 +60,7 @@ class NovuApiClient(
     fun createWorkflow(workflow: NovuWorkflow): NovuWorkflow =
         restTemplate
             .exchange(
-                "$baseUrl/notification-templates",
+                "$baseUrl/workflows",
                 HttpMethod.POST,
                 HttpEntity(workflow, headers()),
                 Map::class.java,
@@ -74,7 +74,7 @@ class NovuApiClient(
     ): NovuWorkflow =
         restTemplate
             .exchange(
-                "$baseUrl/notification-templates/$id",
+                "$baseUrl/workflows/$id",
                 HttpMethod.PUT,
                 HttpEntity(workflow, headers()),
                 Map::class.java,

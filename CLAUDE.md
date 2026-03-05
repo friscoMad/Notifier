@@ -171,6 +171,16 @@ private fun User.toDto() = UserDto(id = id, email = email)
 | `pr_merged_master_success` | GitHub | author, repo |
 | `pr_merged_master_error` | GitHub | author, repo |
 
+## Novu Delivery Architecture (Slack)
+
+Slack delivery chain: Integration → ChannelConnection → ChannelEndpoint → Subscriber
+
+- **Integration** (`slack`, `chat` channel): holds `clientId`, `secretKey`, `applicationId`, bot `token`. Update with PUT — never delete-and-recreate, or all channel endpoints are orphaned.
+- **ChannelConnection**: workspace-level, holds `auth.accessToken` (bot token). Endpoint's `connectionIdentifier` must point here or Novu sends empty Bearer token → Slack 401.
+- **ChannelEndpoint**: per-subscriber. `slack_user` for DMs (U/W prefix), `slack_channel` for channels (C/G prefix). Always check for existing valid endpoint before creating — duplicates cause Novu fanout (N deliveries per event).
+- `POST /v1/channel-connections` requires `subscriberId` — cannot be called at startup without subscriber context.
+- `SimpleClientHttpRequestFactory` does NOT support HTTP PATCH — avoid PATCH calls in `NovuService`; use PUT or POST instead.
+
 ## In Progress
 
 See `docs/IMPLEMENTATION_PLAN.md` for detailed task breakdown. Current focus:

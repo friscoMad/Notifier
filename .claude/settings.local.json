@@ -31,7 +31,11 @@
       "WebFetch(domain:novu-preview.mintlify.app)",
       "WebFetch(domain:api.github.com)",
       "WebFetch(domain:novu.co)",
-      "Bash(./gradlew :bot:compileKotlin:*)"
+      "Bash(./gradlew :bot:compileKotlin:*)",
+      "Skill(claude-md-management:revise-claude-md)",
+      "Bash(./gradlew :api:ktlintMainSourceSetFormat:*)",
+      "Bash(./gradlew :api:ktlintMainSourceSetCheck:*)",
+      "Bash(git:*)"
     ]
   }
 }

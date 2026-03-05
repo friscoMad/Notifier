@@ -121,6 +121,38 @@ If the batch prompt appears, answer `S` (Sí) to terminate it.
 
 It does NOT include `repo` or `author` in the payload — those are used for filter matching only.
 
+## 9. Novu Slack Integration: Delete-and-Recreate Orphans Endpoints
+
+**Symptom:** Channel endpoints stop delivering after API restart. Novu logs: `"All chat channels failed"`.
+
+**Cause:** Deleting and recreating the Slack integration generates a new `identifier`. All existing channel endpoints reference the old identifier → Novu can't resolve them.
+
+**Fix:** Always PUT (update) the existing integration, never DELETE + POST. See `NovuService.ensureSlackIntegrationExists()`.
+
+## 10. Novu Chat Delivery: Empty Bearer Token
+
+**Symptom:** Slack API returns 401 / message not delivered, Novu logs show empty token.
+
+**Cause:** Channel endpoint has `connectionIdentifier: null`. Novu resolves the bot token from the referenced `ChannelConnection.auth.accessToken` — if the reference is missing, token is empty string.
+
+**Fix:** Always pass `connectionIdentifier` when creating channel endpoints. Use `resolveSlackConnectionIdentifier(subscriberId)` which finds or creates the workspace connection.
+
+## 11. Duplicate Novu Deliveries (Fanout)
+
+**Symptom:** User receives N DMs per event (e.g., 3 DMs for one webhook).
+
+**Cause:** Multiple valid channel endpoints exist for the same subscriber. Novu delivers to every endpoint.
+
+**Fix:** Before creating a channel endpoint, check if a valid one already exists (`integrationIdentifier` matches AND `connectionIdentifier != null`). If yes, skip creation entirely.
+
+## 12. `Invalid HTTP method: PATCH` in NovuService
+
+**Symptom:** `ResourceAccessException: I/O error on PATCH request: Invalid HTTP method: PATCH`
+
+**Cause:** Spring's `SimpleClientHttpRequestFactory` (backed by Java `HttpURLConnection`) does not support PATCH.
+
+**Fix:** Avoid PATCH entirely in `NovuService`. Use PUT for full updates, or restructure to POST + DELETE.
+
 ## 8. Spring Boot `@MockBean` Deprecation Warning
 
 **Symptom:** Kotlin compiler warning: `'annotation class MockBean' is deprecated`.

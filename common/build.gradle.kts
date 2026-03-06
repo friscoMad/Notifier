@@ -8,6 +8,7 @@ plugins {
 dependencies {
     implementation(libs.jackson.module.kotlin)
     implementation(libs.jakarta.validation.api)
+    detektPlugins(libs.detekt.formatting)
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {

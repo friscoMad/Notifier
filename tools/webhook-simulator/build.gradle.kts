@@ -13,6 +13,7 @@ dependencies {
     implementation("org.springframework:spring-web")
     implementation(libs.kotlin.reflect)
     implementation(libs.jackson2.module.kotlin)
+    detektPlugins(libs.detekt.formatting)
 }
 
 application {

@@ -25,6 +25,7 @@ dependencies {
 
     testImplementation(libs.spring.boot.starter.test)
     testImplementation(libs.mockito.kotlin)
+    detektPlugins(libs.detekt.formatting)
 }
 
 tasks.withType<KotlinCompile> {

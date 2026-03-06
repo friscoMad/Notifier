@@ -37,6 +37,7 @@ dependencies {
     testImplementation(libs.testcontainers.postgresql)
     testImplementation(libs.wiremock.standalone)
     testImplementation(libs.mockito.kotlin)
+    detektPlugins(libs.detekt.formatting)
 }
 
 tasks.withType<KotlinCompile> {

@@ -34,8 +34,8 @@ class ModalHandlers(
         }
 
         app.viewSubmission("create_subscription_modal") {
-            req: ViewSubmissionRequest,
-            ctx: ViewSubmissionContext,
+                req: ViewSubmissionRequest,
+                ctx: ViewSubmissionContext,
             ->
             handleSubscriptionSubmission(req, ctx)
         }
@@ -122,7 +122,9 @@ class ModalHandlers(
             val inputText = stateValues["filter_block_$fieldName"]?.get("filter_input_$fieldName")?.value
             if (!inputText.isNullOrBlank()) {
                 if (inputText.contains(",")) {
-                    extractedFilters.add(Filter(fieldName, "IN", inputText.split(",").map { it.trim() }.filter { it.isNotEmpty() }))
+                    extractedFilters.add(
+                        Filter(fieldName, "IN", inputText.split(",").map { it.trim() }.filter { it.isNotEmpty() })
+                    )
                 } else {
                     extractedFilters.add(Filter(fieldName, "EQ", inputText.trim()))
                 }
@@ -169,7 +171,9 @@ class ModalHandlers(
                     filters = extractedFilters,
                 )
             ) {
-                is ChannelSubscribeResult.Success -> results.add("✅ *#$channelName* will receive `$typeName` notifications")
+                is ChannelSubscribeResult.Success -> results.add(
+                    "✅ *#$channelName* will receive `$typeName` notifications"
+                )
                 ChannelSubscribeResult.Failure -> {
                     results.add("❌ Failed to subscribe *#$channelName*")
                     anyFailure = true

@@ -66,13 +66,13 @@ class NotificationFlowIntegrationTest : BaseIntegrationTest() {
                 notificationTypeId = prCreatedType.id,
                 channels = listOf("slack_dm"),
                 filters =
-                    listOf(
-                        Filter(
-                            field = "repo",
-                            operator = "EQ",
-                            value = "org/repo",
-                        ),
+                listOf(
+                    Filter(
+                        field = "repo",
+                        operator = "EQ",
+                        value = "org/repo",
                     ),
+                ),
                 enabled = true,
             )
         subscriptionRepository.save(subscription)

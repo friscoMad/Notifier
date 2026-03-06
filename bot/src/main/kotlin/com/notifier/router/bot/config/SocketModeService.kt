@@ -28,7 +28,9 @@ class SocketModeService(
             }
 
             logger.info(
-                "Starting Slack Socket Mode app with app token (len: ${appToken.length}, starts with: ${appToken.take(10)}...)",
+                "Starting Slack Socket Mode app with app token (len: ${appToken.length}, starts with: ${appToken.take(
+                    10
+                )}...)",
             )
 
             logger.info("Starting Slack Socket Mode app...")

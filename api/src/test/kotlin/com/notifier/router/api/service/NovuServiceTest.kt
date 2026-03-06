@@ -79,7 +79,12 @@ class NovuServiceTest {
     @Test
     fun `updates existing integration in place`() {
         markNovuClientInitialized()
-        val existing = NovuIntegration(_id = "int-existing", identifier = "slack-abc", providerId = "slack", channel = "chat")
+        val existing = NovuIntegration(
+            _id = "int-existing",
+            identifier = "slack-abc",
+            providerId = "slack",
+            channel = "chat"
+        )
         whenever(apiClient.listIntegrations()).thenReturn(listOf(existing))
         whenever(apiClient.updateIntegration(any(), any(), any())).thenReturn(existing)
 
@@ -97,8 +102,18 @@ class NovuServiceTest {
     @Test
     fun `deletes duplicate integrations beyond the first`() {
         markNovuClientInitialized()
-        val first = NovuIntegration(_id = "int-first", identifier = "slack-first", providerId = "slack", channel = "chat")
-        val second = NovuIntegration(_id = "int-second", identifier = "slack-second", providerId = "slack", channel = "chat")
+        val first = NovuIntegration(
+            _id = "int-first",
+            identifier = "slack-first",
+            providerId = "slack",
+            channel = "chat"
+        )
+        val second = NovuIntegration(
+            _id = "int-second",
+            identifier = "slack-second",
+            providerId = "slack",
+            channel = "chat"
+        )
         whenever(apiClient.listIntegrations()).thenReturn(listOf(first, second))
         whenever(apiClient.updateIntegration(any(), any(), any())).thenReturn(first)
 

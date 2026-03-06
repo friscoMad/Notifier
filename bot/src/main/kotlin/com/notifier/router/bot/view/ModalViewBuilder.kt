@@ -19,7 +19,9 @@ object ModalViewBuilder {
     )
 
     /** Encodes metadata as `typeKey|channelId|channelName` (pipe-delimited). */
-    fun encodeMetadata(metadata: ModalMetadata): String = "${metadata.typeKey}|${metadata.channelId ?: ""}|${metadata.channelName ?: ""}"
+    fun encodeMetadata(
+        metadata: ModalMetadata
+    ): String = "${metadata.typeKey}|${metadata.channelId ?: ""}|${metadata.channelName ?: ""}"
 
     fun decodeMetadata(raw: String?): ModalMetadata {
         if (raw.isNullOrBlank()) return ModalMetadata()
@@ -141,11 +143,11 @@ object ModalViewBuilder {
                         staticSelect(
                             actionId = "digest_select",
                             options =
-                                listOf(
-                                    Option("Immediate", "immediate"),
-                                    Option("Daily (24h)", "24h"),
-                                    Option("Half-Day (12h)", "12h"),
-                                ),
+                            listOf(
+                                Option("Immediate", "immediate"),
+                                Option("Daily (24h)", "24h"),
+                                Option("Half-Day (12h)", "12h"),
+                            ),
                             initialValue = "immediate",
                         )
                     }
@@ -153,7 +155,11 @@ object ModalViewBuilder {
             v
                 .callbackId("create_subscription_modal")
                 .type("modal")
-                .privateMetadata(encodeMetadata(ModalMetadata(typeKey = selectedTypeKey, channelId = channelId, channelName = channelName)))
+                .privateMetadata(
+                    encodeMetadata(
+                        ModalMetadata(typeKey = selectedTypeKey, channelId = channelId, channelName = channelName)
+                    )
+                )
                 .title(viewTitle { it.type("plain_text").text("Configure Notifications") })
                 .submit(viewSubmit { it.type("plain_text").text("Save") })
                 .close(viewClose { it.type("plain_text").text("Cancel") })

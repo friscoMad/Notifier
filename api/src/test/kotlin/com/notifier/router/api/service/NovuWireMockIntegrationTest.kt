@@ -122,7 +122,7 @@ class NovuWireMockIntegrationTest : BaseIntegrationTest() {
                     typeKey = "pr_created",
                     name = "PR Created",
                     description =
-                        "Triggered when a new Pull Request is opened.",
+                    "Triggered when a new Pull Request is opened.",
                 ),
             )
 
@@ -143,13 +143,13 @@ class NovuWireMockIntegrationTest : BaseIntegrationTest() {
                 notificationTypeId = prCreatedType.id,
                 channels = listOf("slack_dm"),
                 filters =
-                    listOf(
-                        Filter(
-                            field = "repo",
-                            operator = "EQ",
-                            value = "org/wiremock-repo",
-                        ),
+                listOf(
+                    Filter(
+                        field = "repo",
+                        operator = "EQ",
+                        value = "org/wiremock-repo",
                     ),
+                ),
                 enabled = true,
             ),
         )
@@ -227,13 +227,13 @@ class NovuWireMockIntegrationTest : BaseIntegrationTest() {
                 notificationTypeId = prCreatedType.id,
                 channels = listOf("slack_dm"),
                 filters =
-                    listOf(
-                        Filter(
-                            field = "repo",
-                            operator = "EQ",
-                            value = "org/specific-repo",
-                        ),
+                listOf(
+                    Filter(
+                        field = "repo",
+                        operator = "EQ",
+                        value = "org/specific-repo",
                     ),
+                ),
                 enabled = true,
             ),
         )

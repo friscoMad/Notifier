@@ -20,20 +20,20 @@ import java.util.UUID
 @Table(
     name = "channel_subscriptions",
     uniqueConstraints =
-        [
-            UniqueConstraint(
-                name = "uc_channel_sub_channel_type",
-                columnNames = ["slack_channel_id", "notification_type_id"],
-            ),
-        ],
+    [
+        UniqueConstraint(
+            name = "uc_channel_sub_channel_type",
+            columnNames = ["slack_channel_id", "notification_type_id"],
+        ),
+    ],
     indexes =
-        [
-            Index(name = "idx_channel_sub_channel_id", columnList = "slack_channel_id"),
-            Index(
-                name = "idx_channel_sub_type_id",
-                columnList = "notification_type_id",
-            ),
-        ],
+    [
+        Index(name = "idx_channel_sub_channel_id", columnList = "slack_channel_id"),
+        Index(
+            name = "idx_channel_sub_type_id",
+            columnList = "notification_type_id",
+        ),
+    ],
 )
 @EntityListeners(AuditingEntityListener::class)
 data class ChannelSubscription(

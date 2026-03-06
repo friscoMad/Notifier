@@ -84,13 +84,13 @@ class NovuServiceIntegrationTest : BaseIntegrationTest() {
                 notificationTypeId = prCreatedType.id,
                 channels = listOf("slack_dm"),
                 filters =
-                    listOf(
-                        Filter(
-                            field = "repo",
-                            operator = "EQ",
-                            value = "org/my-repo",
-                        ),
+                listOf(
+                    Filter(
+                        field = "repo",
+                        operator = "EQ",
+                        value = "org/my-repo",
                     ),
+                ),
                 enabled = true,
             ),
         )
@@ -166,13 +166,13 @@ class NovuServiceIntegrationTest : BaseIntegrationTest() {
                 notificationTypeId = prCreatedType.id,
                 channels = listOf("slack_dm"),
                 filters =
-                    listOf(
-                        Filter(
-                            field = "repo",
-                            operator = "EQ",
-                            value = "org/shared-repo",
-                        ),
+                listOf(
+                    Filter(
+                        field = "repo",
+                        operator = "EQ",
+                        value = "org/shared-repo",
                     ),
+                ),
                 enabled = true,
             ),
         )
@@ -183,13 +183,13 @@ class NovuServiceIntegrationTest : BaseIntegrationTest() {
                 notificationTypeId = prCreatedType.id,
                 channels = listOf("slack_dm"),
                 filters =
-                    listOf(
-                        Filter(
-                            field = "repo",
-                            operator = "EQ",
-                            value = "org/shared-repo",
-                        ),
+                listOf(
+                    Filter(
+                        field = "repo",
+                        operator = "EQ",
+                        value = "org/shared-repo",
                     ),
+                ),
                 enabled = true,
             ),
         )
@@ -242,13 +242,13 @@ class NovuServiceIntegrationTest : BaseIntegrationTest() {
                 notificationTypeId = prCreatedType.id,
                 channels = listOf("slack_dm"),
                 filters =
-                    listOf(
-                        Filter(
-                            field = "repo",
-                            operator = "EQ",
-                            value = "org/repo",
-                        ),
+                listOf(
+                    Filter(
+                        field = "repo",
+                        operator = "EQ",
+                        value = "org/repo",
                     ),
+                ),
                 enabled = false,
             ),
         )

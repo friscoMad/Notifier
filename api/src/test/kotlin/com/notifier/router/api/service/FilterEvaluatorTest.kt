@@ -9,7 +9,10 @@ import org.junit.jupiter.api.Test
 class FilterEvaluatorTest {
     private val evaluator = FilterEvaluator()
 
-    private fun event(vararg metadata: Pair<String, Any>) = GenericEvent(typeKey = "pr_created", metadata = mapOf(*metadata))
+    private fun event(vararg metadata: Pair<String, Any>) = GenericEvent(
+        typeKey = "pr_created",
+        metadata = mapOf(*metadata)
+    )
 
     @Test
     fun `EQ operator matches exact value`() {

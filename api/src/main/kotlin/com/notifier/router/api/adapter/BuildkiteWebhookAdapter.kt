@@ -27,10 +27,10 @@ object BuildkiteWebhookAdapter {
                 GenericEvent(
                     typeKey = w.event ?: "buildkite_event",
                     metadata =
-                        mapOf(
-                            "service" to w.pipeline.slug,
-                            "event_type" to (w.event ?: "unknown"),
-                        ),
+                    mapOf(
+                        "service" to w.pipeline.slug,
+                        "event_type" to (w.event ?: "unknown"),
+                    ),
                     rawPayload = mapOf("event_data" to payload),
                 )
             }

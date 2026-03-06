@@ -33,8 +33,8 @@ class SlashCommandHandlers(
         }
 
         app.blockAction("^delete_subscription_.*$".toPattern()) {
-            req: BlockActionRequest,
-            ctx: ActionContext,
+                req: BlockActionRequest,
+                ctx: ActionContext,
             ->
             handleDeleteAction(req, ctx)
         }
@@ -157,10 +157,10 @@ class SlashCommandHandlers(
                             elements {
                                 markdownText(
                                     text =
-                                        "*Filters:* " +
-                                            sub.filters.joinToString(" | ") {
-                                                "`${it.field}` ${it.operator} `${it.value}`"
-                                            },
+                                    "*Filters:* " +
+                                        sub.filters.joinToString(" | ") {
+                                            "`${it.field}` ${it.operator} `${it.value}`"
+                                        },
                                 )
                             }
                         }
@@ -253,7 +253,9 @@ class SlashCommandHandlers(
         ctx: SlashCommandContext,
     ): Response {
         if (args.size < 2) {
-            return ctx.ack("Usage: `/notifyme channel #channel <type>` (e.g. `/notifyme channel #dev-alerts pr_created`)")
+            return ctx.ack(
+                "Usage: `/notifyme channel #channel <type>` (e.g. `/notifyme channel #dev-alerts pr_created`)"
+            )
         }
 
         val channelArg = args[0]

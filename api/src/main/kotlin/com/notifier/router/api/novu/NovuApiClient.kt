@@ -45,7 +45,12 @@ class NovuApiClient(
             .let { restTemplate.objectMapper().convertValue(it, NovuIntegration::class.java) }
 
     fun deleteIntegration(id: String) {
-        restTemplate.exchange("$baseUrl/integrations/$id", HttpMethod.DELETE, HttpEntity<Unit>(headers()), Map::class.java)
+        restTemplate.exchange(
+            "$baseUrl/integrations/$id",
+            HttpMethod.DELETE,
+            HttpEntity<Unit>(headers()),
+            Map::class.java
+        )
     }
 
     // ── Workflows ─────────────────────────────────────────────────────────────
@@ -184,4 +189,4 @@ private fun Map<*, *>?.dataRawList(): List<Map<String, Any?>> =
 @Suppress("UNCHECKED_CAST")
 private fun Map<*, *>?.dataRawObject(): Map<String, Any?> =
     (this?.get("data") as? Map<String, Any?>)
-        ?: throw IllegalStateException("Missing 'data' field in Novu response")
+        ?: error("Missing 'data' field in Novu response")

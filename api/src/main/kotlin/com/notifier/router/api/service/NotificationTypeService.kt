@@ -18,7 +18,9 @@ class NotificationTypeService(
     fun getAllNotificationTypes(): List<NotificationTypeDto> = notificationTypeRepository.findAll().map { it.toDto() }
 
     @Transactional(readOnly = true)
-    fun getNotificationTypeByKey(typeKey: String): NotificationTypeDto? = notificationTypeRepository.findByTypeKey(typeKey)?.toDto()
+    fun getNotificationTypeByKey(typeKey: String): NotificationTypeDto? = notificationTypeRepository.findByTypeKey(
+        typeKey
+    )?.toDto()
 
     @Transactional(readOnly = true)
     fun getFiltersForType(typeKey: String): List<FilterDefinitionDto> =

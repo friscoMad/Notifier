@@ -19,7 +19,9 @@ class ChannelSubscriptionController(
     @PostMapping
     fun createChannelSubscription(
         @RequestBody dto: ChannelSubscriptionDto,
-    ): ResponseEntity<ChannelSubscriptionDto> = ResponseEntity.ok(channelSubscriptionService.createChannelSubscription(dto))
+    ): ResponseEntity<ChannelSubscriptionDto> = ResponseEntity.ok(
+        channelSubscriptionService.createChannelSubscription(dto)
+    )
 
     @GetMapping("/channels/{slackChannelId}")
     fun getChannelSubscriptionsByChannelId(

@@ -42,10 +42,10 @@ object GitHubWebhookAdapter {
                 GenericEvent(
                     typeKey = w.action ?: "github_event",
                     metadata =
-                        mapOf(
-                            "repo" to w.repository.fullName,
-                            "event_type" to (w.action ?: "unknown"),
-                        ),
+                    mapOf(
+                        "repo" to w.repository.fullName,
+                        "event_type" to (w.action ?: "unknown"),
+                    ),
                     rawPayload = mapOf("event_data" to payload),
                 )
             }

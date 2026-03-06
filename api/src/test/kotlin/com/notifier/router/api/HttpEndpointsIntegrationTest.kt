@@ -160,13 +160,13 @@ class HttpEndpointsIntegrationTest : BaseIntegrationTest() {
                     notificationTypeId = seededTypeId.toString(),
                     channels = listOf("slack_dm"),
                     filters =
-                        listOf(
-                            Filter(
-                                field = "repo",
-                                operator = "EQ",
-                                value = "my-repo",
-                            ),
+                    listOf(
+                        Filter(
+                            field = "repo",
+                            operator = "EQ",
+                            value = "my-repo",
                         ),
+                    ),
                 )
 
             val result =
@@ -225,7 +225,7 @@ class HttpEndpointsIntegrationTest : BaseIntegrationTest() {
                         SubscriptionDto(
                             userId = userId,
                             notificationTypeId =
-                                seededTypeId.toString(),
+                            seededTypeId.toString(),
                             channels = listOf("slack_dm"),
                         ),
                     ).exchange()
@@ -253,7 +253,7 @@ class HttpEndpointsIntegrationTest : BaseIntegrationTest() {
                         SubscriptionDto(
                             userId = userId,
                             notificationTypeId =
-                                seededTypeId.toString(),
+                            seededTypeId.toString(),
                             channels = listOf("slack_dm"),
                         ),
                     ).exchange()
@@ -384,7 +384,7 @@ class HttpEndpointsIntegrationTest : BaseIntegrationTest() {
                             slackChannelId = "C_DEL",
                             slackChannelName = "#del-channel",
                             notificationTypeId =
-                                seededTypeId.toString(),
+                            seededTypeId.toString(),
                         ),
                     ).exchange()
                     .expectStatus()

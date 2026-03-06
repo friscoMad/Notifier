@@ -20,20 +20,20 @@ import java.util.UUID
 @Table(
     name = "subscriptions",
     uniqueConstraints =
-        [
-            UniqueConstraint(
-                name = "uc_subscription_user_type",
-                columnNames = ["user_id", "notification_type_id"],
-            ),
-        ],
+    [
+        UniqueConstraint(
+            name = "uc_subscription_user_type",
+            columnNames = ["user_id", "notification_type_id"],
+        ),
+    ],
     indexes =
-        [
-            Index(name = "idx_subscription_user_id", columnList = "user_id"),
-            Index(
-                name = "idx_subscription_type_id",
-                columnList = "notification_type_id",
-            ),
-        ],
+    [
+        Index(name = "idx_subscription_user_id", columnList = "user_id"),
+        Index(
+            name = "idx_subscription_type_id",
+            columnList = "notification_type_id",
+        ),
+    ],
 )
 @EntityListeners(AuditingEntityListener::class)
 data class Subscription(

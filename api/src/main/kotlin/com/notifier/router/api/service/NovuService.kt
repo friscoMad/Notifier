@@ -281,10 +281,10 @@ class NovuService(
                         name = key,
                         notificationGroupId = groupId,
                         steps =
-                            listOf(
-                                NovuWorkflowStep(NovuStepTemplate("in_app", "{{content}}")),
-                                NovuWorkflowStep(NovuStepTemplate("chat", "{{content}}")),
-                            ),
+                        listOf(
+                            NovuWorkflowStep(NovuStepTemplate("in_app", "{{content}}")),
+                            NovuWorkflowStep(NovuStepTemplate("chat", "{{content}}")),
+                        ),
                         active = true,
                         draft = false,
                         critical = false,
@@ -329,7 +329,11 @@ class NovuService(
                         novuApiClient!!.deleteIntegration(it._id!!)
                         logger.info("Deleted duplicate Slack integration: ${it.identifier}")
                     }
-                    val updated = novuApiClient!!.updateIntegration(slackIntegrations[0]._id!!, credentials, active = true)
+                    val updated = novuApiClient!!.updateIntegration(
+                        slackIntegrations[0]._id!!,
+                        credentials,
+                        active = true
+                    )
                     logger.info("Updated existing Slack integration: ${updated.identifier}")
                     updated
                 } else {
@@ -348,7 +352,9 @@ class NovuService(
                 }
             slackIntegrationIdentifier = integration.identifier
         } catch (e: org.springframework.web.client.RestClientResponseException) {
-            logger.error("Failed to provision Slack integration. Status: ${e.statusCode}, Body: ${e.responseBodyAsString}")
+            logger.error(
+                "Failed to provision Slack integration. Status: ${e.statusCode}, Body: ${e.responseBodyAsString}"
+            )
         } catch (e: Exception) {
             logger.error("Failed to provision Slack integration", e)
         }
@@ -366,7 +372,7 @@ class NovuService(
 
         val integrationId =
             slackIntegrationIdentifier
-                ?: throw IllegalStateException("Slack integration not initialized")
+                ?: error("Slack integration not initialized")
 
         val existing = novuApiClient!!.listChannelConnections().filter { it.providerId == "slack" }
         if (existing.isNotEmpty()) {
@@ -404,7 +410,7 @@ class NovuService(
 
         val integrationId =
             slackIntegrationIdentifier
-                ?: throw IllegalStateException("Slack integration not initialized — cannot create channel endpoint")
+                ?: error("Slack integration not initialized — cannot create channel endpoint")
         val connectionId = resolveSlackConnectionIdentifier(subscriberId)
 
         val isChannel = subscriberId.startsWith("C") || subscriberId.startsWith("G")

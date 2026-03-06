@@ -39,7 +39,7 @@ class ChannelSubscriptionServiceTest {
                 slackChannelId = channelSubscriptionDto.slackChannelId,
                 slackChannelName = channelSubscriptionDto.slackChannelName,
                 notificationTypeId =
-                    UUID.fromString(channelSubscriptionDto.notificationTypeId),
+                UUID.fromString(channelSubscriptionDto.notificationTypeId),
                 filters = emptyList(),
                 digestEnabled = channelSubscriptionDto.digestEnabled,
                 digestInterval = channelSubscriptionDto.digestInterval,

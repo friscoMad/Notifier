@@ -20,7 +20,12 @@ class LoggingInterceptor : ClientHttpRequestInterceptor {
         val response = execution.execute(request, body)
         val resBody =
             response.body.readBytes().also {
-                log.debug("← {} {} | body={}", response.statusCode, request.uri, it.toString(Charsets.UTF_8).ifEmpty { "<empty>" })
+                log.debug(
+                    "← {} {} | body={}",
+                    response.statusCode,
+                    request.uri,
+                    it.toString(Charsets.UTF_8).ifEmpty { "<empty>" }
+                )
             }
         return object : ClientHttpResponse by response {
             override fun getBody() = resBody.inputStream()

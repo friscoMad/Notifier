@@ -35,6 +35,13 @@ subprojects {
                 txt.required.set(false)
             }
         }
+        configurations.getByName("detekt") {
+            resolutionStrategy.eachDependency {
+                if (requested.group == "org.jetbrains.kotlin") {
+                    useVersion("2.0.21") // Add the version of Kotlin that detekt needs
+                }
+            }
+        }
     }
 }
 

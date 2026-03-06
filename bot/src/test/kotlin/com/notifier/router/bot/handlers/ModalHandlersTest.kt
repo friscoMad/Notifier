@@ -1,6 +1,7 @@
 package com.notifier.router.bot.handlers
 
 import com.notifier.router.bot.client.RouterApiClient
+import com.notifier.router.bot.service.SubscriptionService
 import com.notifier.router.common.dto.NotificationTypeDto
 import com.slack.api.app_backend.interactive_components.payload.BlockActionPayload
 import com.slack.api.app_backend.interactive_components.payload.BlockActionPayload.Action
@@ -31,6 +32,9 @@ class ModalHandlersTest {
 
     @Mock
     private lateinit var apiClient: RouterApiClient
+
+    @Mock
+    private lateinit var subscriptionService: SubscriptionService
 
     @InjectMocks
     private lateinit var handlers: ModalHandlers

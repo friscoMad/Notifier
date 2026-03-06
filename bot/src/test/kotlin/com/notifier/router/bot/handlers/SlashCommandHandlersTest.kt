@@ -1,6 +1,7 @@
 package com.notifier.router.bot.handlers
 
 import com.notifier.router.bot.client.RouterApiClient
+import com.notifier.router.bot.service.SubscriptionService
 import com.notifier.router.common.dto.NotificationTypeDto
 import com.slack.api.bolt.App
 import com.slack.api.bolt.context.builtin.SlashCommandContext
@@ -32,6 +33,9 @@ class SlashCommandHandlersTest {
 
     @Mock
     private lateinit var apiClient: RouterApiClient
+
+    @Mock
+    private lateinit var subscriptionService: SubscriptionService
 
     @InjectMocks
     private lateinit var handlers: SlashCommandHandlers

@@ -16,9 +16,9 @@ A centralized notification management system built as a multi-module Kotlin Spri
 # Test (always use --no-daemon on Windows)
 ./gradlew test --no-daemon
 
-# Lint
-./gradlew ktlintCheck
-./gradlew ktlintFormat    # run after every Kotlin file change
+# Lint / Static Analysis (detekt with autoCorrect)
+./gradlew detekt          # check + auto-correct all modules
+./gradlew check           # runs detekt as part of the full check lifecycle
 
 # Stop stuck Gradle daemon
 ./gradlew --stop

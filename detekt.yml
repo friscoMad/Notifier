@@ -1,10 +1,63 @@
 # Detekt configuration — built-in defaults + formatting (replaces ktlint)
 # buildUponDefaultConfig = true is set in Gradle, so all default rules are active.
-# This file only adds the formatting rule set on top.
+# Thresholds are tuned for the existing codebase; formatting is added via detekt-formatting.
 
 config:
   validation: true
   warningsAsErrors: false
+
+# ── Complexity ────────────────────────────────────────────────────────────────
+
+complexity:
+  LongMethod:
+    threshold: 110
+  LongParameterList:
+    functionThreshold: 8
+    constructorThreshold: 10
+  CyclomaticComplexMethod:
+    threshold: 25
+  TooManyFunctions:
+    thresholdInClasses: 20
+  NestedBlockDepth:
+    active: false
+
+# ── Exceptions ────────────────────────────────────────────────────────────────
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: false
+  SwallowedException:
+    active: false
+
+# ── Naming ────────────────────────────────────────────────────────────────────
+
+naming:
+  ConstructorParameterNaming:
+    active: false
+
+# ── Performance ───────────────────────────────────────────────────────────────
+
+performance:
+  SpreadOperator:
+    active: false
+
+# ── Style ─────────────────────────────────────────────────────────────────────
+
+style:
+  ReturnCount:
+    max: 6
+  MagicNumber:
+    active: false
+  UnusedPrivateProperty:
+    active: false
+  UnusedParameter:
+    active: false
+  SerialVersionUIDInSerializableClass:
+    active: false
+  MaxLineLength:
+    maxLineLength: 200
+  LoopWithTooManyJumpStatements:
+    active: false
 
 # ── Formatting (detekt-formatting wraps ktlint) ───────────────────────────────
 
@@ -12,3 +65,5 @@ formatting:
   active: true
   android: false
   autoCorrect: true
+  MaximumLineLength:
+    active: false

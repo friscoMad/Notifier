@@ -171,8 +171,8 @@ class NovuService(
                             apiField.set(handler, newProxy)
                         }
                     }
-                } catch (e: NoSuchFieldException) {
-                    // Some handlers might have different structure, skip silently
+                } catch (@Suppress("SwallowedException") e: NoSuchFieldException) {
+                    // Some Retrofit handlers have different internal structure — skip silently
                 }
             }
 

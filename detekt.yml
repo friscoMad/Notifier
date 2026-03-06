@@ -24,14 +24,13 @@ complexity:
     active: false
 
 # ── Exceptions ────────────────────────────────────────────────────────────────
-# Intentional broad catches at service/client integration boundaries throughout
-# the codebase (NovuService, EventService, RouterApiClient, etc.). Disabling
-# globally is deliberate — these catches log and handle errors at API call sites.
+# TooGenericExceptionCaught: All remaining catch(e: Exception) blocks are at
+# external SDK boundaries (Spring RestTemplate, Novu SDK, Slack SDK) where any
+# exception type can occur. Making them specific would require catching multiple
+# types per site from three different libraries without meaningful benefit.
 
 exceptions:
   TooGenericExceptionCaught:
-    active: false
-  SwallowedException:
     active: false
 
 # ── Performance ───────────────────────────────────────────────────────────────

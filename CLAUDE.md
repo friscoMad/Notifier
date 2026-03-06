@@ -108,11 +108,56 @@ SLACK_APP_TOKEN=xapp-...   # for Socket Mode (local dev, no ngrok needed)
 - **No wildcard imports** — always explicit (linting enforces this)
 - **`Filter` domain class directly in DTOs** — no separate DTO wrappers for simple value objects
 
+## Exception Handling Patterns
+
+Catches belong at the boundary where a **meaningful decision** can be made — not in every intermediate method.
+
+| Location | Pattern |
+|----------|---------|
+| HTTP client (`RouterApiClient`) | **No catches** — pure HTTP client, throws `RestClientException` to callers |
+| Bot service layer (`SubscriptionService`) | Catch `RestClientException`, return typed `SubscribeResult.Failure` |
+| Bot handler layer (`SlashCommandHandlers`) | Catch `RestClientException`, return user-facing error message |
+| API `@Async` boundary (`EventService`) | Catch `Exception` with `@Suppress("TooGenericExceptionCaught")` — thread must not die silently |
+| Best-effort pre-registration | Catch `RestClientException`, log warn, continue — subscriber may already exist in Novu |
+| Startup seeders (`DataSeeder`, `NovuSeeder`) | **No catches** — let exceptions propagate and fail startup visibly |
+| `syncWithNovu` in `SubscriptionService` | Catch `RestClientException` — Novu outage must not roll back the DB subscription transaction |
+
+**Always narrow to `RestClientException`** for Spring `RestTemplate` calls — never catch `Exception` unless at a genuine SDK boundary (e.g., Slack SDK throws `IOException + SlackApiException` with no common parent).
+
+**`@Suppress` for genuine catch-all boundaries:**
+```kotlin
+// @Async boundary — thread must not die silently
+} catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+    logger.error("Error processing event ${event.typeKey}", e)
+}
+
+// SDK boundary — two unrelated exception types with no common parent
+} catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+    // Slack SDK throws IOException + SlackApiException with no common parent narrower than Exception.
+    logger.error("Exception while sending message to $slackTargetId", e)
+}
+
+// Intentional swallow — reflection loop, some handlers have different internal structure
+} catch (@Suppress("SwallowedException") e: NoSuchFieldException) {
+    // Some Retrofit handlers have different internal structure — skip silently
+}
+```
+
+## Static Analysis (detekt)
+
+- Config: `detekt.yml` at project root — `buildUponDefaultConfig = true`, overrides only
+- `TooGenericExceptionCaught` and `SwallowedException` are **active** — use `@Suppress` at the call site with a comment explaining why, do not disable globally
+- `MagicNumber` and `UnusedPrivateProperty` are excluded from `**/test/**` — only applies to production code
+- Extract named constants for magic numbers in production code (e.g., `MAX_BODY_BYTES = 65536`)
+- Use `@Suppress("ConstructorParameterNaming")` on Novu model classes that need MongoDB's `_id` field
+
 ## Testing Gotchas
 
 - **Always use `org.mockito.kotlin.*`** — never `any(Class::class.java)` or `ArgumentCaptor.capture()` (they return `null` and crash Kotlin non-nullable params)
 - **Use `org.mockito.kotlin.check {}`** for argument verification
 - **WireMock:** Use `WireMockServer` instance for `stubFor()`/`resetAll()`, create `WireMock(port)` client for `verifyThat()`. Never use static `WireMock.verify()` — it defaults to port 8080
+- **WireMock stub completeness:** Stub ALL HTTP endpoints the code under test calls — not just the one being verified. Missing stubs cause silent failures that were previously hidden by swallowed exceptions.
+- **`@InjectMocks` requires all constructor params:** Every constructor parameter of the class under test must have a corresponding `@Mock` field. Missing mocks cause `InjectMocksException` / `NullPointerException` at test setup.
 - **Shared test config** is in `api/src/test/resources/application-test.yml` — tests just need `@ActiveProfiles("test")`. Do NOT duplicate properties in `@SpringBootTest(properties = [...])` unless test-specific
 
 ## Windows Gotchas
@@ -144,6 +189,21 @@ fun getUser(id: UUID) = userRepository.findById(id).orElseThrow { NotFoundExcept
 
 // Extension function mapping (private, in same file)
 private fun User.toDto() = UserDto(id = id, email = email)
+```
+
+### HTTP Client (`RouterApiClient`)
+```kotlin
+// Pure HTTP client — no try-catch, no null-return fallbacks.
+// Callers decide what to do with RestClientException.
+fun getSubscriptionsForUser(slackId: String): List<SubscriptionDto> =
+    restTemplate.exchange(
+        "$apiUrl/subscriptions/users/$slackId", HttpMethod.GET, null,
+        object : ParameterizedTypeReference<List<SubscriptionDto>>() {},
+    ).body ?: emptyList()
+
+fun unsubscribe(subscriptionId: String) {
+    restTemplate.delete("$apiUrl/subscriptions/$subscriptionId")
+}
 ```
 
 ### Webhook Adapters

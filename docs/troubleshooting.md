@@ -153,6 +153,45 @@ It does NOT include `repo` or `author` in the payload — those are used for fil
 
 **Fix:** Avoid PATCH entirely in `NovuService`. Use PUT for full updates, or restructure to POST + DELETE.
 
+## 13. `@InjectMocks` Fails When Constructor Params Have No `@Mock`
+
+**Symptom:** `InjectMocksException` or `NullPointerException` during test setup when using `@InjectMocks`.
+
+**Cause:** Mockito's `@InjectMocks` injects via constructor. If any constructor parameter does not have a corresponding `@Mock` field in the test class, injection fails silently or throws.
+
+**Fix:** Add a `@Mock` field for every constructor parameter of the class under test:
+```kotlin
+@ExtendWith(MockitoExtension::class)
+class ModalHandlersTest {
+    @Mock private lateinit var app: App
+    @Mock private lateinit var apiClient: RouterApiClient
+    @Mock private lateinit var subscriptionService: SubscriptionService  // ← must match constructor
+    @InjectMocks private lateinit var modalHandlers: ModalHandlers
+}
+```
+
+If the constructor was recently updated (e.g., a new dependency was injected), update the test class immediately or tests will fail at setup, not at assertion.
+
+## 14. WireMock Stubs Must Cover All Endpoints Called
+
+**Symptom:** Test passes when exception swallowing was in place, fails after removing catches.
+
+**Cause:** WireMock returns 404 for any unstubbed path. If the code under test calls an endpoint that is not stubbed, it gets a `RestClientException`, which was previously swallowed silently.
+
+**Fix:** Stub every HTTP endpoint the code under test calls — not just the one being verified:
+```kotlin
+@BeforeEach
+fun setUp() {
+    // stub ALL paths the class under test touches
+    wireMock.stubFor(post(urlPathEqualTo("/v1/subscribers"))
+        .willReturn(aResponse().withStatus(201).withBody("""{"data":{"subscriberId":"test"}}""")))
+    wireMock.stubFor(post(urlPathEqualTo("/v1/events/trigger"))
+        .willReturn(aResponse().withStatus(201).withBody("""{"data":{"transactionId":"abc"}}""")))
+}
+```
+
+A good sign that stubs are missing: removing exception swallowing reveals new test failures on paths that were never part of the test scenario.
+
 ## 8. Spring Boot `@MockBean` Deprecation Warning
 
 **Symptom:** Kotlin compiler warning: `'annotation class MockBean' is deprecated`.

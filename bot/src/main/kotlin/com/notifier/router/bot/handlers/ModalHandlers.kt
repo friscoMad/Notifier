@@ -78,6 +78,7 @@ class ModalHandlers(
         return ctx.ack()
     }
 
+    @Suppress("LongMethod")
     private fun handleSubscriptionSubmission(
         req: ViewSubmissionRequest,
         ctx: ViewSubmissionContext,

@@ -11,6 +11,8 @@ import com.slack.api.model.view.Views.viewSubmit
 import com.slack.api.model.view.Views.viewTitle
 
 object ModalViewBuilder {
+    private const val METADATA_FIELD_COUNT = 3
+
     /** Metadata serialized into view privateMetadata to survive modal updates. */
     data class ModalMetadata(
         val typeKey: String = "",
@@ -25,8 +27,8 @@ object ModalViewBuilder {
 
     fun decodeMetadata(raw: String?): ModalMetadata {
         if (raw.isNullOrBlank()) return ModalMetadata()
-        val parts = raw.split("|", limit = 3)
-        return if (parts.size == 3) {
+        val parts = raw.split("|", limit = METADATA_FIELD_COUNT)
+        return if (parts.size == METADATA_FIELD_COUNT) {
             ModalMetadata(
                 typeKey = parts[0],
                 channelId = parts[1].ifBlank { null },

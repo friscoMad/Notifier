@@ -2,6 +2,7 @@ package com.notifier.router.api.novu
 
 // ── Integrations ──────────────────────────────────────────────────────────────
 
+@Suppress("ConstructorParameterNaming")
 data class NovuIntegration(
     val _id: String? = null,
     val identifier: String? = null,
@@ -21,6 +22,7 @@ data class NovuSlackCredentials(
 
 // ── Workflows ─────────────────────────────────────────────────────────────────
 
+@Suppress("ConstructorParameterNaming")
 data class NovuWorkflow(
     val _id: String? = null,
     val name: String? = null,

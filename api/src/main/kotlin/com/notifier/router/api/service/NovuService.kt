@@ -25,6 +25,7 @@ import org.springframework.web.client.RestTemplate
 import retrofit2.Retrofit
 
 @Service
+@Suppress("LongParameterList")
 class NovuService(
     @Value("\${novu.api.key:not-set}") private val apiKey: String,
     @Value("\${novu.api.url:}") private val apiUrl: String,

@@ -27,6 +27,7 @@ class SocketModeService(
                 return
             }
 
+            @Suppress("MagicNumber")
             logger.info(
                 "Starting Slack Socket Mode app with app token (len: ${appToken.length}, starts with: ${appToken.take(
                     10

@@ -3,7 +3,6 @@ package com.notifier.router.tools
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.jline.utils.AttributedString
 import org.jline.utils.AttributedStyle
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.WebApplicationType
 import org.springframework.boot.autoconfigure.SpringBootApplication
@@ -32,7 +31,6 @@ open class WebhookSimulatorApp {
 
 @ShellComponent
 open class WebhookSimulator {
-    private val logger = LoggerFactory.getLogger(WebhookSimulator::class.java)
     private val restTemplate: RestTemplate = RestTemplate()
     private val mapper = jacksonObjectMapper()
 

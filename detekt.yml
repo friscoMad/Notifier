@@ -10,10 +10,12 @@ config:
 
 complexity:
   LongMethod:
-    threshold: 110
+    # handleSubscriptionSubmission suppressed at call site; keep threshold reasonable
+    threshold: 80
   LongParameterList:
     functionThreshold: 8
-    constructorThreshold: 10
+    # NovuService @Value constructor suppressed at call site; keep threshold reasonable
+    constructorThreshold: 7
   CyclomaticComplexMethod:
     threshold: 25
   TooManyFunctions:
@@ -22,17 +24,14 @@ complexity:
     active: false
 
 # ── Exceptions ────────────────────────────────────────────────────────────────
+# Intentional broad catches at service/client integration boundaries throughout
+# the codebase (NovuService, EventService, RouterApiClient, etc.). Disabling
+# globally is deliberate — these catches log and handle errors at API call sites.
 
 exceptions:
   TooGenericExceptionCaught:
     active: false
   SwallowedException:
-    active: false
-
-# ── Naming ────────────────────────────────────────────────────────────────────
-
-naming:
-  ConstructorParameterNaming:
     active: false
 
 # ── Performance ───────────────────────────────────────────────────────────────
@@ -47,12 +46,12 @@ style:
   ReturnCount:
     max: 6
   MagicNumber:
-    active: false
+    # Magic numbers are fine in test code (status codes, counts, etc.)
+    excludes: ["**/test/**"]
   UnusedPrivateProperty:
-    active: false
+    # @Mock/@MockitoBean lateinit fields look unused to detekt but Mockito injects them
+    excludes: ["**/test/**"]
   UnusedParameter:
-    active: false
-  SerialVersionUIDInSerializableClass:
     active: false
   MaxLineLength:
     maxLineLength: 200

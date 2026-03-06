@@ -14,11 +14,6 @@ class GlobalExceptionHandler {
     fun handleGeneralException(ex: Exception): ResponseEntity<Unit> {
         logger.error("Unexpected error occurred: ${ex.message}", ex)
 
-        val errorTrace = ex.stackTraceToString()
-        // We log the trace, but arguably we might not want to return the full trace in the body for
-        // security
-        // However, the user explicitly asked to log it.
-
         return ResponseEntity
             .status(HttpStatus.INTERNAL_SERVER_ERROR)
             .build()

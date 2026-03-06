@@ -18,7 +18,7 @@ class RequestLoggingFilter : OncePerRequestFilter() {
         response: HttpServletResponse,
         chain: FilterChain,
     ) {
-        val wrappedReq = ContentCachingRequestWrapper(request, 65536)
+        val wrappedReq = ContentCachingRequestWrapper(request, MAX_BODY_BYTES)
         val wrappedRes = ContentCachingResponseWrapper(response)
         chain.doFilter(wrappedReq, wrappedRes)
 
@@ -35,5 +35,9 @@ class RequestLoggingFilter : OncePerRequestFilter() {
         )
 
         wrappedRes.copyBodyToResponse()
+    }
+
+    companion object {
+        private const val MAX_BODY_BYTES = 65536
     }
 }

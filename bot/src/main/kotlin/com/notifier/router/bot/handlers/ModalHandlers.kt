@@ -53,8 +53,20 @@ class ModalHandlers(
         // Preserve channel context from the current view's metadata
         val meta = ModalViewBuilder.decodeMetadata(req.payload.view.privateMetadata)
 
-        val availableTypes = apiClient.getNotificationTypes()
-        val filters = apiClient.getFiltersForType(selectedType)
+        val availableTypes =
+            try {
+                apiClient.getNotificationTypes()
+            } catch (e: Exception) {
+                logger.error("Failed to fetch notification types for modal update", e)
+                return ctx.ack()
+            }
+        val filters =
+            try {
+                apiClient.getFiltersForType(selectedType)
+            } catch (e: Exception) {
+                logger.warn("Failed to fetch filters for $selectedType, showing modal without filters", e)
+                emptyList()
+            }
         val updateView =
             buildDynamicSubscriptionModal(
                 selectedTypeKey = selectedType,
@@ -92,7 +104,13 @@ class ModalHandlers(
         val stateValues = req.payload.view.state.values
         logger.info("Received view submission for type $typeKey")
 
-        val availableTypes = apiClient.getNotificationTypes()
+        val availableTypes =
+            try {
+                apiClient.getNotificationTypes()
+            } catch (e: Exception) {
+                logger.error("Failed to fetch notification types during modal submission", e)
+                return ctx.ackWithErrors(mapOf("type_block" to "Service unavailable. Please try again."))
+            }
         val typeId =
             availableTypes.find { it.key == typeKey }?.id
                 ?: return ctx.ackWithErrors(mapOf("type_block" to "Invalid notification type selected."))
@@ -116,7 +134,13 @@ class ModalHandlers(
         }
 
         // Parse dynamic filters
-        val filterDefinitions = apiClient.getFiltersForType(typeKey)
+        val filterDefinitions =
+            try {
+                apiClient.getFiltersForType(typeKey)
+            } catch (e: Exception) {
+                logger.warn("Failed to fetch filter definitions for $typeKey, submitting without filters", e)
+                emptyList()
+            }
         val extractedFilters = mutableListOf<Filter>()
         filterDefinitions.forEach { filterDef ->
             val fieldName = filterDef.field

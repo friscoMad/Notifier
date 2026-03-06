@@ -38,66 +38,35 @@ class RouterApiClient(
     }
 
     fun subscribe(dto: SubscriptionDto): SubscriptionDto? {
-        val url = "$apiUrl/subscriptions"
-        val headers = HttpHeaders()
-        headers.contentType = MediaType.APPLICATION_JSON
-        val entity = HttpEntity(dto, headers)
-
-        return try {
-            val response =
-                restTemplate.exchange(
-                    url,
-                    HttpMethod.POST,
-                    entity,
-                    object : ParameterizedTypeReference<SubscriptionDto>() {},
-                )
-            response.body
-        } catch (e: Exception) {
-            null
-        }
+        val headers = HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON }
+        return restTemplate.exchange(
+            "$apiUrl/subscriptions",
+            HttpMethod.POST,
+            HttpEntity(dto, headers),
+            object : ParameterizedTypeReference<SubscriptionDto>() {},
+        ).body
     }
 
-    fun getSubscriptionsForUser(slackId: String): List<SubscriptionDto> {
-        val url = "$apiUrl/subscriptions/users/$slackId"
-        return try {
-            val response =
-                restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    null,
-                    object : ParameterizedTypeReference<List<SubscriptionDto>>() {},
-                )
-            response.body ?: emptyList()
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
+    fun getSubscriptionsForUser(slackId: String): List<SubscriptionDto> =
+        restTemplate.exchange(
+            "$apiUrl/subscriptions/users/$slackId",
+            HttpMethod.GET,
+            null,
+            object : ParameterizedTypeReference<List<SubscriptionDto>>() {},
+        ).body ?: emptyList()
 
-    fun unsubscribe(subscriptionId: String): Boolean {
-        val url = "$apiUrl/subscriptions/$subscriptionId"
-        return try {
-            restTemplate.delete(url)
-            true
-        } catch (e: Exception) {
-            false
-        }
+    fun unsubscribe(subscriptionId: String) {
+        restTemplate.delete("$apiUrl/subscriptions/$subscriptionId")
     }
 
     fun subscribeChannel(dto: ChannelSubscriptionDto): ChannelSubscriptionDto? {
-        val url = "$apiUrl/channel-subscriptions"
-        val headers = HttpHeaders()
-        headers.contentType = MediaType.APPLICATION_JSON
-        return try {
-            restTemplate
-                .exchange(
-                    url,
-                    HttpMethod.POST,
-                    HttpEntity(dto, headers),
-                    object : ParameterizedTypeReference<ChannelSubscriptionDto>() {},
-                ).body
-        } catch (e: Exception) {
-            null
-        }
+        val headers = HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON }
+        return restTemplate.exchange(
+            "$apiUrl/channel-subscriptions",
+            HttpMethod.POST,
+            HttpEntity(dto, headers),
+            object : ParameterizedTypeReference<ChannelSubscriptionDto>() {},
+        ).body
     }
 
     fun createSlackEndpoint(subscriberId: String) {
@@ -108,19 +77,11 @@ class RouterApiClient(
         )
     }
 
-    fun getFiltersForType(typeKey: String): List<FilterDefinitionDto> {
-        val url = "$apiUrl/notification-types/$typeKey/filters"
-        return try {
-            val response =
-                restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    null,
-                    object : ParameterizedTypeReference<List<FilterDefinitionDto>>() {},
-                )
-            response.body ?: emptyList()
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
+    fun getFiltersForType(typeKey: String): List<FilterDefinitionDto> =
+        restTemplate.exchange(
+            "$apiUrl/notification-types/$typeKey/filters",
+            HttpMethod.GET,
+            null,
+            object : ParameterizedTypeReference<List<FilterDefinitionDto>>() {},
+        ).body ?: emptyList()
 }

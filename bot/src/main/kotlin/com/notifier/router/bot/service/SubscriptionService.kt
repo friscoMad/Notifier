@@ -21,15 +21,20 @@ class SubscriptionService(
         channelConfig: Map<String, Any> = emptyMap(),
     ): SubscribeResult {
         val subscription =
-            apiClient.subscribe(
-                SubscriptionDto(
-                    userId = userId,
-                    notificationTypeId = notificationTypeId,
-                    channels = channels,
-                    channelConfig = channelConfig,
-                    filters = filters,
-                ),
-            ) ?: return SubscribeResult.Failure
+            try {
+                apiClient.subscribe(
+                    SubscriptionDto(
+                        userId = userId,
+                        notificationTypeId = notificationTypeId,
+                        channels = channels,
+                        channelConfig = channelConfig,
+                        filters = filters,
+                    ),
+                ) ?: return SubscribeResult.Failure
+            } catch (e: Exception) {
+                logger.error("Failed to subscribe $userId to $notificationTypeId", e)
+                return SubscribeResult.Failure
+            }
 
         try {
             logger.info("Creating Slack endpoint for subscriber $userId")
@@ -48,14 +53,19 @@ class SubscriptionService(
         filters: List<Filter> = emptyList(),
     ): ChannelSubscribeResult {
         val subscription =
-            apiClient.subscribeChannel(
-                ChannelSubscriptionDto(
-                    slackChannelId = channelId,
-                    slackChannelName = channelName,
-                    notificationTypeId = notificationTypeId,
-                    filters = filters,
-                ),
-            ) ?: return ChannelSubscribeResult.Failure
+            try {
+                apiClient.subscribeChannel(
+                    ChannelSubscriptionDto(
+                        slackChannelId = channelId,
+                        slackChannelName = channelName,
+                        notificationTypeId = notificationTypeId,
+                        filters = filters,
+                    ),
+                ) ?: return ChannelSubscribeResult.Failure
+            } catch (e: Exception) {
+                logger.error("Failed to subscribe channel $channelId to $notificationTypeId", e)
+                return ChannelSubscribeResult.Failure
+            }
 
         try {
             logger.info("Creating Slack endpoint for channel $channelId")

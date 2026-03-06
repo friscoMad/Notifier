@@ -116,7 +116,13 @@ class SlashCommandHandlers(
         ctx: SlashCommandContext,
     ): Response {
         val slackId = req.payload.userId
-        val subs = apiClient.getSubscriptionsForUser(slackId)
+        val subs =
+            try {
+                apiClient.getSubscriptionsForUser(slackId)
+            } catch (e: Exception) {
+                logger.error("Failed to fetch subscriptions for $slackId", e)
+                return ctx.ack("❌ Failed to fetch subscriptions. Please try again.")
+            }
 
         if (subs.isEmpty()) {
             return ctx.ack("You have no active subscriptions.")
@@ -183,11 +189,12 @@ class SlashCommandHandlers(
         val subscriptionId = req.payload.actions[0].value
         logger.info("User requested deletion of subscription: $subscriptionId")
 
-        val success = apiClient.unsubscribe(subscriptionId)
         val message =
-            if (success) {
+            try {
+                apiClient.unsubscribe(subscriptionId)
                 "✅ Subscription deleted successfully."
-            } else {
+            } catch (e: Exception) {
+                logger.error("Failed to delete subscription $subscriptionId", e)
                 "❌ Failed to delete subscription. Please try again."
             }
 

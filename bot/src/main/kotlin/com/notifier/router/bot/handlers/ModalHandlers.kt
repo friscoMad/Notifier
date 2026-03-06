@@ -56,14 +56,14 @@ class ModalHandlers(
         val availableTypes =
             try {
                 apiClient.getNotificationTypes()
-            } catch (e: Exception) {
+            } catch (e: org.springframework.web.client.RestClientException) {
                 logger.error("Failed to fetch notification types for modal update", e)
                 return ctx.ack()
             }
         val filters =
             try {
                 apiClient.getFiltersForType(selectedType)
-            } catch (e: Exception) {
+            } catch (e: org.springframework.web.client.RestClientException) {
                 logger.warn("Failed to fetch filters for $selectedType, showing modal without filters", e)
                 emptyList()
             }
@@ -107,7 +107,7 @@ class ModalHandlers(
         val availableTypes =
             try {
                 apiClient.getNotificationTypes()
-            } catch (e: Exception) {
+            } catch (e: org.springframework.web.client.RestClientException) {
                 logger.error("Failed to fetch notification types during modal submission", e)
                 return ctx.ackWithErrors(mapOf("type_block" to "Service unavailable. Please try again."))
             }
@@ -137,7 +137,7 @@ class ModalHandlers(
         val filterDefinitions =
             try {
                 apiClient.getFiltersForType(typeKey)
-            } catch (e: Exception) {
+            } catch (e: org.springframework.web.client.RestClientException) {
                 logger.warn("Failed to fetch filter definitions for $typeKey, submitting without filters", e)
                 emptyList()
             }

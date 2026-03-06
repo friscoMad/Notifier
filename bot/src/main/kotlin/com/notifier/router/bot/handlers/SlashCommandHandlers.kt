@@ -119,7 +119,7 @@ class SlashCommandHandlers(
         val subs =
             try {
                 apiClient.getSubscriptionsForUser(slackId)
-            } catch (e: Exception) {
+            } catch (e: org.springframework.web.client.RestClientException) {
                 logger.error("Failed to fetch subscriptions for $slackId", e)
                 return ctx.ack("❌ Failed to fetch subscriptions. Please try again.")
             }
@@ -193,7 +193,7 @@ class SlashCommandHandlers(
             try {
                 apiClient.unsubscribe(subscriptionId)
                 "✅ Subscription deleted successfully."
-            } catch (e: Exception) {
+            } catch (e: org.springframework.web.client.RestClientException) {
                 logger.error("Failed to delete subscription $subscriptionId", e)
                 "❌ Failed to delete subscription. Please try again."
             }

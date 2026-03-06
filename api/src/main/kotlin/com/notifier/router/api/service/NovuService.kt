@@ -193,7 +193,7 @@ class NovuService(
         subscriberIds.forEach { subscriberId ->
             try {
                 ensureSubscriberExists(subscriberId)
-            } catch (e: Exception) {
+            } catch (e: org.springframework.web.client.RestClientException) {
                 // Pre-registration is best-effort — subscriber may already exist in Novu.
                 // Log and continue; the trigger attempt below will reveal if they truly don't exist.
                 logger.warn("Could not pre-register subscriber $subscriberId in Novu, attempting trigger anyway", e)
@@ -397,7 +397,7 @@ class NovuService(
         val existing =
             try {
                 novuApiClient!!.listChannelEndpoints(subscriberId)
-            } catch (e: Exception) {
+            } catch (e: org.springframework.web.client.RestClientException) {
                 logger.warn("Could not fetch channel endpoints for $subscriberId", e)
                 emptyList()
             }
@@ -411,7 +411,7 @@ class NovuService(
         existing.forEach { ep ->
             try {
                 novuApiClient!!.deleteChannelEndpoint(ep.identifier!!)
-            } catch (e: Exception) {
+            } catch (e: org.springframework.web.client.RestClientException) {
                 logger.warn("Could not delete stale endpoint ${ep.identifier}", e)
             }
         }

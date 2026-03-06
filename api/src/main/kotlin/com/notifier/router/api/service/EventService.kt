@@ -62,7 +62,8 @@ class EventService(
             )
 
             triggerIfNotEmpty(event.typeKey, allTargets, event.payload, "targets")
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            // @Async boundary: must catch all unchecked exceptions so the thread does not die silently.
             logger.error("Error processing event ${event.typeKey}", e)
         }
     }

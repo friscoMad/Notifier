@@ -86,7 +86,7 @@ open class WebhookSimulator {
         try {
             val payload = mapper.readValue(json, Map::class.java)
             sendRequest("$apiBaseUrl/$endpoint", payload)
-        } catch (e: Exception) {
+        } catch (e: org.springframework.web.client.RestClientException) {
             "\u001B[31mInvalid JSON: ${e.message}\u001B[0m"
         }
 
@@ -114,7 +114,7 @@ open class WebhookSimulator {
                 if (response.statusCode.is2xxSuccessful) "\u001B[32m" else "\u001B[31m"
             sb.append("${statusColor}Response: ${response.statusCode}\u001B[0m\n")
             sb.append(response.body ?: "No body").toString()
-        } catch (e: Exception) {
+        } catch (e: org.springframework.web.client.RestClientException) {
             sb.append("\u001B[31mError: ${e.message}\u001B[0m").toString()
         }
     }

@@ -73,7 +73,7 @@ class SubscriptionService(
                 channels = subscription.channels,
                 channelConfig = subscription.channelConfig,
             )
-        } catch (e: Exception) {
+        } catch (e: org.springframework.web.client.RestClientException) {
             // Novu registration is best-effort — subscriber will be created lazily on first trigger.
             // Do not roll back the subscription transaction.
             logger.warn("Could not pre-register subscriber ${subscription.userId} in Novu", e)

@@ -23,16 +23,6 @@ complexity:
   NestedBlockDepth:
     active: false
 
-# ── Exceptions ────────────────────────────────────────────────────────────────
-# TooGenericExceptionCaught: All remaining catch(e: Exception) blocks are at
-# external SDK boundaries (Spring RestTemplate, Novu SDK, Slack SDK) where any
-# exception type can occur. Making them specific would require catching multiple
-# types per site from three different libraries without meaningful benefit.
-
-exceptions:
-  TooGenericExceptionCaught:
-    active: false
-
 # ── Performance ───────────────────────────────────────────────────────────────
 
 performance:

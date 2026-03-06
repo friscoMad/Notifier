@@ -31,7 +31,7 @@ class SubscriptionService(
                         filters = filters,
                     ),
                 ) ?: return SubscribeResult.Failure
-            } catch (e: Exception) {
+            } catch (e: org.springframework.web.client.RestClientException) {
                 logger.error("Failed to subscribe $userId to $notificationTypeId", e)
                 return SubscribeResult.Failure
             }
@@ -39,7 +39,7 @@ class SubscriptionService(
         try {
             logger.info("Creating Slack endpoint for subscriber $userId")
             apiClient.createSlackEndpoint(userId)
-        } catch (e: Exception) {
+        } catch (e: org.springframework.web.client.RestClientException) {
             logger.warn("Could not create Slack endpoint for $userId: ${e.message}", e)
         }
 
@@ -62,7 +62,7 @@ class SubscriptionService(
                         filters = filters,
                     ),
                 ) ?: return ChannelSubscribeResult.Failure
-            } catch (e: Exception) {
+            } catch (e: org.springframework.web.client.RestClientException) {
                 logger.error("Failed to subscribe channel $channelId to $notificationTypeId", e)
                 return ChannelSubscribeResult.Failure
             }
@@ -70,7 +70,7 @@ class SubscriptionService(
         try {
             logger.info("Creating Slack endpoint for channel $channelId")
             apiClient.createSlackEndpoint(channelId)
-        } catch (e: Exception) {
+        } catch (e: org.springframework.web.client.RestClientException) {
             logger.warn("Could not create Slack endpoint for channel $channelId: ${e.message}", e)
         }
 

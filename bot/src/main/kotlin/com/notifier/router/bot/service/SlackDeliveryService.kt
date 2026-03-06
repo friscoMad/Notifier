@@ -23,7 +23,8 @@ class SlackDeliveryService(
             } else {
                 logger.error("Failed to send message to $slackTargetId. Error: ${response.error}")
             }
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            // Slack SDK throws IOException + SlackApiException with no common parent narrower than Exception.
             logger.error("Exception while sending message to $slackTargetId", e)
         }
     }

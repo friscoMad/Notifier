@@ -18,6 +18,26 @@ allprojects {
     }
 }
 
+subprojects {
+    plugins.withId("io.gitlab.arturbosch.detekt") {
+        configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
+            buildUponDefaultConfig = true
+            config.setFrom(rootProject.files("detekt.yml"))
+        }
+
+        tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+            autoCorrect = true
+            jvmTarget = "21"
+            reports {
+                html.required.set(true)
+                xml.required.set(false)
+                sarif.required.set(false)
+                txt.required.set(false)
+            }
+        }
+    }
+}
+
 // Custom tasks to manage the local E2E environment
 tasks.register<Exec>("startLocalEnv") {
     group = "application"

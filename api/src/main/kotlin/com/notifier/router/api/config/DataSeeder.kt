@@ -31,28 +31,24 @@ class DataSeeder(
     override fun run(vararg args: String) {
         logger.info("Resetting and seeding data for local profile...")
 
-        try {
-            // Deletion order respects foreign keys
-            subscriptionRepository.deleteAll()
-            channelSubscriptionRepository.deleteAll()
-            filterDefinitionRepository.deleteAll()
-            userRepository.deleteAll()
-            notificationTypeRepository.deleteAll()
+        // Deletion order respects foreign keys
+        subscriptionRepository.deleteAll()
+        channelSubscriptionRepository.deleteAll()
+        filterDefinitionRepository.deleteAll()
+        userRepository.deleteAll()
+        notificationTypeRepository.deleteAll()
 
-            seedData.forEach { (type, filters) ->
-                notificationTypeRepository.save(type)
-                logger.info("Seeded Notification Type: ${type.typeKey}")
+        seedData.forEach { (type, filters) ->
+            notificationTypeRepository.save(type)
+            logger.info("Seeded Notification Type: ${type.typeKey}")
 
-                filters.forEach { filter ->
-                    filterDefinitionRepository.save(filter)
-                    logger.info("  Seeded Filter: ${filter.field} for ${type.typeKey}")
-                }
+            filters.forEach { filter ->
+                filterDefinitionRepository.save(filter)
+                logger.info("  Seeded Filter: ${filter.field} for ${type.typeKey}")
             }
-
-            logger.info("DataSeeder completed successfully.")
-        } catch (e: Exception) {
-            logger.error("Error during DataSeeding: ${e.message}", e)
         }
+
+        logger.info("DataSeeder completed successfully.")
     }
 
     override fun getOrder(): Int = 10

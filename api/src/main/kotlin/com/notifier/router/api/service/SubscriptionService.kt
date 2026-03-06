@@ -7,6 +7,7 @@ import com.notifier.router.api.repository.NotificationTypeRepository
 import com.notifier.router.api.repository.SubscriptionRepository
 import com.notifier.router.api.repository.UserRepository
 import com.notifier.router.common.dto.SubscriptionDto
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -18,6 +19,8 @@ class SubscriptionService(
     private val userRepository: UserRepository,
     private val novuService: NovuService,
 ) {
+    private val logger = LoggerFactory.getLogger(javaClass)
+
     @Transactional
     fun createSubscription(dto: SubscriptionDto): SubscriptionDto {
         val user =
@@ -63,12 +66,18 @@ class SubscriptionService(
             notificationTypeRepository.findById(subscription.notificationTypeId).orElse(null)
                 ?: return
 
-        novuService.syncSubscriberPreferences(
-            subscriberId = subscription.userId.toString(),
-            workflowKey = type.typeKey,
-            channels = subscription.channels,
-            channelConfig = subscription.channelConfig,
-        )
+        try {
+            novuService.syncSubscriberPreferences(
+                subscriberId = subscription.userId.toString(),
+                workflowKey = type.typeKey,
+                channels = subscription.channels,
+                channelConfig = subscription.channelConfig,
+            )
+        } catch (e: Exception) {
+            // Novu registration is best-effort — subscriber will be created lazily on first trigger.
+            // Do not roll back the subscription transaction.
+            logger.warn("Could not pre-register subscriber ${subscription.userId} in Novu", e)
+        }
     }
 
     @Transactional

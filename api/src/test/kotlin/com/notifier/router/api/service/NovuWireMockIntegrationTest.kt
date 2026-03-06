@@ -90,6 +90,17 @@ class NovuWireMockIntegrationTest : BaseIntegrationTest() {
         notificationTypeRepository.deleteAll()
         userRepository.deleteAll()
 
+        // Stub the Novu subscriber upsert endpoint
+        wireMock.stubFor(
+            post(urlPathEqualTo("/v1/subscribers"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(201)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""{"data": {"subscriberId": "test"}}"""),
+                ),
+        )
+
         // Stub the Novu trigger endpoint to return 201
         wireMock.stubFor(
             post(urlPathEqualTo("/v1/events/trigger"))

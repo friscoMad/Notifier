@@ -95,91 +95,87 @@ class NovuService(
      * with the new URL via Retrofit.Builder.
      */
     private fun overrideBaseUrl(url: String) {
-        try {
-            val normalizedUrl = if (url.endsWith("/")) url else "$url/"
+        val normalizedUrl = if (url.endsWith("/")) url else "$url/"
 
-            // 1. Override NovuConfig.baseUrl at the top-level
-            val novuConfigField = Novu::class.java.getDeclaredField("novuConfig")
-            novuConfigField.isAccessible = true
-            val rootConfig = novuConfigField.get(novuClient) as NovuConfig
+        // 1. Override NovuConfig.baseUrl at the top-level
+        val novuConfigField = Novu::class.java.getDeclaredField("novuConfig")
+        novuConfigField.isAccessible = true
+        val rootConfig = novuConfigField.get(novuClient) as NovuConfig
 
-            val baseUrlField = NovuConfig::class.java.getDeclaredField("baseUrl")
-            baseUrlField.isAccessible = true
-            baseUrlField.set(rootConfig, normalizedUrl)
+        val baseUrlField = NovuConfig::class.java.getDeclaredField("baseUrl")
+        baseUrlField.isAccessible = true
+        baseUrlField.set(rootConfig, normalizedUrl)
 
-            // 2. Override each handler's RestHandler → novuConfig.baseUrl and rebuild Retrofit
-            val handlerFieldNames =
-                listOf(
-                    "eventsHandler",
-                    "notificationHandler",
-                    "topicHandler",
-                    "subscribersHandler",
-                    "integrationsHandler",
-                    "layoutHandler",
-                    "workflowHandler",
-                    "workflowGroupHandler",
-                    "changeHandler",
-                    "environmentHandler",
-                    "inboundParseHandler",
-                    "feedsHandler",
-                    "messageHandler",
-                    "executiveDetailsHandler",
-                    "blueprintsHandler",
-                    "tenantsHandler",
-                    "organizationHandler",
-                    "workflowOverrideHandler",
-                )
+        // 2. Override each handler's RestHandler → novuConfig.baseUrl and rebuild Retrofit
+        val handlerFieldNames =
+            listOf(
+                "eventsHandler",
+                "notificationHandler",
+                "topicHandler",
+                "subscribersHandler",
+                "integrationsHandler",
+                "layoutHandler",
+                "workflowHandler",
+                "workflowGroupHandler",
+                "changeHandler",
+                "environmentHandler",
+                "inboundParseHandler",
+                "feedsHandler",
+                "messageHandler",
+                "executiveDetailsHandler",
+                "blueprintsHandler",
+                "tenantsHandler",
+                "organizationHandler",
+                "workflowOverrideHandler",
+            )
 
-            for (handlerName in handlerFieldNames) {
-                try {
-                    val handlerField = Novu::class.java.getDeclaredField(handlerName)
-                    handlerField.isAccessible = true
-                    val handler = handlerField.get(novuClient) ?: continue
+        for (handlerName in handlerFieldNames) {
+            try {
+                val handlerField = Novu::class.java.getDeclaredField(handlerName)
+                handlerField.isAccessible = true
+                val handler = handlerField.get(novuClient) ?: continue
 
-                    val restHandlerField = handler::class.java.getDeclaredField("restHandler")
-                    restHandlerField.isAccessible = true
-                    val restHandler = restHandlerField.get(handler) ?: continue
+                val restHandlerField = handler::class.java.getDeclaredField("restHandler")
+                restHandlerField.isAccessible = true
+                val restHandler = restHandlerField.get(handler) ?: continue
 
-                    // Override the RestHandler's novuConfig.baseUrl
-                    val restNovuConfigField = restHandler::class.java.getDeclaredField("novuConfig")
-                    restNovuConfigField.isAccessible = true
-                    val restConfig = restNovuConfigField.get(restHandler) as NovuConfig
-                    baseUrlField.set(restConfig, normalizedUrl)
+                // Override the RestHandler's novuConfig.baseUrl
+                val restNovuConfigField = restHandler::class.java.getDeclaredField("novuConfig")
+                restNovuConfigField.isAccessible = true
+                val restConfig = restNovuConfigField.get(restHandler) as NovuConfig
+                baseUrlField.set(restConfig, normalizedUrl)
 
-                    // Rebuild the Retrofit instance with the new base URL
-                    val retrofitField = restHandler::class.java.getDeclaredField("retrofit")
-                    retrofitField.isAccessible = true
-                    val oldRetrofit = retrofitField.get(restHandler) as Retrofit
-                    val newRetrofit = oldRetrofit.newBuilder().baseUrl(normalizedUrl).build()
-                    retrofitField.set(restHandler, newRetrofit)
+                // Rebuild the Retrofit instance with the new base URL
+                val retrofitField = restHandler::class.java.getDeclaredField("retrofit")
+                retrofitField.isAccessible = true
+                val oldRetrofit = retrofitField.get(restHandler) as Retrofit
+                val newRetrofit = oldRetrofit.newBuilder().baseUrl(normalizedUrl).build()
+                retrofitField.set(restHandler, newRetrofit)
 
-                    // Rebuild API interface proxies on the handler that were created
-                    // from the old Retrofit. These are Retrofit dynamic proxies whose
-                    // interfaces end in "Api" (e.g., EventsApi, SubscribersApi, etc.)
-                    for (apiField in handler::class.java.declaredFields) {
-                        if (apiField.name == "restHandler") continue
-                        apiField.isAccessible = true
-                        val apiProxy = apiField.get(handler) ?: continue
+                // Rebuild API interface proxies on the handler that were created
+                // from the old Retrofit. These are Retrofit dynamic proxies whose
+                // interfaces end in "Api" (e.g., EventsApi, SubscribersApi, etc.)
+                for (apiField in handler::class.java.declaredFields) {
+                    if (apiField.name == "restHandler") continue
+                    apiField.isAccessible = true
+                    val apiProxy = apiField.get(handler) ?: continue
 
-                        // Find the Retrofit interface type from the proxy's interfaces
-                        val apiInterface =
-                            apiProxy::class.java.interfaces.firstOrNull {
-                                it.name.contains("Api")
-                            }
-                        if (apiInterface != null) {
-                            val newProxy = newRetrofit.create(apiInterface)
-                            apiField.set(handler, newProxy)
+                    // Find the Retrofit interface type from the proxy's interfaces
+                    val apiInterface =
+                        apiProxy::class.java.interfaces.firstOrNull {
+                            it.name.contains("Api")
                         }
+                    if (apiInterface != null) {
+                        val newProxy = newRetrofit.create(apiInterface)
+                        apiField.set(handler, newProxy)
                     }
-                } catch (@Suppress("SwallowedException") e: NoSuchFieldException) {
-                    // Some Retrofit handlers have different internal structure — skip silently
                 }
+            } catch (@Suppress("SwallowedException") e: NoSuchFieldException) {
+                // Some Retrofit handlers have different internal structure — skip silently
             }
-
-            logger.info("Overrode Novu base URL to: $normalizedUrl")
-        } catch (e: Exception) {
-            logger.error("Failed to override Novu base URL via reflection", e)
         }
+
+        logger.info("Overrode Novu base URL to: $normalizedUrl")
     }
 
     fun triggerWorkflow(
@@ -194,23 +190,27 @@ class NovuService(
             return
         }
 
-        try {
-            subscriberIds.forEach { ensureSubscriberExists(it) }
-
-            val novuIdentifier = workflowRegistry[workflowId] ?: workflowId
-            if (novuIdentifier != workflowId) {
-                logger.debug("Resolved typeKey $workflowId -> Novu identifier $novuIdentifier")
+        subscriberIds.forEach { subscriberId ->
+            try {
+                ensureSubscriberExists(subscriberId)
+            } catch (e: Exception) {
+                // Pre-registration is best-effort — subscriber may already exist in Novu.
+                // Log and continue; the trigger attempt below will reveal if they truly don't exist.
+                logger.warn("Could not pre-register subscriber $subscriberId in Novu, attempting trigger anyway", e)
             }
-            val request = TriggerEventRequest()
-            request.name = novuIdentifier
-            request.to = subscriberIds
-            request.payload = payload.toMutableMap()
-
-            val response = novuClient.triggerEvent(request)
-            logger.info("Novu trigger response: ${response.data}")
-        } catch (e: Exception) {
-            logger.error("Failed to trigger Novu workflow $workflowId", e)
         }
+
+        val novuIdentifier = workflowRegistry[workflowId] ?: workflowId
+        if (novuIdentifier != workflowId) {
+            logger.debug("Resolved typeKey $workflowId -> Novu identifier $novuIdentifier")
+        }
+        val request = TriggerEventRequest()
+        request.name = novuIdentifier
+        request.to = subscriberIds
+        request.payload = payload.toMutableMap()
+
+        val response = novuClient.triggerEvent(request)
+        logger.info("Novu trigger response: ${response.data}")
     }
 
     fun syncSubscriberPreferences(
@@ -226,14 +226,10 @@ class NovuService(
             return
         }
 
-        try {
-            novuApiClient!!.upsertSubscriber(NovuSubscriber(subscriberId = subscriberId))
-            logger.info(
-                "Successfully synced subscriber $subscriberId to Novu. Channels: $channels, Config: $channelConfig",
-            )
-        } catch (e: Exception) {
-            logger.error("Failed to sync preferences for $subscriberId", e)
-        }
+        novuApiClient!!.upsertSubscriber(NovuSubscriber(subscriberId = subscriberId))
+        logger.info(
+            "Successfully synced subscriber $subscriberId to Novu. Channels: $channels, Config: $channelConfig",
+        )
     }
 
     fun ensureWorkflowExists(
@@ -245,66 +241,57 @@ class NovuService(
             return
         }
 
-        try {
-            val workflows = novuApiClient!!.listWorkflows()
-            val existing = workflows.find { it.name == key }
+        val workflows = novuApiClient!!.listWorkflows()
+        val existing = workflows.find { it.name == key }
 
-            if (existing != null) {
-                val novuIdentifier = existing.triggers?.firstOrNull()?.identifier
-                if (novuIdentifier != null) workflowRegistry[key] = novuIdentifier
+        if (existing != null) {
+            val novuIdentifier = existing.triggers?.firstOrNull()?.identifier
+            if (novuIdentifier != null) workflowRegistry[key] = novuIdentifier
 
-                val steps = existing.steps ?: emptyList()
-                val hasChatStep = steps.any { it.template.type == "chat" }
-                val hasPushStep = steps.any { it.template.type == "push" }
+            val steps = existing.steps ?: emptyList()
+            val hasChatStep = steps.any { it.template.type == "chat" }
+            val hasPushStep = steps.any { it.template.type == "push" }
 
-                if (!hasChatStep || hasPushStep) {
-                    logger.info("Workflow $key needs patching (hasChatStep=$hasChatStep, hasPushStep=$hasPushStep)")
-                    val cleanSteps =
-                        steps
-                            .filter { it.template.type != "push" }
-                            .let { if (!hasChatStep) it + NovuWorkflowStep(NovuStepTemplate("chat", "{{content}}")) else it }
-                    novuApiClient!!.updateWorkflow(existing._id!!, existing.copy(steps = cleanSteps))
-                    logger.info("Patched workflow $key: removed push, ensured chat step")
-                } else {
-                    logger.info("Registered existing Novu workflow: $key -> $novuIdentifier")
-                }
-                return
-            }
-
-            val groups = novuApiClient!!.listNotificationGroups()
-            val groupId =
-                (groups.firstOrNull()?.get("_id") as? String)
-                    ?: return logger.error("Could not find any notification groups in Novu")
-
-            val created =
-                novuApiClient!!.createWorkflow(
-                    NovuWorkflow(
-                        name = key,
-                        notificationGroupId = groupId,
-                        steps =
-                        listOf(
-                            NovuWorkflowStep(NovuStepTemplate("in_app", "{{content}}")),
-                            NovuWorkflowStep(NovuStepTemplate("chat", "{{content}}")),
-                        ),
-                        active = true,
-                        draft = false,
-                        critical = false,
-                    ),
-                )
-            val novuIdentifier = created.triggers?.firstOrNull()?.identifier
-            if (novuIdentifier != null) {
-                workflowRegistry[key] = novuIdentifier
-                logger.info("Provisioned Novu workflow: $key -> $novuIdentifier ($name)")
+            if (!hasChatStep || hasPushStep) {
+                logger.info("Workflow $key needs patching (hasChatStep=$hasChatStep, hasPushStep=$hasPushStep)")
+                val cleanSteps =
+                    steps
+                        .filter { it.template.type != "push" }
+                        .let { if (!hasChatStep) it + NovuWorkflowStep(NovuStepTemplate("chat", "{{content}}")) else it }
+                novuApiClient!!.updateWorkflow(existing._id!!, existing.copy(steps = cleanSteps))
+                logger.info("Patched workflow $key: removed push, ensured chat step")
             } else {
-                logger.warn("Created Novu workflow $key but could not extract trigger identifier")
+                logger.info("Registered existing Novu workflow: $key -> $novuIdentifier")
             }
-        } catch (e: org.springframework.web.client.RestClientResponseException) {
-            logger.error(
-                "Failed to ensure Novu workflow $key exists. Status: ${e.statusCode}, Response: ${e.responseBodyAsString}",
-                e,
+            return
+        }
+
+        val groups = novuApiClient!!.listNotificationGroups()
+        val groupId =
+            (groups.firstOrNull()?.get("_id") as? String)
+                ?: return logger.error("Could not find any notification groups in Novu")
+
+        val created =
+            novuApiClient!!.createWorkflow(
+                NovuWorkflow(
+                    name = key,
+                    notificationGroupId = groupId,
+                    steps =
+                    listOf(
+                        NovuWorkflowStep(NovuStepTemplate("in_app", "{{content}}")),
+                        NovuWorkflowStep(NovuStepTemplate("chat", "{{content}}")),
+                    ),
+                    active = true,
+                    draft = false,
+                    critical = false,
+                ),
             )
-        } catch (e: Exception) {
-            logger.error("Failed to ensure Novu workflow $key exists", e)
+        val novuIdentifier = created.triggers?.firstOrNull()?.identifier
+        if (novuIdentifier != null) {
+            workflowRegistry[key] = novuIdentifier
+            logger.info("Provisioned Novu workflow: $key -> $novuIdentifier ($name)")
+        } else {
+            logger.warn("Created Novu workflow $key but could not extract trigger identifier")
         }
     }
 
@@ -319,46 +306,38 @@ class NovuService(
             return
         }
 
-        try {
-            val credentials = NovuSlackCredentials(slackClientId, slackClientSecret, slackApplicationId, slackBotToken)
-            val allIntegrations = novuApiClient!!.listIntegrations()
-            val slackIntegrations = allIntegrations.filter { it.providerId == "slack" && it.channel == "chat" }
+        val credentials = NovuSlackCredentials(slackClientId, slackClientSecret, slackApplicationId, slackBotToken)
+        val allIntegrations = novuApiClient!!.listIntegrations()
+        val slackIntegrations = allIntegrations.filter { it.providerId == "slack" && it.channel == "chat" }
 
-            val integration =
-                if (slackIntegrations.isNotEmpty()) {
-                    slackIntegrations.drop(1).forEach {
-                        novuApiClient!!.deleteIntegration(it._id!!)
-                        logger.info("Deleted duplicate Slack integration: ${it.identifier}")
-                    }
-                    val updated = novuApiClient!!.updateIntegration(
-                        slackIntegrations[0]._id!!,
-                        credentials,
-                        active = true
-                    )
-                    logger.info("Updated existing Slack integration: ${updated.identifier}")
-                    updated
-                } else {
-                    val created =
-                        novuApiClient!!.createIntegration(
-                            NovuIntegration(
-                                providerId = "slack",
-                                channel = "chat",
-                                name = "Slack",
-                                active = true,
-                                credentials = credentials,
-                            ),
-                        )
-                    logger.info("Created Slack integration: ${created.identifier}")
-                    created
+        val integration =
+            if (slackIntegrations.isNotEmpty()) {
+                slackIntegrations.drop(1).forEach {
+                    novuApiClient!!.deleteIntegration(it._id!!)
+                    logger.info("Deleted duplicate Slack integration: ${it.identifier}")
                 }
-            slackIntegrationIdentifier = integration.identifier
-        } catch (e: org.springframework.web.client.RestClientResponseException) {
-            logger.error(
-                "Failed to provision Slack integration. Status: ${e.statusCode}, Body: ${e.responseBodyAsString}"
-            )
-        } catch (e: Exception) {
-            logger.error("Failed to provision Slack integration", e)
-        }
+                val updated = novuApiClient!!.updateIntegration(
+                    slackIntegrations[0]._id!!,
+                    credentials,
+                    active = true
+                )
+                logger.info("Updated existing Slack integration: ${updated.identifier}")
+                updated
+            } else {
+                val created =
+                    novuApiClient!!.createIntegration(
+                        NovuIntegration(
+                            providerId = "slack",
+                            channel = "chat",
+                            name = "Slack",
+                            active = true,
+                            credentials = credentials,
+                        ),
+                    )
+                logger.info("Created Slack integration: ${created.identifier}")
+                created
+            }
+        slackIntegrationIdentifier = integration.identifier
     }
 
     /**
@@ -459,13 +438,9 @@ class NovuService(
      */
     private fun ensureSubscriberExists(subscriberId: String) {
         if (subscriberId in knownSubscribers) return
-        try {
-            novuApiClient!!.upsertSubscriber(NovuSubscriber(subscriberId = subscriberId))
-            knownSubscribers.add(subscriberId)
-            logger.debug("Upserted subscriber $subscriberId in Novu")
-        } catch (e: Exception) {
-            logger.warn("Could not upsert subscriber $subscriberId in Novu", e)
-        }
+        novuApiClient!!.upsertSubscriber(NovuSubscriber(subscriberId = subscriberId))
+        knownSubscribers.add(subscriberId)
+        logger.debug("Upserted subscriber $subscriberId in Novu")
     }
 
     private fun getBaseUrl() = if (apiUrl.isNotBlank()) apiUrl else "https://api.novu.co/v1"

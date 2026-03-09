@@ -4,6 +4,7 @@ import co.novu.api.events.requests.TriggerEventRequest
 import co.novu.common.base.Novu
 import co.novu.common.base.NovuConfig
 import com.notifier.router.api.config.LoggingInterceptor
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter
 import com.notifier.router.api.novu.NovuApiClient
 import com.notifier.router.api.novu.NovuChannelConnection
 import com.notifier.router.api.novu.NovuChannelEndpoint
@@ -42,6 +43,8 @@ class NovuService(
     private val restTemplate =
         RestTemplate(BufferingClientHttpRequestFactory(SimpleClientHttpRequestFactory())).apply {
             interceptors = listOf(LoggingInterceptor())
+            messageConverters.filterIsInstance<MappingJackson2HttpMessageConverter>()
+                .forEach { it.objectMapper.findAndRegisterModules() }
         }
 
     /**

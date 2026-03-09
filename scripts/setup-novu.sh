@@ -104,6 +104,23 @@ db.environments.updateOne(
 );
 "
 
+# 5. Create Default Notification Group (required by NovuSeeder to attach workflows)
+$MONGO_CMD "
+db.notificationgroups.updateOne(
+  { name: 'General', _organizationId: ObjectId('$ORG_ID') },
+  { \$setOnInsert: {
+      name: 'General',
+      _organizationId: ObjectId('$ORG_ID'),
+      _environmentId: ObjectId('$ENV_DEV_ID'),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      __v: 0
+    }
+  },
+  { upsert: true }
+);
+"
+
 echo "Novu setup complete!"
 echo "Admin Email: admin@notifier.local"
 echo "Admin Password: admin123"

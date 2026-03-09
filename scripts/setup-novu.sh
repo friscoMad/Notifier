@@ -22,6 +22,18 @@ PASSWORD_HASH="$NOVU_ADMIN_PASSWORD_HASH"
 
 MONGO_CMD="docker exec -i novu_mongodb mongosh --username root --password secret --authenticationDatabase admin novu-db --quiet --eval"
 
+# Encrypt the API key using Novu's encryptSecret so the dashboard can decrypt it.
+# Novu treats any value starting with "nvsk." as encrypted — storing the raw key
+# causes "Invalid initialization vector" when the dashboard fetches /v1/environments.
+ENCRYPTED_API_KEY=$(docker exec \
+  -e NEW_RELIC_APP_NAME=skip \
+  -e STORE_ENCRYPTION_KEY="${NOVU_ENCRYPTION_KEY:-12345678901234567890123456789012}" \
+  novu_api node -e "
+process.env.STORE_ENCRYPTION_KEY = process.env.STORE_ENCRYPTION_KEY;
+const { encryptSecret } = require('@novu/application-generic');
+process.stdout.write(encryptSecret('$API_KEY'));
+" 2>/dev/null)
+
 # 1. Create Default User
 $MONGO_CMD "
 db.users.updateOne(
@@ -84,7 +96,7 @@ db.environments.updateOne(
       name: 'Development',
       identifier: 'development',
       apiKeys: [{
-        key: '$API_KEY',
+        key: '$ENCRYPTED_API_KEY',
         hash: '$HASH',
         _userId: ObjectId('$USER_ID')
       }],

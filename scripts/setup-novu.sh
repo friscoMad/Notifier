@@ -30,7 +30,7 @@ db.users.updateOne(
       _id: ObjectId('$USER_ID'),
       firstName: 'Admin',
       lastName: 'User',
-      password: '$2b$10$X/71D37w.pG7hOMj/L.xhe3X.2Qf.O/q4uWeL.BqH/E.o9YgMzZRi',
+      password: '$PASSWORD_HASH',
       tokens: [],
       createdAt: new Date(),
       updatedAt: new Date(),

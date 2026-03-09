@@ -15,7 +15,8 @@ spring:
       hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
 
   flyway:
-    enabled: false
+    enabled: true
+    locations: classpath:db/migration
 
 server:
   port: 8082

@@ -85,7 +85,8 @@ db.environments.updateOne(
       identifier: 'development',
       apiKeys: [{
         key: '$API_KEY',
-        hash: '$HASH'
+        hash: '$HASH',
+        _userId: ObjectId('$USER_ID')
       }],
       apiRateLimits: {
         trigger: { burstAllowance: 0, windowDuration: 0, maximumLimit: 0 },

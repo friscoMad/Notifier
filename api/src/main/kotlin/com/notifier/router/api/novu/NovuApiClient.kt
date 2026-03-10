@@ -20,18 +20,18 @@ class NovuApiClient(
             .exchange("$baseUrl/integrations", HttpMethod.GET, HttpEntity<Unit>(headers()), Map::class.java)
             .body
             .dataRawList()
-            .map { objectMapper.convertValue(it, NovuIntegration::class.java) }
+            .map { objectMapper.readValue(objectMapper.writeValueAsString(it), NovuIntegration::class.java) }
 
     fun createIntegration(integration: NovuIntegration): NovuIntegration =
         restTemplate
             .exchange("$baseUrl/integrations", HttpMethod.POST, HttpEntity(integration, headers()), Map::class.java)
             .body
             .dataRawObject()
-            .let { objectMapper.convertValue(it, NovuIntegration::class.java) }
+            .let { objectMapper.readValue(objectMapper.writeValueAsString(it), NovuIntegration::class.java) }
 
     fun updateIntegration(
         id: String,
-        credentials: NovuSlackCredentials,
+        credentials: NovuCredentials,
         active: Boolean,
     ): NovuIntegration =
         restTemplate
@@ -42,7 +42,7 @@ class NovuApiClient(
                 Map::class.java,
             ).body
             .dataRawObject()
-            .let { objectMapper.convertValue(it, NovuIntegration::class.java) }
+            .let { objectMapper.readValue(objectMapper.writeValueAsString(it), NovuIntegration::class.java) }
 
     fun deleteIntegration(id: String) {
         restTemplate.exchange(
@@ -119,6 +119,15 @@ class NovuApiClient(
             ).body
             .dataRawObject()
             .let { objectMapper.convertValue(it, NovuChannelConnection::class.java) }
+
+    fun deleteChannelConnection(identifier: String) {
+        restTemplate.exchange(
+            "$baseUrl/channel-connections/$identifier",
+            HttpMethod.DELETE,
+            HttpEntity<Unit>(headers()),
+            Map::class.java,
+        )
+    }
 
     // ── Channel Endpoints ─────────────────────────────────────────────────────
 

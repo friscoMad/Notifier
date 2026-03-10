@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank
 data class SubscriptionDto(
     val id: String? = null,
     @field:NotBlank val userId: String,
+    val email: String? = null,
     @field:NotBlank val notificationTypeId: String,
     val channels: List<String>,
     val channelConfig: Map<String, Any> = emptyMap(),

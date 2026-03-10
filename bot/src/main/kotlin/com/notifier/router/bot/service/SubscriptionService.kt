@@ -15,6 +15,7 @@ class SubscriptionService(
 
     fun subscribeAndActivate(
         userId: String,
+        email: String? = null,
         notificationTypeId: String,
         channels: List<String>,
         filters: List<Filter> = emptyList(),
@@ -25,6 +26,7 @@ class SubscriptionService(
                 apiClient.subscribe(
                     SubscriptionDto(
                         userId = userId,
+                        email = email,
                         notificationTypeId = notificationTypeId,
                         channels = channels,
                         channelConfig = channelConfig,

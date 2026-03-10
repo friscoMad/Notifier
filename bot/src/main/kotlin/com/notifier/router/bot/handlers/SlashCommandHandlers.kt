@@ -16,6 +16,7 @@ import com.slack.api.bolt.context.builtin.SlashCommandContext
 import com.slack.api.bolt.request.builtin.BlockActionRequest
 import com.slack.api.bolt.request.builtin.SlashCommandRequest
 import com.slack.api.bolt.response.Response
+import com.slack.api.methods.MethodsClient
 import com.slack.api.methods.request.views.ViewsOpenRequest
 import com.slack.api.model.kotlin_extension.block.withBlocks
 import jakarta.annotation.PostConstruct
@@ -33,6 +34,19 @@ class SlashCommandHandlers(
     private val subscriptionService: SubscriptionService,
 ) {
     private val logger = LoggerFactory.getLogger(SlashCommandHandlers::class.java)
+
+    /**
+     * Fetches the user's email from Slack. Returns null on any failure — email is best-effort
+     * and must not block subscription creation if Slack is unavailable or the profile has no email.
+     */
+    private fun fetchUserEmail(client: MethodsClient, userId: String): String? =
+        try {
+            client.usersInfo { it.user(userId) }.takeIf { it.isOk }?.user?.profile?.email
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            // Slack SDK throws IOException + SlackApiException with no common parent narrower than Exception.
+            logger.warn("Could not fetch email for Slack user $userId", e)
+            null
+        }
 
     @PostConstruct
     fun registerHandlers() {
@@ -326,6 +340,7 @@ class SlashCommandHandlers(
         return when (
             subscriptionService.subscribeAndActivate(
                 userId = req.payload.userId,
+                email = fetchUserEmail(ctx.client(), req.payload.userId),
                 notificationTypeId = typeId,
                 channels = listOf("slack_dm"),
                 filters = filters,

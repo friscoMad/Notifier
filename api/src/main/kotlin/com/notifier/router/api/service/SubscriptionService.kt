@@ -24,13 +24,13 @@ class SubscriptionService(
     @Transactional
     fun createSubscription(dto: SubscriptionDto): SubscriptionDto {
         val user =
-            userRepository.findBySlackId(dto.userId)
-                ?: userRepository.save(
-                    User(
-                        id = UUID.randomUUID(),
-                        slackId = dto.userId,
-                    ),
-                )
+            userRepository.findBySlackId(dto.userId)?.let { existing ->
+                if (dto.email != null && existing.email != dto.email) {
+                    userRepository.save(existing.copy(email = dto.email))
+                } else {
+                    existing
+                }
+            } ?: userRepository.save(User(id = UUID.randomUUID(), slackId = dto.userId, email = dto.email))
 
         val subscription = dto.toDomain(user.id)
         val saved = subscriptionRepository.save(subscription)
@@ -65,10 +65,12 @@ class SubscriptionService(
         val type =
             notificationTypeRepository.findById(subscription.notificationTypeId).orElse(null)
                 ?: return
+        val slackId =
+            userRepository.findById(subscription.userId).orElse(null)?.slackId ?: return
 
         try {
             novuService.syncSubscriberPreferences(
-                subscriberId = subscription.userId.toString(),
+                subscriberId = slackId,
                 workflowKey = type.typeKey,
                 channels = subscription.channels,
                 channelConfig = subscription.channelConfig,
@@ -76,7 +78,7 @@ class SubscriptionService(
         } catch (e: org.springframework.web.client.RestClientException) {
             // Novu registration is best-effort — subscriber will be created lazily on first trigger.
             // Do not roll back the subscription transaction.
-            logger.warn("Could not pre-register subscriber ${subscription.userId} in Novu", e)
+            logger.warn("Could not pre-register subscriber $slackId in Novu", e)
         }
     }
 

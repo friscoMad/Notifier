@@ -6,8 +6,11 @@ import com.notifier.router.api.novu.NovuApiClient
 import com.notifier.router.api.novu.NovuChannelConnection
 import com.notifier.router.api.novu.NovuChannelEndpoint
 import com.notifier.router.api.novu.NovuIntegration
+import com.notifier.router.api.novu.NovuSesCredentials
 import com.notifier.router.api.novu.NovuSlackCredentials
+import com.notifier.router.api.novu.NovuSubscriber
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -24,21 +27,45 @@ class NovuServiceTest {
     @BeforeEach
     fun setup() {
         apiClient = mock()
-        service =
-            NovuService(
-                apiKey = "test-key",
-                apiUrl = "http://localhost:3000/v1",
-                slackClientId = "client-id",
-                slackClientSecret = "client-secret",
-                slackApplicationId = "app-id",
-                slackBotToken = "xoxb-token",
-                slackWorkspaceId = "T123",
-                slackWorkspaceName = "Test Workspace",
-                objectMapper = ObjectMapper(),
-            )
+        service = buildService()
+
         val field = NovuService::class.java.getDeclaredField("novuApiClient")
         field.isAccessible = true
         field.set(service, apiClient)
+    }
+
+    // ── Builder ───────────────────────────────────────────────────────────────
+
+    private fun buildService(
+        sesAccessKeyId: String = "AKID",
+        sesSecretAccessKey: String = "secret",
+        sesRegion: String = "us-east-1",
+        sesFrom: String = "notifier@example.com",
+        sesSenderName: String = "Notifier",
+        sesSessionToken: String = "",
+    ): NovuService {
+        val svc = NovuService(
+            apiKey = "test-key",
+            apiUrl = "http://localhost:3000/v1",
+            slackClientId = "client-id",
+            slackClientSecret = "client-secret",
+            slackApplicationId = "app-id",
+            slackBotToken = "xoxb-token",
+            slackWorkspaceId = "T123",
+            slackWorkspaceName = "Test Workspace",
+            sesAccessKeyId = sesAccessKeyId,
+            sesSecretAccessKey = sesSecretAccessKey,
+            sesRegion = sesRegion,
+            sesFrom = sesFrom,
+            sesSenderName = sesSenderName,
+            sesSessionToken = sesSessionToken,
+            objectMapper = ObjectMapper(),
+        )
+        NovuService::class.java.getDeclaredField("novuApiClient").also {
+            it.isAccessible = true
+            it.set(svc, apiClient)
+        }
+        return svc
     }
 
     // ── Reflection helpers ────────────────────────────────────────────────────
@@ -60,6 +87,13 @@ class NovuServiceTest {
         val field = NovuService::class.java.getDeclaredField("slackConnectionIdentifier")
         field.isAccessible = true
         field.set(service, value)
+    }
+
+    private fun markNovuClientInitializedOn(svc: NovuService) {
+        NovuService::class.java.getDeclaredField("novuClient").also {
+            it.isAccessible = true
+            it.set(svc, mock<Novu>())
+        }
     }
 
     // ── ensureSlackIntegrationExists ──────────────────────────────────────────
@@ -253,6 +287,160 @@ class NovuServiceTest {
                 assertEquals("xoxb-token", conn.auth?.accessToken)
                 assertEquals("T123", conn.workspace?.id)
             },
+        )
+    }
+
+    // ── createSlackEndpoint — email forwarding ────────────────────────────────
+
+    @Test
+    fun `email is forwarded to upsertSubscriber`() {
+        setSlackIntegrationIdentifier("slack-abc")
+        setSlackConnectionIdentifier("chconn-1")
+        whenever(apiClient.listChannelEndpoints("U123")).thenReturn(emptyList())
+        whenever(apiClient.createChannelEndpoint(any())).thenReturn(
+            NovuChannelEndpoint(identifier = "ep-new", type = "slack_user"),
+        )
+
+        service.createSlackEndpoint("U123", "user@example.com")
+
+        verify(apiClient).upsertSubscriber(
+            check { subscriber: NovuSubscriber ->
+                assertEquals("U123", subscriber.subscriberId)
+                assertEquals("user@example.com", subscriber.email)
+            },
+        )
+    }
+
+    @Test
+    fun `null email is forwarded to upsertSubscriber`() {
+        setSlackIntegrationIdentifier("slack-abc")
+        setSlackConnectionIdentifier("chconn-1")
+        whenever(apiClient.listChannelEndpoints("U123")).thenReturn(emptyList())
+        whenever(apiClient.createChannelEndpoint(any())).thenReturn(
+            NovuChannelEndpoint(identifier = "ep-new", type = "slack_user"),
+        )
+
+        service.createSlackEndpoint("U123", null)
+
+        verify(apiClient).upsertSubscriber(
+            check { subscriber: NovuSubscriber -> assertNull(subscriber.email) },
+        )
+    }
+
+    // ── ensureSesIntegrationExists ────────────────────────────────────────────
+
+    @Test
+    fun `ses - skips when credentials not configured`() {
+        val svc = buildService(sesAccessKeyId = "", sesFrom = "")
+        markNovuClientInitializedOn(svc)
+
+        svc.ensureSesIntegrationExists()
+
+        verify(apiClient, never()).listIntegrations()
+    }
+
+    @Test
+    fun `ses - creates integration when none exists`() {
+        val svc = buildService()
+        markNovuClientInitializedOn(svc)
+        whenever(apiClient.listIntegrations()).thenReturn(emptyList())
+        whenever(apiClient.createIntegration(any())).thenReturn(
+            NovuIntegration(_id = "int1", identifier = "ses-new", providerId = "ses", channel = "email"),
+        )
+
+        svc.ensureSesIntegrationExists()
+
+        verify(apiClient).createIntegration(
+            check { integration ->
+                assertEquals("ses", integration.providerId)
+                assertEquals("email", integration.channel)
+                val creds = integration.credentials as NovuSesCredentials
+                assertEquals("AKID", creds.accessKeyId)
+                assertEquals("secret", creds.secretAccessKey)
+                assertEquals("us-east-1", creds.region)
+                assertEquals("notifier@example.com", creds.from)
+            },
+        )
+        verify(apiClient, never()).updateIntegration(any(), any(), any())
+    }
+
+    @Test
+    fun `ses - updates existing integration in place`() {
+        val svc = buildService()
+        markNovuClientInitializedOn(svc)
+        val existing = NovuIntegration(_id = "int-ses", identifier = "ses-abc", providerId = "ses", channel = "email")
+        whenever(apiClient.listIntegrations()).thenReturn(listOf(existing))
+        whenever(apiClient.updateIntegration(any(), any(), any())).thenReturn(existing)
+
+        svc.ensureSesIntegrationExists()
+
+        verify(apiClient).updateIntegration(
+            check { id -> assertEquals("int-ses", id) },
+            any<NovuSesCredentials>(),
+            any(),
+        )
+        verify(apiClient, never()).createIntegration(any())
+        verify(apiClient, never()).deleteIntegration(any())
+    }
+
+    @Test
+    fun `ses - deletes duplicate integrations beyond the first`() {
+        val svc = buildService()
+        markNovuClientInitializedOn(svc)
+        val first = NovuIntegration(
+            _id = "int-first",
+            identifier = "ses-first",
+            providerId = "ses",
+            channel = "email",
+        )
+        val second = NovuIntegration(
+            _id = "int-second",
+            identifier = "ses-second",
+            providerId = "ses",
+            channel = "email"
+        )
+        whenever(apiClient.listIntegrations()).thenReturn(listOf(first, second))
+        whenever(apiClient.updateIntegration(any(), any(), any())).thenReturn(first)
+
+        svc.ensureSesIntegrationExists()
+
+        verify(apiClient).updateIntegration(
+            check { assertEquals("int-first", it) },
+            any(),
+            any(),
+        )
+        verify(apiClient).deleteIntegration(check { assertEquals("int-second", it) })
+    }
+
+    @Test
+    fun `ses - session token is null when blank`() {
+        val svc = buildService(sesSessionToken = "")
+        markNovuClientInitializedOn(svc)
+        whenever(apiClient.listIntegrations()).thenReturn(emptyList())
+        whenever(apiClient.createIntegration(any())).thenReturn(
+            NovuIntegration(_id = "int1", identifier = "ses-new", providerId = "ses", channel = "email"),
+        )
+
+        svc.ensureSesIntegrationExists()
+
+        verify(apiClient).createIntegration(
+            check { assertNull((it.credentials as NovuSesCredentials).sessionToken) },
+        )
+    }
+
+    @Test
+    fun `ses - session token is included when provided`() {
+        val svc = buildService(sesSessionToken = "tok-xyz")
+        markNovuClientInitializedOn(svc)
+        whenever(apiClient.listIntegrations()).thenReturn(emptyList())
+        whenever(apiClient.createIntegration(any())).thenReturn(
+            NovuIntegration(_id = "int1", identifier = "ses-new", providerId = "ses", channel = "email"),
+        )
+
+        svc.ensureSesIntegrationExists()
+
+        verify(apiClient).createIntegration(
+            check { assertEquals("tok-xyz", (it.credentials as NovuSesCredentials).sessionToken) },
         )
     }
 }

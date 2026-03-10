@@ -2,6 +2,7 @@ package com.notifier.router.bot.handlers
 
 import com.notifier.router.bot.client.RouterApiClient
 import com.notifier.router.bot.service.SubscriptionService
+import com.notifier.router.bot.service.UnsubscribeResult
 import com.notifier.router.common.dto.NotificationTypeDto
 import com.slack.api.bolt.App
 import com.slack.api.bolt.context.builtin.SlashCommandContext
@@ -136,5 +137,109 @@ class SlashCommandHandlersTest {
         assertEquals(200, response.statusCode)
         verify(ctx)
             .ack(org.mockito.kotlin.check<String> { assertTrue(it.contains("/notifyme help")) })
+    }
+
+    private fun invokeHandleCommand(): Response {
+        val method =
+            SlashCommandHandlers::class.java.getDeclaredMethod(
+                "handleCommand",
+                SlashCommandRequest::class.java,
+                SlashCommandContext::class.java,
+            )
+        method.isAccessible = true
+        return method.invoke(handlers, req, ctx) as Response
+    }
+
+    @Test
+    fun `unsubscribe with no args returns usage hint`() {
+        whenever(payload.text).thenReturn("unsubscribe")
+        whenever(ctx.ack(any<String>())).thenReturn(Response.ok())
+
+        val response = invokeHandleCommand()
+
+        assertEquals(200, response.statusCode)
+        verify(ctx).ack(org.mockito.kotlin.check<String> { assertTrue(it.contains("pr_created")) })
+    }
+
+    @Test
+    fun `unsubscribe with unknown type returns available types`() {
+        whenever(payload.text).thenReturn("unsubscribe unknown_type")
+        whenever(ctx.ack(any<String>())).thenReturn(Response.ok())
+        whenever(apiClient.getNotificationTypes()).thenReturn(
+            listOf(NotificationTypeDto(id = "type-1", key = "pr_created", name = "PR Created")),
+        )
+
+        val response = invokeHandleCommand()
+
+        assertEquals(200, response.statusCode)
+        verify(ctx).ack(
+            org.mockito.kotlin.check<String> {
+                assertTrue(it.contains("unknown_type"))
+                assertTrue(it.contains("pr_created"))
+            },
+        )
+    }
+
+    @Test
+    fun `unsubscribe with valid type and active subscription succeeds`() {
+        whenever(payload.text).thenReturn("unsubscribe pr_created")
+        whenever(payload.userId).thenReturn("U03SRNCB1HS")
+        whenever(ctx.ack(any<String>())).thenReturn(Response.ok())
+        whenever(apiClient.getNotificationTypes()).thenReturn(
+            listOf(NotificationTypeDto(id = "type-1", key = "pr_created", name = "PR Created")),
+        )
+        whenever(subscriptionService.unsubscribe("U03SRNCB1HS", "type-1"))
+            .thenReturn(UnsubscribeResult.Success)
+
+        val response = invokeHandleCommand()
+
+        assertEquals(200, response.statusCode)
+        verify(ctx).ack(
+            org.mockito.kotlin.check<String> {
+                assertTrue(it.contains("pr_created"))
+                assertTrue(it.lowercase().contains("unsubscribed"))
+            },
+        )
+    }
+
+    @Test
+    fun `unsubscribe when not subscribed returns not-subscribed message`() {
+        whenever(payload.text).thenReturn("unsubscribe pr_created")
+        whenever(payload.userId).thenReturn("U03SRNCB1HS")
+        whenever(ctx.ack(any<String>())).thenReturn(Response.ok())
+        whenever(apiClient.getNotificationTypes()).thenReturn(
+            listOf(NotificationTypeDto(id = "type-1", key = "pr_created", name = "PR Created")),
+        )
+        whenever(subscriptionService.unsubscribe("U03SRNCB1HS", "type-1"))
+            .thenReturn(UnsubscribeResult.NotSubscribed)
+
+        val response = invokeHandleCommand()
+
+        assertEquals(200, response.statusCode)
+        verify(ctx).ack(
+            org.mockito.kotlin.check<String> {
+                assertTrue(it.contains("pr_created"))
+                assertTrue(it.lowercase().contains("no active subscription"))
+            },
+        )
+    }
+
+    @Test
+    fun `unsubscribe on api failure returns error message`() {
+        whenever(payload.text).thenReturn("unsubscribe pr_created")
+        whenever(payload.userId).thenReturn("U03SRNCB1HS")
+        whenever(ctx.ack(any<String>())).thenReturn(Response.ok())
+        whenever(apiClient.getNotificationTypes()).thenReturn(
+            listOf(NotificationTypeDto(id = "type-1", key = "pr_created", name = "PR Created")),
+        )
+        whenever(subscriptionService.unsubscribe("U03SRNCB1HS", "type-1"))
+            .thenReturn(UnsubscribeResult.Failure)
+
+        val response = invokeHandleCommand()
+
+        assertEquals(200, response.statusCode)
+        verify(ctx).ack(
+            org.mockito.kotlin.check<String> { assertTrue(it.contains("❌")) },
+        )
     }
 }

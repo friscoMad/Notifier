@@ -4,6 +4,7 @@ import com.notifier.router.bot.client.RouterApiClient
 import com.notifier.router.bot.service.ChannelSubscribeResult
 import com.notifier.router.bot.service.SubscribeResult
 import com.notifier.router.bot.service.SubscriptionService
+import com.notifier.router.bot.service.UnsubscribeResult
 import com.notifier.router.bot.view.ModalViewBuilder
 import com.notifier.router.common.domain.Filter
 import com.slack.api.bolt.App
@@ -322,8 +323,25 @@ class SlashCommandHandlers(
         req: SlashCommandRequest,
         ctx: SlashCommandContext,
     ): Response {
-        // Unsubscribe logic goes here...
-        // For simplicity we will mock it
-        return ctx.ack("Unsubscribe functionality is WIP.")
+        if (args.isEmpty()) {
+            return ctx.ack("Please specify a notification type. E.g., `/notifyme unsubscribe pr_created`")
+        }
+
+        val typeKey = args[0]
+        val availableTypes = apiClient.getNotificationTypes()
+        val match = availableTypes.find { it.key == typeKey }
+            ?: run {
+                val typeKeys = availableTypes.joinToString { it.key }
+                return ctx.ack("Invalid notification type: `$typeKey`. Available types are: $typeKeys")
+            }
+
+        return when (subscriptionService.unsubscribe(req.payload.userId, match.id!!)) {
+            UnsubscribeResult.Success ->
+                ctx.ack("Successfully unsubscribed from `$typeKey`.")
+            UnsubscribeResult.NotSubscribed ->
+                ctx.ack("You have no active subscription for `$typeKey`.")
+            UnsubscribeResult.Failure ->
+                ctx.ack("❌ Failed to unsubscribe from `$typeKey`. Please try again later.")
+        }
     }
 }

@@ -76,6 +76,30 @@ class SubscriptionService(
 
         return ChannelSubscribeResult.Success(subscription)
     }
+
+    fun unsubscribe(
+        userId: String,
+        notificationTypeId: String,
+    ): UnsubscribeResult {
+        val subs =
+            try {
+                apiClient.getSubscriptionsForUser(userId)
+            } catch (e: org.springframework.web.client.RestClientException) {
+                logger.error("Failed to fetch subscriptions for $userId", e)
+                return UnsubscribeResult.Failure
+            }
+
+        val sub = subs.find { it.notificationTypeId == notificationTypeId }
+            ?: return UnsubscribeResult.NotSubscribed
+
+        return try {
+            apiClient.unsubscribe(sub.id!!)
+            UnsubscribeResult.Success
+        } catch (e: org.springframework.web.client.RestClientException) {
+            logger.error("Failed to unsubscribe $userId from type $notificationTypeId", e)
+            UnsubscribeResult.Failure
+        }
+    }
 }
 
 sealed interface SubscribeResult {
@@ -92,4 +116,10 @@ sealed interface ChannelSubscribeResult {
     ) : ChannelSubscribeResult
 
     data object Failure : ChannelSubscribeResult
+}
+
+sealed interface UnsubscribeResult {
+    data object Success : UnsubscribeResult
+    data object NotSubscribed : UnsubscribeResult
+    data object Failure : UnsubscribeResult
 }

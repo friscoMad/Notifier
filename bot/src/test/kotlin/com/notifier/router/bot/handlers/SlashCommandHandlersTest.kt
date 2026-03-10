@@ -1,9 +1,13 @@
 package com.notifier.router.bot.handlers
 
 import com.notifier.router.bot.client.RouterApiClient
+import com.notifier.router.bot.service.SubscribeResult
 import com.notifier.router.bot.service.SubscriptionService
 import com.notifier.router.bot.service.UnsubscribeResult
+import com.notifier.router.common.domain.Filter
+import com.notifier.router.common.dto.FilterDefinitionDto
 import com.notifier.router.common.dto.NotificationTypeDto
+import com.notifier.router.common.dto.SubscriptionDto
 import com.slack.api.bolt.App
 import com.slack.api.bolt.context.builtin.SlashCommandContext
 import com.slack.api.bolt.request.builtin.SlashCommandRequest
@@ -240,6 +244,220 @@ class SlashCommandHandlersTest {
         assertEquals(200, response.statusCode)
         verify(ctx).ack(
             org.mockito.kotlin.check<String> { assertTrue(it.contains("❌")) },
+        )
+    }
+
+    // ── subscribe tests ────────────────────────────────────────────────────────
+
+    @Test
+    fun `subscribe with no args returns usage hint`() {
+        whenever(payload.text).thenReturn("subscribe")
+        whenever(ctx.ack(any<String>())).thenReturn(Response.ok())
+
+        val response = invokeHandleCommand()
+
+        assertEquals(200, response.statusCode)
+        verify(ctx).ack(org.mockito.kotlin.check<String> { assertTrue(it.contains("pr_created")) })
+    }
+
+    @Test
+    fun `subscribe with unknown type returns available types`() {
+        whenever(payload.text).thenReturn("subscribe unknown_type")
+        whenever(ctx.ack(any<String>())).thenReturn(Response.ok())
+        whenever(apiClient.getNotificationTypes()).thenReturn(
+            listOf(NotificationTypeDto(id = "type-1", key = "pr_created", name = "PR Created")),
+        )
+
+        val response = invokeHandleCommand()
+
+        assertEquals(200, response.statusCode)
+        verify(ctx).ack(
+            org.mockito.kotlin.check<String> {
+                assertTrue(it.contains("unknown_type"))
+                assertTrue(it.contains("pr_created"))
+            },
+        )
+    }
+
+    @Test
+    fun `subscribe without filters succeeds`() {
+        whenever(payload.text).thenReturn("subscribe pr_created")
+        whenever(payload.userId).thenReturn("U03SRNCB1HS")
+        whenever(ctx.ack(any<String>())).thenReturn(Response.ok())
+        whenever(apiClient.getNotificationTypes()).thenReturn(
+            listOf(NotificationTypeDto(id = "type-1", key = "pr_created", name = "PR Created")),
+        )
+        whenever(subscriptionService.subscribeAndActivate(any(), any(), any(), any(), any()))
+            .thenReturn(
+                SubscribeResult.Success(
+                    SubscriptionDto(
+                        id = "sub-1",
+                        userId = "U03SRNCB1HS",
+                        notificationTypeId = "type-1",
+                        channels = listOf("slack_dm"),
+                        channelConfig = emptyMap(),
+                        filters = emptyList(),
+                        enabled = true
+                    )
+                )
+            )
+
+        val response = invokeHandleCommand()
+
+        assertEquals(200, response.statusCode)
+        verify(ctx).ack(org.mockito.kotlin.check<String> { assertTrue(it.contains("pr_created")) })
+    }
+
+    @Test
+    fun `subscribe with single EQ filter succeeds`() {
+        whenever(payload.text).thenReturn("subscribe pr_created repo=api")
+        whenever(payload.userId).thenReturn("U03SRNCB1HS")
+        whenever(ctx.ack(any<String>())).thenReturn(Response.ok())
+        whenever(apiClient.getNotificationTypes()).thenReturn(
+            listOf(NotificationTypeDto(id = "type-1", key = "pr_created", name = "PR Created")),
+        )
+        whenever(apiClient.getFiltersForType("pr_created")).thenReturn(
+            listOf(
+                FilterDefinitionDto(
+                    id = "f-1",
+                    notificationTypeId = "type-1",
+                    field = "repo",
+                    fieldType = "STRING",
+                    operators = listOf("EQ", "IN")
+                )
+            ),
+        )
+        whenever(subscriptionService.subscribeAndActivate(any(), any(), any(), any(), any()))
+            .thenReturn(
+                SubscribeResult.Success(
+                    SubscriptionDto(
+                        id = "sub-1",
+                        userId = "U03SRNCB1HS",
+                        notificationTypeId = "type-1",
+                        channels = listOf("slack_dm"),
+                        channelConfig = emptyMap(),
+                        filters = listOf(Filter("repo", "EQ", "api")),
+                        enabled = true
+                    )
+                )
+            )
+
+        val response = invokeHandleCommand()
+
+        assertEquals(200, response.statusCode)
+        verify(subscriptionService).subscribeAndActivate(
+            userId = any(),
+            notificationTypeId = any(),
+            channels = any(),
+            filters = org.mockito.kotlin.check { filters ->
+                assertEquals(1, filters.size)
+                assertEquals("repo", filters[0].field)
+                assertEquals("EQ", filters[0].operator)
+                assertEquals("api", filters[0].value)
+            },
+            channelConfig = any(),
+        )
+    }
+
+    @Test
+    fun `subscribe with comma-separated value uses IN operator`() {
+        whenever(payload.text).thenReturn("subscribe pr_created repo=api,web")
+        whenever(payload.userId).thenReturn("U03SRNCB1HS")
+        whenever(ctx.ack(any<String>())).thenReturn(Response.ok())
+        whenever(apiClient.getNotificationTypes()).thenReturn(
+            listOf(NotificationTypeDto(id = "type-1", key = "pr_created", name = "PR Created")),
+        )
+        whenever(apiClient.getFiltersForType("pr_created")).thenReturn(
+            listOf(
+                FilterDefinitionDto(
+                    id = "f-1",
+                    notificationTypeId = "type-1",
+                    field = "repo",
+                    fieldType = "STRING",
+                    operators = listOf("EQ", "IN")
+                )
+            ),
+        )
+        whenever(subscriptionService.subscribeAndActivate(any(), any(), any(), any(), any()))
+            .thenReturn(
+                SubscribeResult.Success(
+                    SubscriptionDto(
+                        id = "sub-1",
+                        userId = "U03SRNCB1HS",
+                        notificationTypeId = "type-1",
+                        channels = listOf("slack_dm"),
+                        channelConfig = emptyMap(),
+                        filters = emptyList(),
+                        enabled = true
+                    )
+                )
+            )
+
+        val response = invokeHandleCommand()
+
+        assertEquals(200, response.statusCode)
+        verify(subscriptionService).subscribeAndActivate(
+            userId = any(),
+            notificationTypeId = any(),
+            channels = any(),
+            filters = org.mockito.kotlin.check { filters ->
+                assertEquals(1, filters.size)
+                assertEquals("repo", filters[0].field)
+                assertEquals("IN", filters[0].operator)
+                @Suppress("UNCHECKED_CAST")
+                assertEquals(listOf("api", "web"), filters[0].value as List<String>)
+            },
+            channelConfig = any(),
+        )
+    }
+
+    @Test
+    fun `subscribe with malformed filter returns error`() {
+        whenever(payload.text).thenReturn("subscribe pr_created invalid_filter")
+        whenever(ctx.ack(any<String>())).thenReturn(Response.ok())
+        whenever(apiClient.getNotificationTypes()).thenReturn(
+            listOf(NotificationTypeDto(id = "type-1", key = "pr_created", name = "PR Created")),
+        )
+        whenever(apiClient.getFiltersForType("pr_created")).thenReturn(emptyList())
+
+        val response = invokeHandleCommand()
+
+        assertEquals(200, response.statusCode)
+        verify(ctx).ack(
+            org.mockito.kotlin.check<String> {
+                assertTrue(it.contains("invalid_filter"))
+                assertTrue(it.lowercase().contains("field=value"))
+            },
+        )
+    }
+
+    @Test
+    fun `subscribe with unknown filter field returns error listing valid fields`() {
+        whenever(payload.text).thenReturn("subscribe pr_created unknown_field=value")
+        whenever(ctx.ack(any<String>())).thenReturn(Response.ok())
+        whenever(apiClient.getNotificationTypes()).thenReturn(
+            listOf(NotificationTypeDto(id = "type-1", key = "pr_created", name = "PR Created")),
+        )
+        whenever(apiClient.getFiltersForType("pr_created")).thenReturn(
+            listOf(
+                FilterDefinitionDto(
+                    id = "f-1",
+                    notificationTypeId = "type-1",
+                    field = "repo",
+                    fieldType = "STRING",
+                    operators = listOf("EQ")
+                )
+            ),
+        )
+
+        val response = invokeHandleCommand()
+
+        assertEquals(200, response.statusCode)
+        verify(ctx).ack(
+            org.mockito.kotlin.check<String> {
+                assertTrue(it.contains("unknown_field"))
+                assertTrue(it.contains("repo"))
+            },
         )
     }
 }

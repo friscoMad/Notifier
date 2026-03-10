@@ -1,4 +1,9 @@
-.PHONY: novu-up novu-seed db-migrate run-api run-bot
+.PHONY: up novu-up novu-seed db-migrate run-api run-bot run-simulator
+
+up:
+	@echo "Starting all infrastructure (Postgres + Novu stack)..."
+	@docker compose up -d postgres
+	@bash scripts/install-novu-testing.sh
 
 novu-up:
 	@echo "Starting Novu stack..."
@@ -10,12 +15,16 @@ novu-seed:
 
 db-migrate:
 	@echo "Running database migrations..."
-	@cd api && ./gradlew flywayMigrate
+	@./gradlew :api:flywayMigrate
 
 run-api:
 	@echo "Starting API Service..."
-	@cd api && ./gradlew bootRun
+	@./gradlew :api:bootRun
 
 run-bot:
 	@echo "Starting Slack Bot..."
-	@cd bot && ./gradlew bootRun
+	@./gradlew :bot:bootRun
+
+run-simulator:
+	@echo "Starting Webhook Simulator..."
+	@./gradlew :tools:webhook-simulator:bootRun

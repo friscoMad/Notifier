@@ -73,15 +73,18 @@ else
     fi
 fi
 
-# Update application-local.yml with the ngrok URL
+# Update application-local.yml/.yaml with the ngrok URL
 LOCAL_YML="api/src/main/resources/application-local.yml"
+LOCAL_YAML="api/src/main/resources/application-local.yaml"
+if [ -f "$LOCAL_YAML" ]; then
+    LOCAL_YML="$LOCAL_YAML"
+fi
+
 if [ -f "$LOCAL_YML" ]; then
     if grep -q "redirect-uri:" "$LOCAL_YML"; then
-        # Line exists — update it
         sed -i.bak "s|redirect-uri:.*|redirect-uri: $NGROK_URL/auth/slack/callback|" "$LOCAL_YML" && rm -f "$LOCAL_YML.bak"
         echo "Updated redirect-uri in $LOCAL_YML"
     else
-        # Block missing — append it
         echo "" >> "$LOCAL_YML"
         echo "app:" >> "$LOCAL_YML"
         echo "  slack:" >> "$LOCAL_YML"
@@ -90,7 +93,7 @@ if [ -f "$LOCAL_YML" ]; then
         echo "Added redirect-uri block to $LOCAL_YML"
     fi
 else
-    echo "Warning: $LOCAL_YML not found. Create it or set the redirect URI manually."
+    echo "Warning: No application-local.yml or .yaml found. Create it or set the redirect URI manually."
 fi
 
 echo ""

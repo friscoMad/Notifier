@@ -1,86 +1,87 @@
 #!/bin/bash
 
 # Install Novu for Testing
-# This script installs Novu with testing configuration on k3s
+# Starts the Novu stack (MongoDB, Redis, API, Worker, WS, Dashboard) via Docker Compose.
+# Based on: https://github.com/novuhq/novu/blob/next/docker/Readme.md
 
 set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Check if helm is available
-if ! command -v helm &> /dev/null; then
-    echo -e "${RED}Error: helm is not installed or not in PATH${NC}"
+# Check Docker is running
+if ! docker info > /dev/null 2>&1; then
+    echo -e "${RED}Error: Docker is not running. Please start Docker Desktop first.${NC}"
     exit 1
 fi
 
-# Check if kubectl is available
-if ! command -v kubectl &> /dev/null; then
-    echo -e "${RED}Error: kubectl is not installed or not in PATH${NC}"
-    exit 1
-fi
+# Start only the Novu services (leave postgres to the app stack)
+echo -e "${YELLOW}Starting Novu stack (MongoDB, Redis, API, Worker, WS, Dashboard)...${NC}"
+docker compose -f "$REPO_ROOT/docker-compose.yml" up -d \
+    mongodb redis api worker ws dashboard
 
-# Create Novu namespace if it doesn't exist
-kubectl create namespace novu 2>/dev/null || true
-
-# Add Novu Helm repository
-echo -e "${YELLOW}Adding Novu Helm repository...${NC}"
-helm repo add nova-edge-charts oci://ghcr.io/nova-edge/charts || true
-helm repo update
-
-# Install Novu with testing configuration
-echo -e "${YELLOW}Installing Novu with testing configuration...${NC}"
-
-# Use the testing values file
-helm install novu nova-edge-charts/novu --namespace novu \
-    --values k8s/novu-testing-values.yaml \
-    --set mongodb.enabled=true \
-    --set redis.enabled=true \
-    --set provider.enabled=true \
-    --set workflows.enabled=true \
-    --set ingress.enabled=false \
-    --set service.type=ClusterIP
-
-# Wait for Novu to be ready
-echo -e "${YELLOW}Waiting for Novu to be ready...${NC}"
-sleep 30
-
-# Check Novu deployment status
-novu_deployment=$(kubectl get deployment novu -n novu -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
-if [ "$novu_deployment" = "1" ]; then
-    echo -e "${GREEN}✅ Novu deployment is ready${NC}"
-else
-    echo -e "${YELLOW}Novu may still be starting up...${NC}"
-    kubectl get pods -n novu
-fi
-
-# Check Novu services
-novu_services=$(kubectl get services -n novu | grep -E "(novu|redis|mongodb)" | wc -l)
-if [ "$novu_services" -ge 3 ]; then
-    echo -e "${GREEN}✅ Novu services are available${NC}"
-else
-    echo -e "${YELLOW}⚠ Some Novu services may not be ready${NC}"
-fi
-
-# Test Novu connectivity
-echo -e "${YELLOW}Testing Novu connectivity...${NC}"
-novu_pod=$(kubectl get pod -n novu -l app.kubernetes.io/name=novu -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-if [ -n "$novu_pod" ]; then
-    if kubectl exec -n novu $novu_pod -- curl -s http://localhost:3000/health > /dev/null 2>&1; then
-        echo -e "${GREEN}✅ Novu health check passed${NC}"
-    else
-        echo -e "${YELLOW}Novu health check failed, but service may still be starting up${NC}"
+# Wait for MongoDB
+echo -e "${YELLOW}Waiting for MongoDB to be ready...${NC}"
+for i in {1..20}; do
+    if docker exec novu_mongodb mongosh --quiet \
+        --username root --password secret \
+        --eval "db.adminCommand('ping').ok" > /dev/null 2>&1; then
+        echo -e "${GREEN}✅ MongoDB is ready${NC}"
+        break
     fi
-else
-    echo -e "${YELLOW}Could not find Novu pod${NC}"
-fi
+    if [ "$i" -eq 20 ]; then
+        echo -e "${RED}MongoDB did not become ready in time.${NC}"
+        exit 1
+    fi
+    echo -e "${YELLOW}  Waiting for MongoDB ($i/20)...${NC}"
+    sleep 5
+done
 
-echo -e "${GREEN}✅ Novu installation for testing completed!${NC}"
+# Wait for Redis
+echo -e "${YELLOW}Waiting for Redis to be ready...${NC}"
+for i in {1..12}; do
+    if docker exec novu_redis redis-cli ping > /dev/null 2>&1; then
+        echo -e "${GREEN}✅ Redis is ready${NC}"
+        break
+    fi
+    if [ "$i" -eq 12 ]; then
+        echo -e "${RED}Redis did not become ready in time.${NC}"
+        exit 1
+    fi
+    echo -e "${YELLOW}  Waiting for Redis ($i/12)...${NC}"
+    sleep 5
+done
+
+# Wait for Novu API health check
+echo -e "${YELLOW}Waiting for Novu API to be ready (may take a minute on first run)...${NC}"
+for i in {1..24}; do
+    if curl -sf http://localhost:3000/v1/health-check > /dev/null 2>&1; then
+        echo -e "${GREEN}✅ Novu API is ready${NC}"
+        break
+    fi
+    if [ "$i" -eq 24 ]; then
+        echo -e "${YELLOW}⚠ Novu API health check did not respond — may still be initialising${NC}"
+        echo -e "${YELLOW}Check logs with: docker logs novu_api${NC}"
+    else
+        echo -e "${YELLOW}  Waiting for Novu API ($i/24)...${NC}"
+        sleep 5
+    fi
+done
+
+echo ""
+echo -e "${GREEN}✅ Novu installation complete!${NC}"
+echo -e "${YELLOW}Services:${NC}"
+docker compose -f "$REPO_ROOT/docker-compose.yml" ps mongodb redis api worker ws dashboard
+echo ""
+echo -e "  Dashboard : ${GREEN}http://localhost:4000${NC}  (admin@notifier.local / admin123)"
+echo -e "  API       : ${GREEN}http://localhost:3000${NC}"
+echo -e "  WS        : ${GREEN}http://localhost:3002${NC}"
+echo ""
 echo -e "${YELLOW}Next steps:${NC}"
-echo -e "1. Update k8s/secrets.yaml with your Novu API Key"
-echo -e "   (Get key from http://localhost:3000 after Novu setup)"
-echo -e "2. Deploy the application: make deploy-k3s-testing"
-echo -e "3. Verify setup: make verify-k3s-testing"
+echo -e "  Run the Novu seeder : bash scripts/setup-novu.sh"

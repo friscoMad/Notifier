@@ -52,7 +52,6 @@ GitHub Webhook / GitHub Actions / Buildkite
 | `bot/` | Slack Bolt bot — slash commands, modals, subscription management |
 | `common/` | Shared domain models with JPA annotations |
 | `docs/` | Architecture, API spec, DB schema, local dev guide |
-| `k8s/` | Kubernetes manifests for k3s deployment |
 | `novu/workflows/` | Novu JSON workflow definitions |
 | `scripts/` | Setup scripts for Novu seeding |
 

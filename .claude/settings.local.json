@@ -19,7 +19,13 @@
       "Bash(git:*)",
       "WebFetch(domain:*)",
       "Bash(/e/Notifier/detekt.yml:*)",
-      "Bash(./gradlew detekt:*)"
+      "Bash(./gradlew detekt:*)",
+      "Bash(node --version 2>/dev/null && npx novu --version 2>/dev/null | head -3 || echo \"node/npx not available\")",
+      "Bash(helm search:*)",
+      "Bash(helm repo:*)",
+      "Bash(chmod +x /Users/ramiro.aparicio/others/Notifier/scripts/install-novu-testing.sh && bash /Users/ramiro.aparicio/others/Notifier/scripts/install-novu-testing.sh)",
+      "Bash(bash scripts/setup-novu.sh)",
+      "Bash(k3d cluster:*)"
     ]
   }
 }

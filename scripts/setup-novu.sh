@@ -138,6 +138,4 @@ echo "Admin Email: admin@notifier.local"
 echo "Admin Password: admin123"
 echo "API Key: $API_KEY"
 
-echo "Running Novu Sync using local API key..."
-export NOVU_API_KEY="$API_KEY"
-cd api && npx novu@latest sync
+echo "Workflows are seeded by NovuSeeder.kt on API startup — no novu sync needed."

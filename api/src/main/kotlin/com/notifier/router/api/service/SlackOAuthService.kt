@@ -1,7 +1,5 @@
 package com.notifier.router.api.service
 
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpEntity
@@ -10,12 +8,15 @@ import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.web.client.RestTemplate
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 @Service
 class SlackOAuthService(
     @Value("\${novu.slack.client-id:}") private val clientId: String,
     @Value("\${novu.slack.client-secret:}") private val clientSecret: String,
-    @Value("\${app.slack.oauth.redirect-uri:http://localhost:8082/auth/slack/callback}") private val redirectUri: String,
+    @Value("\${app.slack.oauth.redirect-uri:http://localhost:8082/auth/slack/callback}") private val redirectUri:
+    String,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val restTemplate = RestTemplate()

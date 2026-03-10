@@ -1,11 +1,11 @@
 package com.notifier.router.api.service
 
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.util.Base64
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 
 @Service
 class JwtService(

@@ -954,11 +954,17 @@
 const API = '/api/v1';
 
 // ── Utilities ──
+function esc(str) {
+  const d = document.createElement('div');
+  d.appendChild(document.createTextNode(String(str)));
+  return d.innerHTML;
+}
+
 function toast(msg, type = 'success') {
   const el = document.createElement('div');
   const icon = type === 'success' ? 'check-circle' : 'alert-circle';
   el.className = `toast toast-${type}`;
-  el.innerHTML = `<i data-lucide="${icon}"></i><span>${msg}</span>`;
+  el.innerHTML = `<i data-lucide="${icon}"></i><span>${esc(msg)}</span>`;
   document.body.appendChild(el);
   lucide.createIcons({ nodes: [el] });
   setTimeout(() => {
@@ -1071,7 +1077,7 @@ const Feed = {
     el.innerHTML = this.items.map(item => {
       const { icon, color } = this.getIcon(item.typeKey);
       const metaStr = Object.entries(item.metadata)
-        .map(([k,v]) => `<span class="filter-chip">${k}: ${Array.isArray(v) ? v.join(', ') : v}</span>`)
+        .map(([k,v]) => `<span class="filter-chip">${esc(k)}: ${esc(Array.isArray(v) ? v.join(', ') : v)}</span>`)
         .join('');
       const ago = this.timeAgo(item.time);
       return `<div class="feed-item">
@@ -1080,8 +1086,8 @@ const Feed = {
         </div>
         <div class="feed-content">
           <div class="feed-title">
-            ${this.formatType(item.typeKey)}
-            <span class="badge badge-type" style="font-size:10px">${item.typeKey}</span>
+            ${esc(this.formatType(item.typeKey))}
+            <span class="badge badge-type" style="font-size:10px">${esc(item.typeKey)}</span>
           </div>
           <div class="feed-body">${metaStr || '<span style="color:var(--muted);font-size:12px">No metadata</span>'}</div>
           <div class="feed-time"><i data-lucide="clock"></i>${ago}</div>
@@ -1148,19 +1154,19 @@ const Subscriptions = {
       const typeName = typeNameById(sub.notificationTypeId);
       const typeKey = typeKeyById(sub.notificationTypeId);
       const filters = (sub.filters || []).map(f =>
-        `<span class="filter-chip">${f.field} ${f.operator} ${f.value}</span>`
+        `<span class="filter-chip">${esc(f.field)} ${esc(f.operator)} ${esc(f.value)}</span>`
       ).join('');
       const channels = (sub.channels || []).map(ch => {
         const icon = ch === 'chat' ? 'message-square' : 'layout-grid';
-        return `<span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="${icon}" style="width:12px;height:12px"></i>${ch}</span>`;
+        return `<span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="${icon}" style="width:12px;height:12px"></i>${esc(ch)}</span>`;
       }).join(', ');
       return `<div class="card">
         <div class="card-header">
           <div class="card-header-left">
             <div class="card-icon card-icon-purple"><i data-lucide="bell" style="width:18px;height:18px"></i></div>
             <div>
-              <span class="card-title">${typeName}</span>
-              <div style="margin-top:2px"><span class="badge badge-type">${typeKey}</span></div>
+              <span class="card-title">${esc(typeName)}</span>
+              <div style="margin-top:2px"><span class="badge badge-type">${esc(typeKey)}</span></div>
             </div>
           </div>
           <div class="card-header-right">
@@ -1168,7 +1174,7 @@ const Subscriptions = {
               <i data-lucide="${sub.enabled ? 'check' : 'pause'}" style="width:11px;height:11px"></i>
               ${sub.enabled ? 'active' : 'paused'}
             </span>
-            <button class="btn btn-danger btn-sm" onclick="Subscriptions.remove('${sub.id}')">
+            <button class="btn btn-danger btn-sm" onclick="Subscriptions.remove('${esc(sub.id)}')">
               <i data-lucide="trash-2"></i>
             </button>
           </div>
@@ -1203,7 +1209,7 @@ const Subscriptions = {
       </div>
       <div class="form-group">
         <label>User ID</label>
-        <input id="add-sub-user" value="${userId}" readonly />
+        <input id="add-sub-user" value="${esc(userId)}" readonly />
       </div>
       <div class="form-group">
         <label>Notification Type</label>
@@ -1245,7 +1251,7 @@ const Subscriptions = {
         el.innerHTML = `<div class="filter-hint">
           <div class="filter-hint-label">Available fields</div>
           <div class="filters-list" style="margin:0">${defs.map(d =>
-            `<span class="filter-chip">${d.field} <span style="color:var(--muted)">(${d.operators.join(', ')})</span></span>`
+            `<span class="filter-chip">${esc(d.field)} <span style="color:var(--muted)">(${d.operators.map(esc).join(', ')})</span></span>`
           ).join('')}</div>
         </div>`;
       } else {
@@ -1332,16 +1338,16 @@ const Channels = {
       const typeName = typeNameById(ch.notificationTypeId);
       const typeKey = typeKeyById(ch.notificationTypeId);
       const filters = (ch.filters || []).map(f =>
-        `<span class="filter-chip">${f.field} ${f.operator} ${f.value}</span>`
+        `<span class="filter-chip">${esc(f.field)} ${esc(f.operator)} ${esc(f.value)}</span>`
       ).join('');
       return `<div class="card">
         <div class="card-header">
           <div class="card-header-left">
             <div class="card-icon card-icon-amber"><i data-lucide="hash" style="width:18px;height:18px"></i></div>
             <div>
-              <span class="card-title">#${ch.slackChannelName || ch.slackChannelId}</span>
+              <span class="card-title">#${esc(ch.slackChannelName || ch.slackChannelId)}</span>
               <div style="margin-top:2px">
-                <span class="badge badge-type">${typeKey}</span>
+                <span class="badge badge-type">${esc(typeKey)}</span>
               </div>
             </div>
           </div>
@@ -1351,9 +1357,9 @@ const Channels = {
               ${ch.enabled ? 'active' : 'paused'}
             </span>
             ${ch.digestEnabled
-              ? `<span class="badge badge-channel"><i data-lucide="timer" style="width:11px;height:11px"></i>${ch.digestInterval}</span>`
+              ? `<span class="badge badge-channel"><i data-lucide="timer" style="width:11px;height:11px"></i>${esc(ch.digestInterval)}</span>`
               : ''}
-            <button class="btn btn-danger btn-sm" onclick="Channels.remove('${ch.id}')">
+            <button class="btn btn-danger btn-sm" onclick="Channels.remove('${esc(ch.id)}')">
               <i data-lucide="trash-2"></i>
             </button>
           </div>
@@ -1388,7 +1394,7 @@ const Channels = {
       <div class="form-row">
         <div class="form-group">
           <label>Channel ID</label>
-          <input id="add-chan-id" value="${channelId}" readonly />
+          <input id="add-chan-id" value="${esc(channelId)}" readonly />
         </div>
         <div class="form-group">
           <label>Channel Name</label>

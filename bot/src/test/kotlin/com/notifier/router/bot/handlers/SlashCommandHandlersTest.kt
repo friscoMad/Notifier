@@ -8,11 +8,17 @@ import com.notifier.router.common.domain.Filter
 import com.notifier.router.common.dto.FilterDefinitionDto
 import com.notifier.router.common.dto.NotificationTypeDto
 import com.notifier.router.common.dto.SubscriptionDto
+import com.slack.api.RequestConfigurator
+import com.slack.api.app_backend.interactive_components.payload.BlockActionPayload
 import com.slack.api.bolt.App
+import com.slack.api.bolt.context.builtin.ActionContext
 import com.slack.api.bolt.context.builtin.SlashCommandContext
+import com.slack.api.bolt.request.builtin.BlockActionRequest
 import com.slack.api.bolt.request.builtin.SlashCommandRequest
 import com.slack.api.bolt.response.Response
 import com.slack.api.methods.MethodsClient
+import com.slack.api.methods.request.chat.ChatPostEphemeralRequest
+import com.slack.api.methods.request.chat.ChatPostMessageRequest
 import com.slack.api.methods.request.views.ViewsOpenRequest
 import com.slack.api.methods.response.views.ViewsOpenResponse
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -26,6 +32,9 @@ import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.junit.jupiter.MockitoSettings
 import org.mockito.kotlin.any
+import org.mockito.kotlin.check
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -56,8 +65,7 @@ class SlashCommandHandlersTest {
     private lateinit var ctx: SlashCommandContext
 
     @Mock
-    private lateinit var payload:
-        com.slack.api.app_backend.slash_commands.payload.SlashCommandPayload
+    private lateinit var payload: com.slack.api.app_backend.slash_commands.payload.SlashCommandPayload
 
     @BeforeEach
     fun setup() {
@@ -77,15 +85,8 @@ class SlashCommandHandlersTest {
         whenever(ctx.client()).thenReturn(methodsClient)
 
         val viewsOpenResponse = ViewsOpenResponse().apply { isOk = true }
-        org.mockito
-            .kotlin
-            .doReturn(viewsOpenResponse)
-            .whenever(methodsClient)
-            .viewsOpen(any<ViewsOpenRequest>())
-        org.mockito.kotlin
-            .doReturn(Response.ok())
-            .whenever(ctx)
-            .ack()
+        doReturn(viewsOpenResponse).whenever(methodsClient).viewsOpen(any<ViewsOpenRequest>())
+        doReturn(Response.ok()).whenever(ctx).ack()
 
         // Act
         // Reflection is needed here to invoke the private handleCommand method since Bolt lambda
@@ -141,8 +142,166 @@ class SlashCommandHandlersTest {
 
         // Assert
         assertEquals(200, response.statusCode)
-        verify(ctx)
-            .ack(org.mockito.kotlin.check<String> { assertTrue(it.contains("/notifyme help")) })
+        verify(ctx).ack(check<String> { assertTrue(it.contains("/notifyme help")) })
+    }
+
+    @Test
+    fun `list command - empty subscriptions returns empty state message`() {
+        whenever(payload.userId).thenReturn("U123")
+        whenever(apiClient.getSubscriptionsForUser("U123")).thenReturn(emptyList())
+        whenever(ctx.ack(any<String>())).thenReturn(Response.ok())
+
+        val method =
+            SlashCommandHandlers::class.java.getDeclaredMethod(
+                "handleListCommand",
+                SlashCommandRequest::class.java,
+                SlashCommandContext::class.java,
+            )
+        method.isAccessible = true
+        val response = method.invoke(handlers, req, ctx) as Response
+
+        assertEquals(200, response.statusCode)
+        verify(ctx).ack(check<String> { assertTrue(it.contains("No active subscriptions")) })
+    }
+
+    @Test
+    fun `list command - returns block kit message with subscription details`() {
+        val slackId = "U123"
+        whenever(payload.userId).thenReturn(slackId)
+        whenever(apiClient.getSubscriptionsForUser(slackId)).thenReturn(
+            listOf(
+                SubscriptionDto(
+                    id = "sub-id-1",
+                    userId = slackId,
+                    notificationTypeId = "type-id-1",
+                    channels = listOf("slack_dm"),
+                )
+            )
+        )
+        whenever(apiClient.getNotificationTypes()).thenReturn(
+            listOf(NotificationTypeDto(id = "type-id-1", name = "PR Created", key = "pr_created"))
+        )
+
+        val methodsClient = mock<MethodsClient>()
+        whenever(ctx.client()).thenReturn(methodsClient)
+        whenever(ctx.ack()).thenReturn(Response.ok())
+
+        val method =
+            SlashCommandHandlers::class.java.getDeclaredMethod(
+                "handleListCommand",
+                SlashCommandRequest::class.java,
+                SlashCommandContext::class.java,
+            )
+        method.isAccessible = true
+        val response = method.invoke(handlers, req, ctx) as Response
+
+        assertEquals(200, response.statusCode)
+        verify(apiClient).getSubscriptionsForUser(slackId)
+        verify(apiClient).getNotificationTypes()
+        verify(methodsClient)
+            .chatPostMessage(any<RequestConfigurator<ChatPostMessageRequest.ChatPostMessageRequestBuilder>>())
+        verify(ctx).ack()
+    }
+
+    @Test
+    fun `list command - api error returns error message`() {
+        val slackId = "U123"
+        whenever(payload.userId).thenReturn(slackId)
+        whenever(apiClient.getSubscriptionsForUser(slackId)).thenThrow(RestClientException("API error"))
+        whenever(ctx.ack(any<String>())).thenReturn(Response.ok())
+
+        val method =
+            SlashCommandHandlers::class.java.getDeclaredMethod(
+                "handleListCommand",
+                SlashCommandRequest::class.java,
+                SlashCommandContext::class.java,
+            )
+        method.isAccessible = true
+        val response = method.invoke(handlers, req, ctx) as Response
+
+        assertEquals(200, response.statusCode)
+        verify(ctx).ack(check<String> { assertTrue(it.contains("Failed to fetch subscriptions")) })
+    }
+
+    @Test
+    fun `delete action - successful delete posts ephemeral confirmation`() {
+        val actionReq = mock<BlockActionRequest>()
+        val actionCtx = mock<ActionContext>()
+        val blockPayload = buildDeletePayload(subscriptionId = "sub-id-123", userId = "U123", channelId = "C456")
+        whenever(actionReq.payload).thenReturn(blockPayload)
+
+        val methodsClient = mock<MethodsClient>()
+        whenever(actionCtx.client()).thenReturn(methodsClient)
+        whenever(actionCtx.ack()).thenReturn(Response.ok())
+
+        val method =
+            SlashCommandHandlers::class.java.getDeclaredMethod(
+                "handleDeleteAction",
+                BlockActionRequest::class.java,
+                ActionContext::class.java,
+            )
+        method.isAccessible = true
+        val response = method.invoke(handlers, actionReq, actionCtx) as Response
+
+        assertEquals(200, response.statusCode)
+        verify(apiClient).unsubscribe("sub-id-123")
+        verify(methodsClient)
+            .chatPostEphemeral(
+                check<RequestConfigurator<ChatPostEphemeralRequest.ChatPostEphemeralRequestBuilder>> { configurator ->
+                    val built = configurator.configure(ChatPostEphemeralRequest.builder())?.build()
+                    assertTrue(built?.text?.contains("✅") == true)
+                    assertTrue(built?.text?.lowercase()?.contains("deleted") == true)
+                }
+            )
+    }
+
+    @Test
+    fun `delete action - api error on unsubscribe posts ephemeral error message`() {
+        val actionReq = mock<BlockActionRequest>()
+        val actionCtx = mock<ActionContext>()
+        val blockPayload = buildDeletePayload(subscriptionId = "sub-id-123", userId = "U123", channelId = "C456")
+        whenever(actionReq.payload).thenReturn(blockPayload)
+
+        doThrow(RestClientException("API error")).whenever(apiClient).unsubscribe(any())
+
+        val methodsClient = mock<MethodsClient>()
+        whenever(actionCtx.client()).thenReturn(methodsClient)
+        whenever(actionCtx.ack()).thenReturn(Response.ok())
+
+        val method =
+            SlashCommandHandlers::class.java.getDeclaredMethod(
+                "handleDeleteAction",
+                BlockActionRequest::class.java,
+                ActionContext::class.java,
+            )
+        method.isAccessible = true
+        val response = method.invoke(handlers, actionReq, actionCtx) as Response
+
+        assertEquals(200, response.statusCode)
+        verify(apiClient).unsubscribe("sub-id-123")
+        verify(methodsClient)
+            .chatPostEphemeral(any<RequestConfigurator<ChatPostEphemeralRequest.ChatPostEphemeralRequestBuilder>>())
+    }
+
+    private fun buildDeletePayload(
+        subscriptionId: String,
+        userId: String,
+        channelId: String,
+    ): BlockActionPayload {
+        val action = mock<BlockActionPayload.Action>()
+        whenever(action.value).thenReturn(subscriptionId)
+
+        val user = mock<BlockActionPayload.User>()
+        whenever(user.id).thenReturn(userId)
+
+        val channel = mock<BlockActionPayload.Channel>()
+        whenever(channel.id).thenReturn(channelId)
+
+        return mock<BlockActionPayload>().also {
+            whenever(it.actions).thenReturn(listOf(action))
+            whenever(it.user).thenReturn(user)
+            whenever(it.channel).thenReturn(channel)
+        }
     }
 
     private fun invokeHandleCommand(): Response {

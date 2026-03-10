@@ -28,7 +28,7 @@ class SlashCommandHandlers(
 
     @PostConstruct
     fun registerHandlers() {
-        app.command("/notifyme") { req: SlashCommandRequest, ctx: SlashCommandContext ->
+        app.command("/notifyme.*".toPattern()) { req: SlashCommandRequest, ctx: SlashCommandContext ->
             handleCommand(req, ctx)
         }
 

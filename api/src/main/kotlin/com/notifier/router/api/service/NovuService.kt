@@ -4,6 +4,7 @@ import co.novu.api.events.requests.TriggerEventRequest
 import co.novu.common.base.Novu
 import co.novu.common.base.NovuConfig
 import com.notifier.router.api.config.LoggingInterceptor
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter
 import com.notifier.router.api.novu.NovuApiClient
 import com.notifier.router.api.novu.NovuChannelConnection
@@ -36,6 +37,7 @@ class NovuService(
     @Value("\${novu.slack.bot-token:}") private val slackBotToken: String,
     @Value("\${novu.slack.workspace-id:}") private val slackWorkspaceId: String,
     @Value("\${novu.slack.workspace-name:Slack Workspace}") private val slackWorkspaceName: String,
+    private val objectMapper: ObjectMapper,
 ) {
     private val logger = LoggerFactory.getLogger(NovuService::class.java)
     private lateinit var novuClient: Novu
@@ -83,7 +85,7 @@ class NovuService(
                 overrideBaseUrl(apiUrl)
             }
 
-            novuApiClient = NovuApiClient(restTemplate, getBaseUrl(), apiKey)
+            novuApiClient = NovuApiClient(restTemplate, getBaseUrl(), apiKey, objectMapper)
         }
     }
 

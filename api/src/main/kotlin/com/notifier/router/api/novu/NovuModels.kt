@@ -1,7 +1,5 @@
 package com.notifier.router.api.novu
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-
 // ── Integrations ──────────────────────────────────────────────────────────────
 
 @Suppress("ConstructorParameterNaming")
@@ -16,15 +14,14 @@ data class NovuIntegration(
 )
 
 data class NovuSlackCredentials(
-    val clientId: String,
-    val secretKey: String,
-    val applicationId: String,
-    val token: String,
+    val clientId: String = "",
+    val secretKey: String = "",
+    val applicationId: String = "",
+    val token: String = "",
 )
 
 // ── Workflows ─────────────────────────────────────────────────────────────────
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 @Suppress("ConstructorParameterNaming")
 data class NovuWorkflow(
     val _id: String? = null,
@@ -37,17 +34,14 @@ data class NovuWorkflow(
     val critical: Boolean = false,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 data class NovuWorkflowTrigger(
     val identifier: String = "",
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 data class NovuWorkflowStep(
     val template: NovuStepTemplate = NovuStepTemplate(),
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 data class NovuStepTemplate(
     val type: String = "",
     val content: String = "",
@@ -65,12 +59,12 @@ data class NovuChannelConnection(
 )
 
 data class NovuWorkspace(
-    val id: String,
-    val name: String,
+    val id: String = "",
+    val name: String = "",
 )
 
 data class NovuConnectionAuth(
-    val accessToken: String,
+    val accessToken: String = "",
 )
 
 // ── Channel Endpoints ─────────────────────────────────────────────────────────
@@ -87,7 +81,7 @@ data class NovuChannelEndpoint(
 // ── Subscribers ───────────────────────────────────────────────────────────────
 
 data class NovuSubscriber(
-    val subscriberId: String,
+    val subscriberId: String = "",
     val firstName: String? = null,
     val lastName: String? = null,
 )

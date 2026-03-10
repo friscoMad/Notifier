@@ -5,13 +5,13 @@ import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter
 import org.springframework.web.client.RestTemplate
 
 class NovuApiClient(
     private val restTemplate: RestTemplate,
     private val baseUrl: String,
     private val apiKey: String,
+    private val objectMapper: ObjectMapper,
 ) {
     // ── Integrations ──────────────────────────────────────────────────────────
 
@@ -20,14 +20,14 @@ class NovuApiClient(
             .exchange("$baseUrl/integrations", HttpMethod.GET, HttpEntity<Unit>(headers()), Map::class.java)
             .body
             .dataRawList()
-            .map { restTemplate.objectMapper().convertValue(it, NovuIntegration::class.java) }
+            .map { objectMapper.convertValue(it, NovuIntegration::class.java) }
 
     fun createIntegration(integration: NovuIntegration): NovuIntegration =
         restTemplate
             .exchange("$baseUrl/integrations", HttpMethod.POST, HttpEntity(integration, headers()), Map::class.java)
             .body
             .dataRawObject()
-            .let { restTemplate.objectMapper().convertValue(it, NovuIntegration::class.java) }
+            .let { objectMapper.convertValue(it, NovuIntegration::class.java) }
 
     fun updateIntegration(
         id: String,
@@ -42,7 +42,7 @@ class NovuApiClient(
                 Map::class.java,
             ).body
             .dataRawObject()
-            .let { restTemplate.objectMapper().convertValue(it, NovuIntegration::class.java) }
+            .let { objectMapper.convertValue(it, NovuIntegration::class.java) }
 
     fun deleteIntegration(id: String) {
         restTemplate.exchange(
@@ -60,7 +60,7 @@ class NovuApiClient(
             .exchange("$baseUrl/workflows", HttpMethod.GET, HttpEntity<Unit>(headers()), Map::class.java)
             .body
             .dataRawList()
-            .map { restTemplate.objectMapper().convertValue(it, NovuWorkflow::class.java) }
+            .map { objectMapper.convertValue(it, NovuWorkflow::class.java) }
 
     fun createWorkflow(workflow: NovuWorkflow): NovuWorkflow =
         restTemplate
@@ -71,7 +71,7 @@ class NovuApiClient(
                 Map::class.java,
             ).body
             .dataRawObject()
-            .let { restTemplate.objectMapper().convertValue(it, NovuWorkflow::class.java) }
+            .let { objectMapper.convertValue(it, NovuWorkflow::class.java) }
 
     fun updateWorkflow(
         id: String,
@@ -85,7 +85,7 @@ class NovuApiClient(
                 Map::class.java,
             ).body
             .dataRawObject()
-            .let { restTemplate.objectMapper().convertValue(it, NovuWorkflow::class.java) }
+            .let { objectMapper.convertValue(it, NovuWorkflow::class.java) }
 
     // ── Notification Groups ───────────────────────────────────────────────────
 
@@ -107,7 +107,7 @@ class NovuApiClient(
             .exchange("$baseUrl/channel-connections", HttpMethod.GET, HttpEntity<Unit>(headers()), Map::class.java)
             .body
             .dataRawList()
-            .map { restTemplate.objectMapper().convertValue(it, NovuChannelConnection::class.java) }
+            .map { objectMapper.convertValue(it, NovuChannelConnection::class.java) }
 
     fun createChannelConnection(connection: NovuChannelConnection): NovuChannelConnection =
         restTemplate
@@ -118,7 +118,7 @@ class NovuApiClient(
                 Map::class.java,
             ).body
             .dataRawObject()
-            .let { restTemplate.objectMapper().convertValue(it, NovuChannelConnection::class.java) }
+            .let { objectMapper.convertValue(it, NovuChannelConnection::class.java) }
 
     // ── Channel Endpoints ─────────────────────────────────────────────────────
 
@@ -131,7 +131,7 @@ class NovuApiClient(
                 Map::class.java,
             ).body
             .dataRawList()
-            .map { restTemplate.objectMapper().convertValue(it, NovuChannelEndpoint::class.java) }
+            .map { objectMapper.convertValue(it, NovuChannelEndpoint::class.java) }
 
     fun createChannelEndpoint(endpoint: NovuChannelEndpoint): NovuChannelEndpoint =
         restTemplate
@@ -142,7 +142,7 @@ class NovuApiClient(
                 Map::class.java,
             ).body
             .dataRawObject()
-            .let { restTemplate.objectMapper().convertValue(it, NovuChannelEndpoint::class.java) }
+            .let { objectMapper.convertValue(it, NovuChannelEndpoint::class.java) }
 
     fun deleteChannelEndpoint(identifier: String) {
         restTemplate.exchange(
@@ -173,12 +173,6 @@ class NovuApiClient(
         }
 }
 
-private fun RestTemplate.objectMapper(): ObjectMapper =
-    messageConverters
-        .filterIsInstance<MappingJackson2HttpMessageConverter>()
-        .firstOrNull()
-        ?.objectMapper
-        ?: ObjectMapper()
 
 @Suppress("UNCHECKED_CAST")
 private fun Map<*, *>?.dataRawList(): List<Map<String, Any?>> =

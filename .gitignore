@@ -73,6 +73,7 @@ local.properties
 
 ### Project-specific ###
 **/application-local.yml
+**/application-local.yaml
 .env.local
 test_bot_output*.txt
 build_output.txt

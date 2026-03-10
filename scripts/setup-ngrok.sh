@@ -73,14 +73,13 @@ else
     fi
 fi
 
-# Write to .env
-if [ -f .env ] && grep -q "^NGROK_URL=" .env; then
-    sed -i.bak "s|^NGROK_URL=.*|NGROK_URL=$NGROK_URL|" .env && rm -f .env.bak
-    echo "Updated NGROK_URL in .env"
+# Update application-local.yml with the ngrok URL
+LOCAL_YML="api/src/main/resources/application-local.yml"
+if [ -f "$LOCAL_YML" ]; then
+    sed -i.bak "s|redirect-uri:.*|redirect-uri: $NGROK_URL/auth/slack/callback|" "$LOCAL_YML" && rm -f "$LOCAL_YML.bak"
+    echo "Updated redirect-uri in $LOCAL_YML"
 else
-    echo "" >> .env
-    echo "NGROK_URL=$NGROK_URL" >> .env
-    echo "Added NGROK_URL to .env"
+    echo "Warning: $LOCAL_YML not found. Create it or set the redirect URI manually."
 fi
 
 echo ""
@@ -92,3 +91,5 @@ echo ""
 echo "Add this redirect URL in your Slack app (one-time):"
 echo "  https://api.slack.com/apps -> OAuth & Permissions -> Redirect URLs"
 echo "  $NGROK_URL/auth/slack/callback"
+echo ""
+echo "Now start the API:  ./gradlew :api:bootRun --no-daemon"

@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notification Router</title>
+<link rel="icon" type="image/png" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --bg: #09090b;
+    --surface: #18181b;
+    --surface-raised: #1f1f23;
+    --border: #27272a;
+    --border-hover: #3f3f46;
+    --text: #fafafa;
+    --text-secondary: #a1a1aa;
+    --muted: #71717a;
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --accent-glow: rgba(99, 102, 241, .15);
+    --accent-glow-strong: rgba(99, 102, 241, .25);
+    --danger: #ef4444;
+    --danger-hover: #dc2626;
+    --danger-subtle: rgba(239, 68, 68, .1);
+    --success: #22c55e;
+    --success-subtle: rgba(34, 197, 94, .1);
+    --warn: #f59e0b;
+    --warn-subtle: rgba(245, 158, 11, .1);
+    --radius: 10px;
+    --radius-lg: 14px;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.3);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.4);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,.5);
+    --transition: 150ms cubic-bezier(.4, 0, .2, 1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 28px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+
+  header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -.3px;
+  }
+
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: var(--success-subtle);
+    border: 1px solid rgba(34, 197, 94, .2);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--success);
+    letter-spacing: .3px;
+    text-transform: uppercase;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--success);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,.4); }
+    50% { opacity: .6; box-shadow: 0 0 0 4px rgba(34,197,94,0); }
+  }
+
+  /* ── Navigation ── */
+  nav {
+    display: flex;
+    gap: 4px;
+    padding: 10px 28px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  nav button {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 14px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--muted);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all var(--transition);
+  }
+
+  nav button:hover {
+    color: var(--text-secondary);
+    background: rgba(255,255,255,.04);
+  }
+
+  nav button.active {
+    color: var(--text);
+    background: var(--accent-glow);
+    border-color: rgba(99,102,241,.25);
+  }
+
+  nav button i { width: 16px; height: 16px; }
+
+  /* ── Main ── */
+  main {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 28px;
+  }
+
+  .section {
+    display: none;
+    animation: fadeIn .2s ease;
+  }
+
+  .section.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px;
+    margin-bottom: 10px;
+    transition: border-color var(--transition), box-shadow var(--transition);
+  }
+
+  .card:hover {
+    border-color: var(--border-hover);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .card-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-header-right {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .card-title {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -.2px;
+  }
+
+  .card-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .card-icon-purple { background: var(--accent-glow); color: var(--accent-hover); }
+  .card-icon-green { background: var(--success-subtle); color: var(--success); }
+  .card-icon-amber { background: var(--warn-subtle); color: var(--warn); }
+  .card-icon-red { background: var(--danger-subtle); color: var(--danger); }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+  }
+
+  .badge-type { background: var(--accent-glow); color: var(--accent-hover); }
+  .badge-enabled { background: var(--success-subtle); color: var(--success); border: 1px solid rgba(34,197,94,.2); }
+  .badge-disabled { background: var(--danger-subtle); color: var(--danger); border: 1px solid rgba(239,68,68,.2); }
+  .badge-channel { background: var(--warn-subtle); color: var(--warn); border: 1px solid rgba(245,158,11,.2); }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .meta i { width: 13px; height: 13px; opacity: .7; }
+
+  .filters-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .filter-chip {
+    font-size: 11px;
+    padding: 3px 10px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 400;
+  }
+
+  /* ── Buttons ── */
+  button.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+  }
+
+  button.btn i { width: 15px; height: 15px; }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 1px 3px rgba(99,102,241,.3), inset 0 1px 0 rgba(255,255,255,.1);
+  }
+  .btn-primary:hover {
+    background: var(--accent-hover);
+    box-shadow: 0 2px 8px rgba(99,102,241,.4), inset 0 1px 0 rgba(255,255,255,.1);
+    transform: translateY(-1px);
+  }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid rgba(239,68,68,.3);
+  }
+  .btn-danger:hover {
+    background: var(--danger);
+    color: #fff;
+    border-color: var(--danger);
+  }
+
+  .btn-sm { padding: 5px 11px; font-size: 12px; border-radius: 7px; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+  }
+  .btn-ghost:hover { color: var(--text); background: rgba(255,255,255,.05); }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+  .btn-outline:hover {
+    color: var(--text);
+    border-color: var(--border-hover);
+    background: rgba(255,255,255,.03);
+  }
+
+  /* ── Toolbar ── */
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .toolbar h2 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -.4px;
+  }
+
+  .toolbar-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  /* ── Empty state ── */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 24px;
+    text-align: center;
+  }
+
+  .empty-state-icon {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    background: var(--accent-glow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent-hover);
+    margin-bottom: 16px;
+  }
+
+  .empty-state h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+
+  .empty-state p {
+    font-size: 13px;
+    color: var(--muted);
+    max-width: 320px;
+    line-height: 1.5;
+  }
+
+  /* ── Forms ── */
+  .form-group { margin-bottom: 14px; }
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    letter-spacing: .2px;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    padding: 9px 13px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    transition: all var(--transition);
+  }
+
+  input::placeholder, textarea::placeholder { color: var(--muted); }
+
+  input:hover, select:hover, textarea:hover { border-color: var(--border-hover); }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  input[readonly] { opacity: .6; cursor: default; }
+  input[readonly]:focus { border-color: var(--border); box-shadow: none; }
+
+  textarea {
+    resize: vertical;
+    min-height: 100px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2371717a' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 32px;
+    cursor: pointer;
+  }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .search-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    margin-bottom: 20px;
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+
+  .search-row .form-group { flex: 1; margin: 0; }
+  .search-row .btn { height: 38px; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    animation: fadeIn .15s ease;
+  }
+
+  .modal {
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    width: 90%;
+    max-width: 540px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    animation: modalIn .2s cubic-bezier(.4, 0, .2, 1);
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(.96) translateY(8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .modal-header h3 { font-size: 16px; font-weight: 600; letter-spacing: -.2px; }
+
+  .modal-close {
+    width: 32px; height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all var(--transition);
+  }
+
+  .modal-close:hover { background: rgba(255,255,255,.06); color: var(--text); }
+
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 200;
+    box-shadow: var(--shadow-lg);
+    animation: toastIn .25s cubic-bezier(.4, 0, .2, 1);
+  }
+
+  .toast i { width: 18px; height: 18px; flex-shrink: 0; }
+
+  .toast-success {
+    background: #166534;
+    color: #bbf7d0;
+    border: 1px solid rgba(34,197,94,.3);
+  }
+
+  .toast-error {
+    background: #7f1d1d;
+    color: #fecaca;
+    border: 1px solid rgba(239,68,68,.3);
+  }
+
+  @keyframes toastIn {
+    from { transform: translateY(16px) scale(.95); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+  }
+
+  /* ── Feed ── */
+  .feed-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .feed-item {
+    display: flex;
+    gap: 14px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+    transition: background var(--transition);
+    animation: feedIn .3s ease;
+  }
+
+  @keyframes feedIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .feed-item:hover { background: rgba(255,255,255,.02); }
+  .feed-item:last-child { border-bottom: none; }
+
+  .feed-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .feed-icon i { width: 18px; height: 18px; }
+
+  .feed-content { flex: 1; min-width: 0; }
+
+  .feed-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -.1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .feed-body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+  }
+
+  .feed-time {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .feed-time i { width: 12px; height: 12px; }
+
+  /* ── Template Grid ── */
+  .template-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .template-btn {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    transition: all var(--transition);
+  }
+
+  .template-btn:hover {
+    border-color: var(--accent);
+    background: var(--accent-glow);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99,102,241,.1);
+  }
+
+  .template-btn:active { transform: translateY(0); }
+
+  .template-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: var(--accent-glow);
+    color: var(--accent-hover);
+  }
+
+  .template-icon i { width: 16px; height: 16px; }
+
+  .template-text { flex: 1; }
+  .template-label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+    font-weight: 400;
+  }
+
+  /* ── Checkbox & Filter Rows ── */
+  .checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: all var(--transition);
+  }
+
+  .checkbox-group label:has(input:checked) {
+    border-color: var(--accent);
+    background: var(--accent-glow);
+  }
+
+  .checkbox-group input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  .filter-row {
+    display: grid;
+    grid-template-columns: 1fr 120px 1fr 36px;
+    gap: 8px;
+    align-items: end;
+    margin-bottom: 8px;
+  }
+
+  .filter-row .btn { height: 38px; width: 36px; padding: 0; display: flex; align-items: center; justify-content: center; }
+
+  .filter-hint {
+    padding: 10px 14px;
+    background: rgba(255,255,255,.02);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 10px;
+  }
+
+  .filter-hint-label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+  }
+
+  /* ── Divider ── */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 16px 0;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    header, nav, main { padding-left: 16px; padding-right: 16px; }
+    .template-grid { grid-template-columns: 1fr 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+    .filter-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <img src="/favicon.ico" alt="Notification Router" style="width:44px;height:44px;border-radius:10px;object-fit:contain" />
+    <h1>Notification Router</h1>
+  </div>
+  <div class="status-badge">
+    <span class="status-dot"></span>
+    Connected
+  </div>
+</header>
+
+<nav>
+  <button class="active" data-tab="feed">
+    <i data-lucide="activity"></i> Feed
+  </button>
+  <button data-tab="subscriptions">
+    <i data-lucide="user"></i> Subscriptions
+  </button>
+  <button data-tab="channels">
+    <i data-lucide="hash"></i> Channels
+  </button>
+  <button data-tab="testing">
+    <i data-lucide="flask-conical"></i> Testing
+  </button>
+</nav>
+
+<main>
+  <!-- FEED -->
+  <div id="feed" class="section active">
+    <div class="toolbar">
+      <h2>Notification Feed</h2>
+      <div class="toolbar-actions">
+        <button class="btn btn-outline btn-sm" onclick="Feed.clear()">
+          <i data-lucide="x"></i> Clear
+        </button>
+      </div>
+    </div>
+    <div class="feed-container">
+      <div id="feed-list">
+        <div class="empty-state">
+          <div class="empty-state-icon"><i data-lucide="inbox" style="width:24px;height:24px"></i></div>
+          <h3>No notifications yet</h3>
+          <p>Use the Testing tab to simulate webhook events and see them appear here in real time.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUBSCRIPTIONS -->
+  <div id="subscriptions" class="section">
+    <div class="toolbar">
+      <h2>User Subscriptions</h2>
+      <div class="toolbar-actions">
+        <button class="btn btn-primary btn-sm" onclick="Subscriptions.showAdd()">
+          <i data-lucide="plus"></i> Add
+        </button>
+      </div>
+    </div>
+    <div class="search-row">
+      <div class="form-group">
+        <label>User / Slack ID</label>
+        <input id="sub-user-id" placeholder="e.g. johndoe or U12345" onkeydown="if(event.key==='Enter')Subscriptions.load()" />
+      </div>
+      <button class="btn btn-primary" onclick="Subscriptions.load()">
+        <i data-lucide="search"></i> Load
+      </button>
+    </div>
+    <div id="sub-list">
+      <div class="empty-state">
+        <div class="empty-state-icon"><i data-lucide="user-search" style="width:24px;height:24px"></i></div>
+        <h3>Search for subscriptions</h3>
+        <p>Enter a user or Slack ID above to view and manage their notification subscriptions.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHANNELS -->
+  <div id="channels" class="section">
+    <div class="toolbar">
+      <h2>Channel Subscriptions</h2>
+      <div class="toolbar-actions">
+        <button class="btn btn-primary btn-sm" onclick="Channels.showAdd()">
+          <i data-lucide="plus"></i> Add
+        </button>
+      </div>
+    </div>
+    <div class="search-row">
+      <div class="form-group">
+        <label>Slack Channel ID</label>
+        <input id="chan-id" placeholder="e.g. C12345" onkeydown="if(event.key==='Enter')Channels.load()" />
+      </div>
+      <button class="btn btn-primary" onclick="Channels.load()">
+        <i data-lucide="search"></i> Load
+      </button>
+    </div>
+    <div id="chan-list">
+      <div class="empty-state">
+        <div class="empty-state-icon"><i data-lucide="message-square" style="width:24px;height:24px"></i></div>
+        <h3>Search for channels</h3>
+        <p>Enter a Slack channel ID to view and manage its notification subscriptions.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- TESTING -->
+  <div id="testing" class="section">
+    <div class="toolbar">
+      <h2>Webhook Simulator</h2>
+    </div>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;line-height:1.6">
+      Pick a template or craft a custom event to simulate webhook notifications through the routing pipeline.
+    </p>
+    <div class="template-grid">
+      <button class="template-btn" onclick="Testing.useTemplate('pr_created')">
+        <div class="template-icon"><i data-lucide="git-pull-request"></i></div>
+        <div class="template-text">
+          PR Created
+          <div class="template-label">Pull request opened</div>
+        </div>
+      </button>
+      <button class="template-btn" onclick="Testing.useTemplate('pr_review_requested')">
+        <div class="template-icon" style="background:var(--warn-subtle);color:var(--warn)"><i data-lucide="eye"></i></div>
+        <div class="template-text">
+          Review Requested
+          <div class="template-label">Review requested on PR</div>
+        </div>
+      </button>
+      <button class="template-btn" onclick="Testing.useTemplate('pr_merged_service')">
+        <div class="template-icon" style="background:var(--success-subtle);color:var(--success)"><i data-lucide="git-merge"></i></div>
+        <div class="template-text">
+          PR Merged
+          <div class="template-label">Service affected by merge</div>
+        </div>
+      </button>
+      <button class="template-btn" onclick="Testing.useTemplate('deploy_started')">
+        <div class="template-icon" style="background:var(--warn-subtle);color:var(--warn)"><i data-lucide="rocket"></i></div>
+        <div class="template-text">
+          Deploy Started
+          <div class="template-label">Deployment initiated</div>
+        </div>
+      </button>
+      <button class="template-btn" onclick="Testing.useTemplate('deploy_completed')">
+        <div class="template-icon" style="background:var(--success-subtle);color:var(--success)"><i data-lucide="check-circle"></i></div>
+        <div class="template-text">
+          Deploy Completed
+          <div class="template-label">Deployment finished</div>
+        </div>
+      </button>
+      <button class="template-btn" onclick="Testing.useTemplate('pr_checks_failed')">
+        <div class="template-icon" style="background:var(--danger-subtle);color:var(--danger)"><i data-lucide="x-circle"></i></div>
+        <div class="template-text">
+          Checks Failed
+          <div class="template-label">CI check failure</div>
+        </div>
+      </button>
+      <button class="template-btn" onclick="Testing.useTemplate('flaky_test_detected')">
+        <div class="template-icon" style="background:var(--danger-subtle);color:var(--danger)"><i data-lucide="bug"></i></div>
+        <div class="template-text">
+          Flaky Test
+          <div class="template-label">Flaky test detected</div>
+        </div>
+      </button>
+      <button class="template-btn" onclick="Testing.useTemplate('custom')">
+        <div class="template-icon" style="background:rgba(255,255,255,.05);color:var(--text-secondary)"><i data-lucide="code"></i></div>
+        <div class="template-text">
+          Custom Event
+          <div class="template-label">Build your own payload</div>
+        </div>
+      </button>
+    </div>
+    <div class="card">
+      <div class="form-group">
+        <label>Type Key</label>
+        <input id="test-type" placeholder="e.g. pr_created" />
+      </div>
+      <div class="form-group">
+        <label>Metadata (JSON)</label>
+        <textarea id="test-metadata" rows="4">{}</textarea>
+      </div>
+      <div class="form-group">
+        <label>Payload (JSON)</label>
+        <textarea id="test-payload" rows="4">{}</textarea>
+      </div>
+      <div style="display:flex;justify-content:flex-end">
+        <button class="btn btn-primary" onclick="Testing.send()">
+          <i data-lucide="send"></i> Send Event
+        </button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Modal container -->
+<div id="modal-root"></div>
+
+<script>
+const API = '/api/v1';
+
+// ── Utilities ──
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  const icon = type === 'success' ? 'check-circle' : 'alert-circle';
+  el.className = `toast toast-${type}`;
+  el.innerHTML = `<i data-lucide="${icon}"></i><span>${msg}</span>`;
+  document.body.appendChild(el);
+  lucide.createIcons({ nodes: [el] });
+  setTimeout(() => {
+    el.style.animation = 'fadeIn .2s ease reverse';
+    setTimeout(() => el.remove(), 200);
+  }, 2800);
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, {
+    headers: { 'Content-Type': 'application/json', ...opts.headers },
+    ...opts,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || res.statusText);
+  }
+  if (res.status === 204 || res.status === 202) return null;
+  return res.json();
+}
+
+function showModal(html) {
+  document.getElementById('modal-root').innerHTML =
+    `<div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">${html}</div>
+    </div>`;
+  lucide.createIcons({ nodes: [document.getElementById('modal-root')] });
+}
+
+function closeModal() {
+  const overlay = document.querySelector('.modal-overlay');
+  if (overlay) {
+    overlay.style.animation = 'fadeIn .15s ease reverse';
+    setTimeout(() => { document.getElementById('modal-root').innerHTML = ''; }, 150);
+  }
+}
+
+// Escape to close modal
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// Cache notification types
+let notifTypes = [];
+async function loadTypes() {
+  if (notifTypes.length) return notifTypes;
+  try {
+    notifTypes = await api('/notification-types');
+  } catch {
+    notifTypes = [];
+  }
+  return notifTypes;
+}
+
+function typeNameById(id) {
+  const t = notifTypes.find(t => t.id === id);
+  return t ? t.name : id;
+}
+
+function typeKeyById(id) {
+  const t = notifTypes.find(t => t.id === id);
+  return t ? t.key : id;
+}
+
+// ── Tab Navigation ──
+document.querySelectorAll('nav button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Feed ──
+const Feed = {
+  items: [],
+
+  add(event) {
+    this.items.unshift({
+      typeKey: event.typeKey,
+      metadata: event.metadata || {},
+      payload: event.payload || {},
+      time: new Date(),
+    });
+    if (this.items.length > 50) this.items.pop();
+    this.render();
+    // Pulse the Feed tab if not active
+    const feedTab = document.querySelector('nav button[data-tab="feed"]');
+    if (!feedTab.classList.contains('active')) {
+      feedTab.style.color = 'var(--accent-hover)';
+      setTimeout(() => { feedTab.style.color = ''; }, 2000);
+    }
+  },
+
+  clear() {
+    this.items = [];
+    this.render();
+  },
+
+  render() {
+    const el = document.getElementById('feed-list');
+    if (!this.items.length) {
+      el.innerHTML = `<div class="empty-state">
+        <div class="empty-state-icon"><i data-lucide="inbox" style="width:24px;height:24px"></i></div>
+        <h3>No notifications yet</h3>
+        <p>Use the Testing tab to simulate webhook events and see them appear here in real time.</p>
+      </div>`;
+      lucide.createIcons({ nodes: [el] });
+      return;
+    }
+    el.innerHTML = this.items.map(item => {
+      const { icon, color } = this.getIcon(item.typeKey);
+      const metaStr = Object.entries(item.metadata)
+        .map(([k,v]) => `<span class="filter-chip">${k}: ${Array.isArray(v) ? v.join(', ') : v}</span>`)
+        .join('');
+      const ago = this.timeAgo(item.time);
+      return `<div class="feed-item">
+        <div class="feed-icon" style="background:${color.bg};color:${color.fg}">
+          <i data-lucide="${icon}"></i>
+        </div>
+        <div class="feed-content">
+          <div class="feed-title">
+            ${this.formatType(item.typeKey)}
+            <span class="badge badge-type" style="font-size:10px">${item.typeKey}</span>
+          </div>
+          <div class="feed-body">${metaStr || '<span style="color:var(--muted);font-size:12px">No metadata</span>'}</div>
+          <div class="feed-time"><i data-lucide="clock"></i>${ago}</div>
+        </div>
+      </div>`;
+    }).join('');
+    lucide.createIcons({ nodes: [el] });
+  },
+
+  getIcon(type) {
+    if (type.includes('review')) return { icon: 'eye', color: { bg: 'var(--warn-subtle)', fg: 'var(--warn)' } };
+    if (type.includes('merged') || type.includes('closed')) return { icon: 'git-merge', color: { bg: 'var(--success-subtle)', fg: 'var(--success)' } };
+    if (type.includes('pr_created')) return { icon: 'git-pull-request', color: { bg: 'var(--accent-glow)', fg: 'var(--accent-hover)' } };
+    if (type.includes('checks_passed')) return { icon: 'check-circle', color: { bg: 'var(--success-subtle)', fg: 'var(--success)' } };
+    if (type.includes('checks_failed')) return { icon: 'x-circle', color: { bg: 'var(--danger-subtle)', fg: 'var(--danger)' } };
+    if (type.includes('deploy_started')) return { icon: 'rocket', color: { bg: 'var(--warn-subtle)', fg: 'var(--warn)' } };
+    if (type.includes('deploy_completed')) return { icon: 'check-circle', color: { bg: 'var(--success-subtle)', fg: 'var(--success)' } };
+    if (type.includes('flaky') || type.includes('test')) return { icon: 'bug', color: { bg: 'var(--danger-subtle)', fg: 'var(--danger)' } };
+    return { icon: 'bell', color: { bg: 'var(--accent-glow)', fg: 'var(--accent-hover)' } };
+  },
+
+  formatType(key) {
+    return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  },
+
+  timeAgo(date) {
+    const s = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (s < 5) return 'just now';
+    if (s < 60) return s + 's ago';
+    if (s < 3600) return Math.floor(s/60) + 'm ago';
+    return Math.floor(s/3600) + 'h ago';
+  },
+};
+
+// ── Subscriptions ──
+const Subscriptions = {
+  current: [],
+  userId: '',
+
+  async load() {
+    this.userId = document.getElementById('sub-user-id').value.trim();
+    if (!this.userId) return toast('Enter a user ID', 'error');
+    await loadTypes();
+    try {
+      this.current = await api(`/subscriptions/users/${encodeURIComponent(this.userId)}`);
+      this.render();
+    } catch (e) {
+      toast('Failed to load: ' + e.message, 'error');
+    }
+  },
+
+  render() {
+    const el = document.getElementById('sub-list');
+    if (!this.current.length) {
+      el.innerHTML = `<div class="empty-state">
+        <div class="empty-state-icon"><i data-lucide="bell-off" style="width:24px;height:24px"></i></div>
+        <h3>No subscriptions</h3>
+        <p>This user has no subscriptions yet. Click "Add" to create one.</p>
+      </div>`;
+      lucide.createIcons({ nodes: [el] });
+      return;
+    }
+    el.innerHTML = this.current.map(sub => {
+      const typeName = typeNameById(sub.notificationTypeId);
+      const typeKey = typeKeyById(sub.notificationTypeId);
+      const filters = (sub.filters || []).map(f =>
+        `<span class="filter-chip">${f.field} ${f.operator} ${f.value}</span>`
+      ).join('');
+      const channels = (sub.channels || []).map(ch => {
+        const icon = ch === 'chat' ? 'message-square' : 'layout-grid';
+        return `<span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="${icon}" style="width:12px;height:12px"></i>${ch}</span>`;
+      }).join(', ');
+      return `<div class="card">
+        <div class="card-header">
+          <div class="card-header-left">
+            <div class="card-icon card-icon-purple"><i data-lucide="bell" style="width:18px;height:18px"></i></div>
+            <div>
+              <span class="card-title">${typeName}</span>
+              <div style="margin-top:2px"><span class="badge badge-type">${typeKey}</span></div>
+            </div>
+          </div>
+          <div class="card-header-right">
+            <span class="badge ${sub.enabled ? 'badge-enabled' : 'badge-disabled'}">
+              <i data-lucide="${sub.enabled ? 'check' : 'pause'}" style="width:11px;height:11px"></i>
+              ${sub.enabled ? 'active' : 'paused'}
+            </span>
+            <button class="btn btn-danger btn-sm" onclick="Subscriptions.remove('${sub.id}')">
+              <i data-lucide="trash-2"></i>
+            </button>
+          </div>
+        </div>
+        <div class="meta"><i data-lucide="radio"></i>Channels: ${channels || 'none'}</div>
+        ${filters ? `<div class="filters-list">${filters}</div>` : ''}
+      </div>`;
+    }).join('');
+    lucide.createIcons({ nodes: [el] });
+  },
+
+  async remove(id) {
+    if (!confirm('Delete this subscription?')) return;
+    try {
+      await api(`/subscriptions/${id}`, { method: 'DELETE' });
+      toast('Subscription deleted');
+      this.load();
+    } catch (e) {
+      toast('Delete failed: ' + e.message, 'error');
+    }
+  },
+
+  async showAdd() {
+    const userId = document.getElementById('sub-user-id').value.trim();
+    if (!userId) return toast('Enter a user ID first', 'error');
+    const types = await loadTypes();
+    const opts = types.map(t => `<option value="${t.id}">${t.name} (${t.key})</option>`).join('');
+    showModal(`
+      <div class="modal-header">
+        <h3>New Subscription</h3>
+        <button class="modal-close" onclick="closeModal()"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+      </div>
+      <div class="form-group">
+        <label>User ID</label>
+        <input id="add-sub-user" value="${userId}" readonly />
+      </div>
+      <div class="form-group">
+        <label>Notification Type</label>
+        <select id="add-sub-type" onchange="Subscriptions.loadFilterDefs()">${opts}</select>
+      </div>
+      <div class="form-group">
+        <label>Channels</label>
+        <div class="checkbox-group" id="add-sub-channels">
+          <label><input type="checkbox" value="in_app" checked /> In-App</label>
+          <label><input type="checkbox" value="chat" /> Slack DM</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Filters</label>
+        <div id="add-sub-filter-defs"></div>
+        <div id="add-sub-filters"></div>
+        <button class="btn btn-ghost btn-sm" onclick="Subscriptions.addFilterRow()" style="margin-top:6px">
+          <i data-lucide="plus" style="width:14px;height:14px"></i> Add filter
+        </button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="Subscriptions.create()">
+          <i data-lucide="check"></i> Create
+        </button>
+      </div>
+    `);
+    this.loadFilterDefs();
+  },
+
+  async loadFilterDefs() {
+    const typeId = document.getElementById('add-sub-type').value;
+    const type = notifTypes.find(t => t.id === typeId);
+    if (!type) return;
+    try {
+      const defs = await api(`/notification-types/${encodeURIComponent(type.key)}/filters`);
+      const el = document.getElementById('add-sub-filter-defs');
+      if (defs.length) {
+        el.innerHTML = `<div class="filter-hint">
+          <div class="filter-hint-label">Available fields</div>
+          <div class="filters-list" style="margin:0">${defs.map(d =>
+            `<span class="filter-chip">${d.field} <span style="color:var(--muted)">(${d.operators.join(', ')})</span></span>`
+          ).join('')}</div>
+        </div>`;
+      } else {
+        el.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0">No filter definitions available for this type.</div>';
+      }
+    } catch { /* ignore */ }
+  },
+
+  addFilterRow() {
+    const container = document.getElementById('add-sub-filters');
+    const row = document.createElement('div');
+    row.className = 'filter-row';
+    row.innerHTML = `
+      <div class="form-group" style="margin:0"><input placeholder="field" class="f-field" /></div>
+      <div class="form-group" style="margin:0">
+        <select class="f-op">
+          <option value="equals">equals</option>
+          <option value="not_equals">not_equals</option>
+          <option value="contains">contains</option>
+          <option value="in">in</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0"><input placeholder="value" class="f-value" /></div>
+      <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()"><i data-lucide="x" style="width:14px;height:14px"></i></button>
+    `;
+    container.appendChild(row);
+    lucide.createIcons({ nodes: [row] });
+  },
+
+  async create() {
+    const userId = document.getElementById('add-sub-user').value;
+    const typeId = document.getElementById('add-sub-type').value;
+    const channels = [...document.querySelectorAll('#add-sub-channels input:checked')].map(c => c.value);
+    const filterRows = document.querySelectorAll('#add-sub-filters .filter-row');
+    const filters = [...filterRows].map(row => ({
+      field: row.querySelector('.f-field').value,
+      operator: row.querySelector('.f-op').value,
+      value: row.querySelector('.f-value').value,
+    })).filter(f => f.field && f.value);
+
+    try {
+      await api('/subscriptions', {
+        method: 'POST',
+        body: JSON.stringify({ userId, notificationTypeId: typeId, channels, filters, enabled: true }),
+      });
+      toast('Subscription created');
+      closeModal();
+      this.load();
+    } catch (e) {
+      toast('Failed: ' + e.message, 'error');
+    }
+  },
+};
+
+// ── Channel Subscriptions ──
+const Channels = {
+  current: [],
+  channelId: '',
+
+  async load() {
+    this.channelId = document.getElementById('chan-id').value.trim();
+    if (!this.channelId) return toast('Enter a channel ID', 'error');
+    await loadTypes();
+    try {
+      this.current = await api(`/channel-subscriptions/channels/${encodeURIComponent(this.channelId)}`);
+      this.render();
+    } catch (e) {
+      toast('Failed to load: ' + e.message, 'error');
+    }
+  },
+
+  render() {
+    const el = document.getElementById('chan-list');
+    if (!this.current.length) {
+      el.innerHTML = `<div class="empty-state">
+        <div class="empty-state-icon"><i data-lucide="hash" style="width:24px;height:24px"></i></div>
+        <h3>No channel subscriptions</h3>
+        <p>This channel has no subscriptions yet. Click "Add" to create one.</p>
+      </div>`;
+      lucide.createIcons({ nodes: [el] });
+      return;
+    }
+    el.innerHTML = this.current.map(ch => {
+      const typeName = typeNameById(ch.notificationTypeId);
+      const typeKey = typeKeyById(ch.notificationTypeId);
+      const filters = (ch.filters || []).map(f =>
+        `<span class="filter-chip">${f.field} ${f.operator} ${f.value}</span>`
+      ).join('');
+      return `<div class="card">
+        <div class="card-header">
+          <div class="card-header-left">
+            <div class="card-icon card-icon-amber"><i data-lucide="hash" style="width:18px;height:18px"></i></div>
+            <div>
+              <span class="card-title">#${ch.slackChannelName || ch.slackChannelId}</span>
+              <div style="margin-top:2px">
+                <span class="badge badge-type">${typeKey}</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-header-right">
+            <span class="badge ${ch.enabled ? 'badge-enabled' : 'badge-disabled'}">
+              <i data-lucide="${ch.enabled ? 'check' : 'pause'}" style="width:11px;height:11px"></i>
+              ${ch.enabled ? 'active' : 'paused'}
+            </span>
+            ${ch.digestEnabled
+              ? `<span class="badge badge-channel"><i data-lucide="timer" style="width:11px;height:11px"></i>${ch.digestInterval}</span>`
+              : ''}
+            <button class="btn btn-danger btn-sm" onclick="Channels.remove('${ch.id}')">
+              <i data-lucide="trash-2"></i>
+            </button>
+          </div>
+        </div>
+        ${filters ? `<div class="filters-list">${filters}</div>` : ''}
+      </div>`;
+    }).join('');
+    lucide.createIcons({ nodes: [el] });
+  },
+
+  async remove(id) {
+    if (!confirm('Delete this channel subscription?')) return;
+    try {
+      await api(`/channel-subscriptions/${id}`, { method: 'DELETE' });
+      toast('Channel subscription deleted');
+      this.load();
+    } catch (e) {
+      toast('Delete failed: ' + e.message, 'error');
+    }
+  },
+
+  async showAdd() {
+    const channelId = document.getElementById('chan-id').value.trim();
+    if (!channelId) return toast('Enter a channel ID first', 'error');
+    const types = await loadTypes();
+    const opts = types.map(t => `<option value="${t.id}">${t.name} (${t.key})</option>`).join('');
+    showModal(`
+      <div class="modal-header">
+        <h3>New Channel Subscription</h3>
+        <button class="modal-close" onclick="closeModal()"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Channel ID</label>
+          <input id="add-chan-id" value="${channelId}" readonly />
+        </div>
+        <div class="form-group">
+          <label>Channel Name</label>
+          <input id="add-chan-name" placeholder="e.g. deploys" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notification Type</label>
+        <select id="add-chan-type">${opts}</select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="checkbox" id="add-chan-digest" style="width:16px;height:16px;accent-color:var(--accent)" />
+            Enable Digest
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Digest Interval</label>
+          <input id="add-chan-interval" value="24h" placeholder="e.g. 1h, 24h" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Filters</label>
+        <div id="add-chan-filters"></div>
+        <button class="btn btn-ghost btn-sm" onclick="Channels.addFilterRow()" style="margin-top:6px">
+          <i data-lucide="plus" style="width:14px;height:14px"></i> Add filter
+        </button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="Channels.create()">
+          <i data-lucide="check"></i> Create
+        </button>
+      </div>
+    `);
+  },
+
+  addFilterRow() {
+    const container = document.getElementById('add-chan-filters');
+    const row = document.createElement('div');
+    row.className = 'filter-row';
+    row.innerHTML = `
+      <div class="form-group" style="margin:0"><input placeholder="field" class="f-field" /></div>
+      <div class="form-group" style="margin:0">
+        <select class="f-op">
+          <option value="equals">equals</option>
+          <option value="not_equals">not_equals</option>
+          <option value="contains">contains</option>
+          <option value="in">in</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0"><input placeholder="value" class="f-value" /></div>
+      <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()"><i data-lucide="x" style="width:14px;height:14px"></i></button>
+    `;
+    container.appendChild(row);
+    lucide.createIcons({ nodes: [row] });
+  },
+
+  async create() {
+    const channelId = document.getElementById('add-chan-id').value;
+    const channelName = document.getElementById('add-chan-name').value;
+    const typeId = document.getElementById('add-chan-type').value;
+    const digestEnabled = document.getElementById('add-chan-digest').checked;
+    const digestInterval = document.getElementById('add-chan-interval').value;
+    const filterRows = document.querySelectorAll('#add-chan-filters .filter-row');
+    const filters = [...filterRows].map(row => ({
+      field: row.querySelector('.f-field').value,
+      operator: row.querySelector('.f-op').value,
+      value: row.querySelector('.f-value').value,
+    })).filter(f => f.field && f.value);
+
+    try {
+      await api('/channel-subscriptions', {
+        method: 'POST',
+        body: JSON.stringify({
+          slackChannelId: channelId,
+          slackChannelName: channelName || channelId,
+          notificationTypeId: typeId,
+          filters,
+          digestEnabled,
+          digestInterval,
+          enabled: true,
+        }),
+      });
+      toast('Channel subscription created');
+      closeModal();
+      this.load();
+    } catch (e) {
+      toast('Failed: ' + e.message, 'error');
+    }
+  },
+};
+
+// ── Testing ──
+const Testing = {
+  templates: {
+    pr_created: {
+      typeKey: 'pr_created',
+      metadata: { author: 'octocat', repo: 'my-org/my-repo', base_branch: 'main' },
+      payload: { content: 'PR #42: Add new feature\nAuthor: octocat | Repo: my-org/my-repo | Branch: main\nhttps://github.com/my-org/my-repo/pull/42' },
+    },
+    pr_review_requested: {
+      typeKey: 'pr_review_requested',
+      metadata: { author: 'octocat', repo: 'my-org/my-repo', reviewer: 'reviewer-user', base_branch: 'main' },
+      payload: { content: 'Review requested on PR #42: Add new feature\nAuthor: octocat | Reviewer: reviewer-user | Repo: my-org/my-repo\nhttps://github.com/my-org/my-repo/pull/42' },
+    },
+    pr_merged_service: {
+      typeKey: 'pr_merged_service',
+      metadata: { author: 'octocat', repo: 'my-org/my-repo', affected_services: ['api-service', 'web-app'] },
+      payload: { content: 'PR #99 merged: Refactor auth module\nAuthor: octocat | Repo: my-org/my-repo\nAffected services: api-service, web-app\nhttps://github.com/my-org/my-repo/pull/99' },
+    },
+    deploy_started: {
+      typeKey: 'deploy_started',
+      metadata: { service: 'api-service', environment: 'staging', author: 'deployer' },
+      payload: { content: 'Deploy started: api-service → staging\nAuthor: deployer | Pipeline: deploy-staging | Build: #1234' },
+    },
+    deploy_completed: {
+      typeKey: 'deploy_completed',
+      metadata: { service: 'api-service', environment: 'production', author: 'deployer', status: 'success' },
+      payload: { content: 'Deploy completed: api-service → production ✅\nAuthor: deployer | Pipeline: deploy-prod | Build: #1235 | Duration: 3m' },
+    },
+    pr_checks_failed: {
+      typeKey: 'pr_checks_failed',
+      metadata: { author: 'octocat', repo: 'my-org/my-repo', check_name: 'ci/test-suite' },
+      payload: { content: 'Checks failed on PR #55: Fix login bug ❌\nAuthor: octocat | Check: ci/test-suite | Repo: my-org/my-repo' },
+    },
+    flaky_test_detected: {
+      typeKey: 'flaky_test_detected',
+      metadata: { test_name: 'LoginTest.shouldAuthenticateUser', service: 'auth-service', team: 'platform' },
+      payload: { content: 'Flaky test detected: LoginTest.shouldAuthenticateUser\nService: auth-service | Team: platform | Failure rate: 15%' },
+    },
+    custom: {
+      typeKey: '',
+      metadata: {},
+      payload: { content: '' },
+    },
+  },
+
+  useTemplate(key) {
+    const t = this.templates[key];
+    document.getElementById('test-type').value = t.typeKey;
+    document.getElementById('test-metadata').value = JSON.stringify(t.metadata, null, 2);
+    document.getElementById('test-payload').value = JSON.stringify(t.payload, null, 2);
+    // Scroll to form
+    document.querySelector('#testing .card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  },
+
+  async send() {
+    const typeKey = document.getElementById('test-type').value.trim();
+    if (!typeKey) return toast('Type key is required', 'error');
+
+    let metadata, payload;
+    try {
+      metadata = JSON.parse(document.getElementById('test-metadata').value || '{}');
+      payload = JSON.parse(document.getElementById('test-payload').value || '{}');
+    } catch {
+      return toast('Invalid JSON in metadata or payload', 'error');
+    }
+
+    const event = { typeKey, metadata, payload };
+
+    try {
+      await api('/events', { method: 'POST', body: JSON.stringify(event) });
+      Feed.add(event);
+      toast('Event dispatched successfully');
+    } catch (e) {
+      toast('Failed: ' + e.message, 'error');
+    }
+  },
+};
+
+// ── Init ──
+loadTypes();
+lucide.createIcons();
+</script>
+</body>
+</html>

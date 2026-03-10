@@ -11,6 +11,7 @@ import com.slack.api.methods.MethodsClient
 import com.slack.api.methods.request.views.ViewsOpenRequest
 import com.slack.api.methods.response.views.ViewsOpenResponse
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -24,6 +25,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.mockito.quality.Strictness
+import java.util.regex.Pattern
 
 @ExtendWith(MockitoExtension::class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -95,6 +97,23 @@ class SlashCommandHandlersTest {
         verify(apiClient).getNotificationTypes()
         verify(methodsClient).viewsOpen(any<ViewsOpenRequest>())
         verify(ctx).ack()
+    }
+
+    @Test
+    fun `registerHandlers registers slash command with a pattern not an exact string`() {
+        handlers.registerHandlers()
+
+        verify(app).command(
+            org.mockito.kotlin.check<Pattern> { pattern ->
+                assertTrue(pattern.matcher("/notifyme").matches(), "/notifyme should match")
+                assertTrue(pattern.matcher("/notifymejuan").matches(), "/notifymejuan should match")
+                assertTrue(pattern.matcher("/notifymeraul").matches(), "/notifymeraul should match")
+                assertTrue(pattern.matcher("/notifyme123").matches(), "/notifyme123 should match")
+                assertFalse(pattern.matcher("/subscribe").matches(), "/subscribe should not match")
+                assertFalse(pattern.matcher("/notify").matches(), "/notify should not match")
+            },
+            any(),
+        )
     }
 
     @Test

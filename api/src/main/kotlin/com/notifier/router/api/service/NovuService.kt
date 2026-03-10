@@ -3,9 +3,8 @@ package com.notifier.router.api.service
 import co.novu.api.events.requests.TriggerEventRequest
 import co.novu.common.base.Novu
 import co.novu.common.base.NovuConfig
-import com.notifier.router.api.config.LoggingInterceptor
 import com.fasterxml.jackson.databind.ObjectMapper
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter
+import com.notifier.router.api.config.LoggingInterceptor
 import com.notifier.router.api.novu.NovuApiClient
 import com.notifier.router.api.novu.NovuChannelConnection
 import com.notifier.router.api.novu.NovuChannelEndpoint
@@ -22,6 +21,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.client.BufferingClientHttpRequestFactory
 import org.springframework.http.client.SimpleClientHttpRequestFactory
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 import retrofit2.Retrofit
@@ -446,6 +446,25 @@ class NovuService(
         novuApiClient!!.upsertSubscriber(NovuSubscriber(subscriberId = subscriberId))
         knownSubscribers.add(subscriberId)
         logger.debug("Upserted subscriber $subscriberId in Novu")
+    }
+
+    /**
+     * Deletes all Novu channel endpoints for the given subscriber (by Slack ID).
+     * Used during full-reset seeding to clean up Novu state alongside the DB wipe.
+     */
+    fun cleanupSubscriber(slackId: String) {
+        val client = novuApiClient ?: return
+        try {
+            client.listChannelEndpoints(slackId)
+                .mapNotNull { it.identifier }
+                .forEach { identifier ->
+                    client.deleteChannelEndpoint(identifier)
+                    logger.info("Deleted Novu channel endpoint $identifier for subscriber $slackId")
+                }
+            knownSubscribers.remove(slackId)
+        } catch (e: org.springframework.web.client.RestClientException) {
+            logger.warn("Failed to clean up Novu data for subscriber $slackId: ${e.message}")
+        }
     }
 
     private fun getBaseUrl() = if (apiUrl.isNotBlank()) apiUrl else "https://api.novu.co/v1"

@@ -173,7 +173,6 @@ class NovuApiClient(
         }
 }
 
-
 @Suppress("UNCHECKED_CAST")
 private fun Map<*, *>?.dataRawList(): List<Map<String, Any?>> =
     (this?.get("data") as? List<*>)

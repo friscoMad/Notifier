@@ -760,9 +760,14 @@
     <img src="/favicon.ico" alt="Notification Router" style="width:44px;height:44px;border-radius:10px;object-fit:contain" />
     <h1>Notification Router</h1>
   </div>
-  <div class="status-badge">
-    <span class="status-dot"></span>
-    Connected
+  <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
+    <a href="/dashboard.html" style="font-size:12px;color:var(--accent-hover);text-decoration:none;display:flex;align-items:center;gap:4px">
+      <i data-lucide="user" style="width:14px;height:14px"></i> My Dashboard
+    </a>
+    <div class="status-badge">
+      <span class="status-dot"></span>
+      Connected
+    </div>
   </div>
 </header>
 
@@ -792,6 +797,33 @@
         </button>
       </div>
     </div>
+    <div class="feed-filters" style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <div class="form-group" style="margin:0;flex:1;min-width:160px">
+        <label>Type</label>
+        <select id="feed-filter-type" onchange="Feed.render()">
+          <option value="">All types</option>
+          <option value="pr_created">PR Created</option>
+          <option value="pr_review_requested">Review Requested</option>
+          <option value="pr_merged_service">PR Merged (Service)</option>
+          <option value="pr_checks_passed">Checks Passed</option>
+          <option value="pr_checks_failed">Checks Failed</option>
+          <option value="deploy_started">Deploy Started</option>
+          <option value="deploy_completed">Deploy Completed</option>
+          <option value="flaky_test_detected">Flaky Test</option>
+          <option value="pr_merged_master_success">Merged Master OK</option>
+          <option value="pr_merged_master_error">Merged Master Error</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0;flex:1;min-width:160px">
+        <label>Author / User</label>
+        <input id="feed-filter-author" placeholder="Filter by author..." oninput="Feed.render()" />
+      </div>
+      <div class="form-group" style="margin:0;flex:1;min-width:160px">
+        <label>Repo / Service</label>
+        <input id="feed-filter-scope" placeholder="Filter by repo or service..." oninput="Feed.render()" />
+      </div>
+    </div>
+    <div id="feed-count" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
     <div class="feed-container">
       <div id="feed-list">
         <div class="empty-state">
@@ -1063,18 +1095,53 @@ const Feed = {
     this.render();
   },
 
+  getFiltered() {
+    const typeFilter = document.getElementById('feed-filter-type')?.value || '';
+    const authorFilter = (document.getElementById('feed-filter-author')?.value || '').toLowerCase();
+    const scopeFilter = (document.getElementById('feed-filter-scope')?.value || '').toLowerCase();
+    return this.items.filter(item => {
+      if (typeFilter && item.typeKey !== typeFilter) return false;
+      if (authorFilter) {
+        const author = String(item.metadata.author || item.metadata.team || '').toLowerCase();
+        if (!author.includes(authorFilter)) return false;
+      }
+      if (scopeFilter) {
+        const scope = String(item.metadata.repo || item.metadata.service || '').toLowerCase();
+        if (!scope.includes(scopeFilter)) return false;
+      }
+      return true;
+    });
+  },
+
   render() {
     const el = document.getElementById('feed-list');
+    const countEl = document.getElementById('feed-count');
     if (!this.items.length) {
       el.innerHTML = `<div class="empty-state">
         <div class="empty-state-icon"><i data-lucide="inbox" style="width:24px;height:24px"></i></div>
         <h3>No notifications yet</h3>
         <p>Use the Testing tab to simulate webhook events and see them appear here in real time.</p>
       </div>`;
+      if (countEl) countEl.textContent = '';
       lucide.createIcons({ nodes: [el] });
       return;
     }
-    el.innerHTML = this.items.map(item => {
+    const filtered = this.getFiltered();
+    if (countEl) {
+      countEl.textContent = filtered.length === this.items.length
+        ? `${this.items.length} notification${this.items.length === 1 ? '' : 's'}`
+        : `${filtered.length} of ${this.items.length} notifications`;
+    }
+    if (!filtered.length) {
+      el.innerHTML = `<div class="empty-state" style="padding:32px">
+        <div class="empty-state-icon"><i data-lucide="filter-x" style="width:24px;height:24px"></i></div>
+        <h3>No matching notifications</h3>
+        <p>Try adjusting your filters.</p>
+      </div>`;
+      lucide.createIcons({ nodes: [el] });
+      return;
+    }
+    el.innerHTML = filtered.map(item => {
       const { icon, color } = this.getIcon(item.typeKey);
       const metaStr = Object.entries(item.metadata)
         .map(([k,v]) => `<span class="filter-chip">${esc(k)}: ${esc(Array.isArray(v) ? v.join(', ') : v)}</span>`)
@@ -1268,10 +1335,10 @@ const Subscriptions = {
       <div class="form-group" style="margin:0"><input placeholder="field" class="f-field" /></div>
       <div class="form-group" style="margin:0">
         <select class="f-op">
-          <option value="equals">equals</option>
-          <option value="not_equals">not_equals</option>
-          <option value="contains">contains</option>
-          <option value="in">in</option>
+          <option value="EQ">equals</option>
+          <option value="NEQ">not equals</option>
+          <option value="CONTAINS">contains</option>
+          <option value="IN">in</option>
         </select>
       </div>
       <div class="form-group" style="margin:0"><input placeholder="value" class="f-value" /></div>
@@ -1297,6 +1364,9 @@ const Subscriptions = {
         method: 'POST',
         body: JSON.stringify({ userId, notificationTypeId: typeId, channels, filters, enabled: true }),
       });
+      if (channels.includes('chat') || channels.includes('slack_dm')) {
+        try { await fetch(`${API}/subscribers/${encodeURIComponent(userId)}/slack/endpoint`, { method: 'POST' }); } catch {}
+      }
       toast('Subscription created');
       closeModal();
       this.load();
@@ -1441,10 +1511,10 @@ const Channels = {
       <div class="form-group" style="margin:0"><input placeholder="field" class="f-field" /></div>
       <div class="form-group" style="margin:0">
         <select class="f-op">
-          <option value="equals">equals</option>
-          <option value="not_equals">not_equals</option>
-          <option value="contains">contains</option>
-          <option value="in">in</option>
+          <option value="EQ">equals</option>
+          <option value="NEQ">not equals</option>
+          <option value="CONTAINS">contains</option>
+          <option value="IN">in</option>
         </select>
       </div>
       <div class="form-group" style="margin:0"><input placeholder="value" class="f-value" /></div>

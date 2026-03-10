@@ -9,8 +9,14 @@ class WebConfig : WebMvcConfigurer {
     override fun addCorsMappings(registry: CorsRegistry) {
         registry
             .addMapping("/api/**")
-            .allowedOrigins("http://localhost:3000", "http://localhost:8080")
+            .allowedOriginPatterns("http://localhost:*", "https://*.ngrok-free.dev")
             .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+            .allowedHeaders("*")
+            .allowCredentials(true)
+        registry
+            .addMapping("/auth/**")
+            .allowedOriginPatterns("http://localhost:*", "https://*.ngrok-free.dev")
+            .allowedMethods("GET", "POST", "OPTIONS")
             .allowedHeaders("*")
             .allowCredentials(true)
     }

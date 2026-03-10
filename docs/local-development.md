@@ -86,7 +86,71 @@ To speed up local development and avoid needing a public URL (like ngrok), you c
    ```
    The bot will connect via WebSockets and start responding to commands and events immediately.
 
-## 6. Send a Test Payload
+## 6. Connect a Real GitHub Webhook (optional)
+
+To receive real GitHub events instead of using the webhook emulator, expose the Router API publicly and register a webhook in GitHub.
+
+### 6.1 Expose the API locally
+
+Use any tunnel to make port `8082` reachable from the internet:
+
+```bash
+# Example with ngrok
+ngrok http 8082
+# → Forwarding: https://abc123.ngrok.io → localhost:8082
+```
+
+### 6.2 Generate a webhook secret
+
+```bash
+openssl rand -hex 32
+# → e.g. a3f9c2d1b4e7...
+```
+
+Add it to your `.env`:
+
+```env
+GITHUB_WEBHOOK_SECRET=<the generated value>
+```
+
+### 6.3 Register the webhook in GitHub
+
+1. Go to your GitHub repository → **Settings** → **Webhooks** → **Add webhook**
+2. Fill in:
+   - **Payload URL**: `https://<tunnel-url>/api/v1/webhooks/github`
+   - **Content type**: `application/json`
+   - **Secret**: the value from step 6.2
+   - **Events**: select **"Let me select individual events"** and check:
+     - Pull requests
+     - Check runs
+     - Check suites
+     - Deployments
+     - Deployment statuses
+     - Workflow runs
+3. Click **Add webhook** — GitHub will send a `ping` event; the Router responds `202 Accepted`
+
+A green checkmark next to the webhook confirms it is working.
+
+### 6.4 Rotate the webhook secret
+
+1. Generate a new secret: `openssl rand -hex 32`
+2. Update `GITHUB_WEBHOOK_SECRET` in your environment and restart the API
+3. In GitHub webhook settings, update the **Secret** field to the same new value
+4. GitHub will immediately start signing payloads with the new secret
+
+### Handled GitHub event types
+
+| GitHub event | Router action |
+|---|---|
+| `pull_request` `opened` | `pr_created` |
+| `pull_request` `review_requested` | `pr_review_requested` |
+| `pull_request` `synchronize` | `pr_updated` |
+| `pull_request` `closed` | `pr_merged_master_success` / `pr_merged_master_error` |
+| `check_run` `completed` | `pr_checks_passed` / `pr_checks_failed` |
+| `check_suite` `rerequested` | `pr_checks_failed` |
+| `deployment` / `deployment_status` | `deploy_started` / `deploy_completed` |
+
+## 7. Send a Test Payload
 You can trigger a test message through the Webhook controller. Assuming the app runs on `8080`:
 
 ```powershell

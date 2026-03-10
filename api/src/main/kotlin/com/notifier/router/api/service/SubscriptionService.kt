@@ -82,7 +82,21 @@ class SubscriptionService(
 
     @Transactional
     fun deleteSubscription(id: String) {
-        subscriptionRepository.deleteById(UUID.fromString(id))
+        val uuid = UUID.fromString(id)
+        val subscription = subscriptionRepository.findById(uuid).orElse(null)
+            ?: throw SubscriptionNotFoundException("Subscription not found: $id")
+
+        subscriptionRepository.deleteById(uuid)
+
+        val remaining = subscriptionRepository.findByUserId(subscription.userId)
+        if (remaining.isEmpty()) {
+            val user = userRepository.findById(subscription.userId).orElse(null) ?: return
+            try {
+                novuService.cleanupSubscriber(user.slackId)
+            } catch (e: org.springframework.web.client.RestClientException) {
+                logger.warn("Could not clean up Novu data for subscriber ${user.slackId}", e)
+            }
+        }
     }
 
     @Transactional(readOnly = true)

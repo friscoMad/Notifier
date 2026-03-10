@@ -495,7 +495,7 @@ class HttpEndpointsIntegrationTest : BaseIntegrationTest() {
         }
 
         @Test
-        fun `POST buildkite webhook returns 202`() {
+        fun `POST buildkite webhook with no token configured returns 202`() {
             val payload =
                 """
                 {

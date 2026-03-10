@@ -7,6 +7,9 @@ import com.notifier.router.bot.service.SubscriptionService
 import com.notifier.router.bot.service.UnsubscribeResult
 import com.notifier.router.bot.view.ModalViewBuilder
 import com.notifier.router.common.domain.Filter
+import com.notifier.router.common.dto.ChannelSubscriptionDto
+import com.notifier.router.common.dto.NotificationTypeDto
+import com.notifier.router.common.dto.SubscriptionDto
 import com.slack.api.bolt.App
 import com.slack.api.bolt.context.builtin.ActionContext
 import com.slack.api.bolt.context.builtin.SlashCommandContext
@@ -18,6 +21,10 @@ import com.slack.api.model.kotlin_extension.block.withBlocks
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import org.springframework.web.client.RestClientException
+
+private const val EMPTY_SUBSCRIPTIONS_MSG =
+    "No active subscriptions. Use `/notifyme subscribe` to create one."
 
 @Component
 class SlashCommandHandlers(
@@ -33,10 +40,7 @@ class SlashCommandHandlers(
             handleCommand(req, ctx)
         }
 
-        app.blockAction("^delete_subscription_.*$".toPattern()) {
-                req: BlockActionRequest,
-                ctx: ActionContext,
-            ->
+        app.blockAction("delete_subscription") { req: BlockActionRequest, ctx: ActionContext ->
             handleDeleteAction(req, ctx)
         }
     }
@@ -117,67 +121,80 @@ class SlashCommandHandlers(
         ctx: SlashCommandContext,
     ): Response {
         val slackId = req.payload.userId
+        val channelId = req.payload.channelId
+        val isChannelContext = channelId != null && (channelId.startsWith("C") || channelId.startsWith("G"))
+
+        return if (isChannelContext && channelId != null) {
+            handleListInChannel(slackId, channelId, ctx)
+        } else {
+            handleListInDm(slackId, ctx)
+        }
+    }
+
+    private fun handleListInChannel(
+        slackId: String,
+        channelId: String,
+        ctx: SlashCommandContext,
+    ): Response {
+        val channelSubs =
+            try {
+                apiClient.getChannelSubscriptionsForChannel(channelId)
+            } catch (e: RestClientException) {
+                logger.error("Failed to fetch channel subscriptions for $channelId", e)
+                return ctx.ack("❌ Failed to fetch subscriptions. Please try again.")
+            }
+
+        if (channelSubs.isEmpty()) {
+            return ctx.ack(
+                "No active subscriptions for this channel. Use `/notifyme channel #channel <type>` to create one."
+            )
+        }
+
+        val availableTypes =
+            try {
+                apiClient.getNotificationTypes()
+            } catch (e: RestClientException) {
+                logger.error("Failed to fetch notification types", e)
+                emptyList()
+            }
+
+        ctx.client().chatPostEphemeral { r ->
+            r.channel(channelId).user(slackId)
+                .blocks(buildChannelSubscriptionBlocks(channelSubs, availableTypes))
+                .text("Channel subscriptions")
+        }
+
+        return ctx.ack()
+    }
+
+    private fun handleListInDm(
+        slackId: String,
+        ctx: SlashCommandContext,
+    ): Response {
         val subs =
             try {
                 apiClient.getSubscriptionsForUser(slackId)
-            } catch (e: org.springframework.web.client.RestClientException) {
+            } catch (e: RestClientException) {
                 logger.error("Failed to fetch subscriptions for $slackId", e)
                 return ctx.ack("❌ Failed to fetch subscriptions. Please try again.")
             }
 
         if (subs.isEmpty()) {
-            return ctx.ack("You have no active subscriptions.")
+            return ctx.ack(EMPTY_SUBSCRIPTIONS_MSG)
         }
 
-        val availableTypes = apiClient.getNotificationTypes()
-        val blocks =
-            withBlocks {
-                section { markdownText("*Your Subscriptions:*") }
-                divider()
-
-                subs.forEach { sub ->
-                    val typeName =
-                        availableTypes.find { it.id == sub.notificationTypeId }?.name
-                            ?: "Unknown Type"
-                    val channels = sub.channels.joinToString { "`$it`" }
-                    val status = if (sub.enabled) "✅ Enabled" else "❌ Disabled"
-
-                    section {
-                        markdownText(
-                            """
-                            *Type:* `$typeName` ($status)
-                            *Channels:* $channels
-                            """.trimIndent(),
-                        )
-                        accessory {
-                            button {
-                                text(text = "Delete", emoji = true)
-                                actionId("delete_subscription_${sub.id}")
-                                value(sub.id ?: "")
-                                style("danger")
-                            }
-                        }
-                    }
-
-                    if (sub.filters.isNotEmpty()) {
-                        context {
-                            elements {
-                                markdownText(
-                                    text =
-                                    "*Filters:* " +
-                                        sub.filters.joinToString(" | ") {
-                                            "`${it.field}` ${it.operator} `${it.value}`"
-                                        },
-                                )
-                            }
-                        }
-                    }
-                    divider()
-                }
+        val availableTypes =
+            try {
+                apiClient.getNotificationTypes()
+            } catch (e: RestClientException) {
+                logger.error("Failed to fetch notification types for $slackId", e)
+                emptyList()
             }
 
         ctx.client().chatPostMessage { r ->
-            r.channel(slackId).blocks(blocks).text("Your Notification Subscriptions")
+            r.channel(slackId)
+                .blocks(buildSubscriptionBlocks(subs, availableTypes))
+                .text("Your subscriptions")
         }
 
         return ctx.ack()
@@ -187,23 +204,89 @@ class SlashCommandHandlers(
         req: BlockActionRequest,
         ctx: ActionContext,
     ): Response {
-        val subscriptionId = req.payload.actions[0].value
-        logger.info("User requested deletion of subscription: $subscriptionId")
+        val actionValue = req.payload.actions[0].value
+        val userId = req.payload.user.id
+        val channelId = req.payload.channel.id
+        val isChannelSub = actionValue.startsWith("channel:")
+        val subscriptionId = actionValue.removePrefix("user:").removePrefix("channel:")
+        logger.info(
+            "User requested deletion of ${if (isChannelSub) "channel" else "user"} subscription: $subscriptionId"
+        )
 
-        val message =
-            try {
-                apiClient.unsubscribe(subscriptionId)
-                "✅ Subscription deleted successfully."
-            } catch (e: org.springframework.web.client.RestClientException) {
-                logger.error("Failed to delete subscription $subscriptionId", e)
-                "❌ Failed to delete subscription. Please try again."
+        try {
+            if (isChannelSub) apiClient.unsubscribeChannel(subscriptionId) else apiClient.unsubscribe(subscriptionId)
+        } catch (e: RestClientException) {
+            logger.error("Failed to delete subscription $subscriptionId", e)
+            ctx.client().chatPostEphemeral { r ->
+                r.channel(channelId).user(userId).text("❌ Failed to delete subscription. Please try again.")
             }
+            return ctx.ack()
+        }
 
         ctx.client().chatPostEphemeral { r ->
-            r.channel(req.payload.channel.id).user(req.payload.user.id).text(message)
+            r.channel(channelId).user(userId).text("✅ Subscription deleted.")
         }
 
         return ctx.ack()
+    }
+
+    private fun buildSubscriptionBlocks(
+        subs: List<SubscriptionDto>,
+        availableTypes: List<NotificationTypeDto>,
+    ) = withBlocks {
+        section { markdownText("*Your subscriptions:*") }
+        divider()
+        subs.forEach { sub ->
+            val typeName = availableTypes.find { it.id == sub.notificationTypeId }?.name ?: "Unknown Type"
+            val filtersSummary =
+                if (sub.filters.isNotEmpty()) {
+                    "\nFilters: " + sub.filters.joinToString(", ") { "${it.field} = ${it.value}" }
+                } else {
+                    ""
+                }
+            val channels = sub.channels.joinToString { ModalViewBuilder.channelDisplayName(it) }
+            section {
+                markdownText("*$typeName*${filtersSummary}\nChannels: $channels")
+                accessory {
+                    button {
+                        text(text = "Delete", emoji = true)
+                        actionId("delete_subscription")
+                        value("user:${sub.id}")
+                        style("danger")
+                    }
+                }
+            }
+            divider()
+        }
+    }
+
+    private fun buildChannelSubscriptionBlocks(
+        channelSubs: List<ChannelSubscriptionDto>,
+        availableTypes: List<NotificationTypeDto>,
+    ) = withBlocks {
+        section { markdownText("*Subscriptions for this channel:*") }
+        divider()
+        channelSubs.forEach { sub ->
+            val typeName = availableTypes.find { it.id == sub.notificationTypeId }?.name ?: "Unknown Type"
+            val filtersSummary =
+                if (sub.filters.isNotEmpty()) {
+                    "\nFilters: " + sub.filters.joinToString(", ") { "${it.field} = ${it.value}" }
+                } else {
+                    ""
+                }
+            section {
+                markdownText("*$typeName*$filtersSummary")
+                accessory {
+                    button {
+                        text(text = "Delete", emoji = true)
+                        actionId("delete_subscription")
+                        value("channel:${sub.id}")
+                        style("danger")
+                    }
+                }
+            }
+            divider()
+        }
     }
 
     private fun handleSubscribeCommand(

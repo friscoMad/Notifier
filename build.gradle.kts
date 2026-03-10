@@ -19,6 +19,14 @@ allprojects {
 }
 
 subprojects {
+    plugins.withId("org.jetbrains.kotlin.jvm") {
+        configure<JavaPluginExtension> {
+            toolchain {
+                languageVersion.set(JavaLanguageVersion.of(21))
+            }
+        }
+    }
+
     plugins.withId("io.gitlab.arturbosch.detekt") {
         configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
             buildUponDefaultConfig = true

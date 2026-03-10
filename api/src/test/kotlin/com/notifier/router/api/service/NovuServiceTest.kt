@@ -1,6 +1,7 @@
 package com.notifier.router.api.service
 
 import co.novu.common.base.Novu
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.notifier.router.api.novu.NovuApiClient
 import com.notifier.router.api.novu.NovuChannelConnection
 import com.notifier.router.api.novu.NovuChannelEndpoint
@@ -33,6 +34,7 @@ class NovuServiceTest {
                 slackBotToken = "xoxb-token",
                 slackWorkspaceId = "T123",
                 slackWorkspaceName = "Test Workspace",
+                objectMapper = ObjectMapper(),
             )
         val field = NovuService::class.java.getDeclaredField("novuApiClient")
         field.isAccessible = true

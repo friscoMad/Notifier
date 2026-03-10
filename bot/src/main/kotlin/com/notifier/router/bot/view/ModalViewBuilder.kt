@@ -120,7 +120,7 @@ object ModalViewBuilder {
                             actionId("channels_checkboxes")
                             options {
                                 option {
-                                    plainText("Slack DM (you)")
+                                    plainText(channelDisplayName("slack_dm"))
                                     value("slack_dm")
                                 }
                                 if (channelId != null) {
@@ -132,7 +132,7 @@ object ModalViewBuilder {
                             }
                             initialOptions {
                                 option {
-                                    plainText("Slack DM (you)")
+                                    plainText(channelDisplayName("slack_dm"))
                                     value("slack_dm")
                                 }
                             }
@@ -203,4 +203,11 @@ object ModalViewBuilder {
         val value: String,
         val description: String? = null,
     )
+
+    fun channelDisplayName(channel: String) =
+        when (channel) {
+            "slack_dm" -> "Slack DM"
+            "in_app" -> "Inbox"
+            else -> channel
+        }
 }

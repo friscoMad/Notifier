@@ -59,6 +59,18 @@ class RouterApiClient(
         restTemplate.delete("$apiUrl/subscriptions/$subscriptionId")
     }
 
+    fun getChannelSubscriptionsForChannel(channelId: String): List<ChannelSubscriptionDto> =
+        restTemplate.exchange(
+            "$apiUrl/channel-subscriptions/channels/$channelId",
+            HttpMethod.GET,
+            null,
+            object : ParameterizedTypeReference<List<ChannelSubscriptionDto>>() {},
+        ).body ?: emptyList()
+
+    fun unsubscribeChannel(subscriptionId: String) {
+        restTemplate.delete("$apiUrl/channel-subscriptions/$subscriptionId")
+    }
+
     fun subscribeChannel(dto: ChannelSubscriptionDto): ChannelSubscriptionDto? {
         val headers = HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON }
         return restTemplate.exchange(

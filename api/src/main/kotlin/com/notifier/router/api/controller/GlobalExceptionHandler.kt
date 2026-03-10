@@ -24,7 +24,6 @@ class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).build()
     }
 
-
     @ExceptionHandler(Exception::class)
     fun handleGeneralException(ex: Exception): ResponseEntity<Unit> {
         logger.error("Unexpected error occurred: ${ex.message}", ex)

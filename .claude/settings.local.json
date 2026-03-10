@@ -25,7 +25,11 @@
       "Bash(helm repo:*)",
       "Bash(chmod +x /Users/ramiro.aparicio/others/Notifier/scripts/install-novu-testing.sh && bash /Users/ramiro.aparicio/others/Notifier/scripts/install-novu-testing.sh)",
       "Bash(bash scripts/setup-novu.sh)",
-      "Bash(k3d cluster:*)"
+      "Bash(k3d cluster:*)",
+      "Bash(which gradle:*)",
+      "Bash(asdf plugin:*)",
+      "Bash(asdf local:*)",
+      "Bash(asdf set:*)"
     ]
   }
 }

@@ -8,7 +8,6 @@ import com.notifier.router.common.domain.Filter
 import com.notifier.router.common.dto.FilterDefinitionDto
 import com.notifier.router.common.dto.NotificationTypeDto
 import com.notifier.router.common.dto.SubscriptionDto
-import org.springframework.web.client.RestClientException
 import com.slack.api.bolt.App
 import com.slack.api.bolt.context.builtin.SlashCommandContext
 import com.slack.api.bolt.request.builtin.SlashCommandRequest
@@ -31,10 +30,12 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.mockito.quality.Strictness
+import org.springframework.web.client.RestClientException
 import java.util.regex.Pattern
 
 @ExtendWith(MockitoExtension::class)
 @MockitoSettings(strictness = Strictness.LENIENT)
+@Suppress("LargeClass")
 class SlashCommandHandlersTest {
     @Mock
     private lateinit var app: App
@@ -433,6 +434,28 @@ class SlashCommandHandlersTest {
     }
 
     @Test
+    fun `subscribe when already subscribed returns friendly message`() {
+        whenever(payload.text).thenReturn("subscribe pr_created")
+        whenever(payload.userId).thenReturn("U03SRNCB1HS")
+        whenever(ctx.ack(any<String>())).thenReturn(Response.ok())
+        whenever(apiClient.getNotificationTypes()).thenReturn(
+            listOf(NotificationTypeDto(id = "type-1", key = "pr_created", name = "PR Created")),
+        )
+        whenever(subscriptionService.subscribeAndActivate(any(), any(), any(), any(), any()))
+            .thenReturn(SubscribeResult.AlreadySubscribed)
+
+        val response = invokeHandleCommand()
+
+        assertEquals(200, response.statusCode)
+        verify(ctx).ack(
+            org.mockito.kotlin.check<String> {
+                assertTrue(it.contains("pr_created"))
+                assertTrue(it.lowercase().contains("already subscribed"))
+            }
+        )
+    }
+
+    @Test
     fun `subscribe on service failure returns error message`() {
         whenever(payload.text).thenReturn("subscribe pr_created")
         whenever(payload.userId).thenReturn("U03SRNCB1HS")
@@ -459,12 +482,36 @@ class SlashCommandHandlersTest {
         )
         whenever(apiClient.getFiltersForType("pr_created")).thenReturn(
             listOf(
-                FilterDefinitionDto(id = "f-1", notificationTypeId = "type-1", field = "repo", fieldType = "STRING", operators = listOf("EQ")),
-                FilterDefinitionDto(id = "f-2", notificationTypeId = "type-1", field = "author", fieldType = "STRING", operators = listOf("EQ")),
+                FilterDefinitionDto(
+                    id = "f-1",
+                    notificationTypeId = "type-1",
+                    field = "repo",
+                    fieldType = "STRING",
+                    operators = listOf("EQ")
+                ),
+                FilterDefinitionDto(
+                    id = "f-2",
+                    notificationTypeId = "type-1",
+                    field = "author",
+                    fieldType = "STRING",
+                    operators = listOf("EQ")
+                ),
             ),
         )
         whenever(subscriptionService.subscribeAndActivate(any(), any(), any(), any(), any()))
-            .thenReturn(SubscribeResult.Success(SubscriptionDto(id = "sub-1", userId = "U03SRNCB1HS", notificationTypeId = "type-1", channels = listOf("slack_dm"), channelConfig = emptyMap(), filters = emptyList(), enabled = true)))
+            .thenReturn(
+                SubscribeResult.Success(
+                    SubscriptionDto(
+                        id = "sub-1",
+                        userId = "U03SRNCB1HS",
+                        notificationTypeId = "type-1",
+                        channels = listOf("slack_dm"),
+                        channelConfig = emptyMap(),
+                        filters = emptyList(),
+                        enabled = true
+                    )
+                )
+            )
 
         invokeHandleCommand()
 
@@ -491,12 +538,36 @@ class SlashCommandHandlersTest {
         )
         whenever(apiClient.getFiltersForType("pr_created")).thenReturn(
             listOf(
-                FilterDefinitionDto(id = "f-1", notificationTypeId = "type-1", field = "repo", fieldType = "STRING", operators = listOf("EQ", "IN")),
-                FilterDefinitionDto(id = "f-2", notificationTypeId = "type-1", field = "author", fieldType = "STRING", operators = listOf("EQ")),
+                FilterDefinitionDto(
+                    id = "f-1",
+                    notificationTypeId = "type-1",
+                    field = "repo",
+                    fieldType = "STRING",
+                    operators = listOf("EQ", "IN")
+                ),
+                FilterDefinitionDto(
+                    id = "f-2",
+                    notificationTypeId = "type-1",
+                    field = "author",
+                    fieldType = "STRING",
+                    operators = listOf("EQ")
+                ),
             ),
         )
         whenever(subscriptionService.subscribeAndActivate(any(), any(), any(), any(), any()))
-            .thenReturn(SubscribeResult.Success(SubscriptionDto(id = "sub-1", userId = "U03SRNCB1HS", notificationTypeId = "type-1", channels = listOf("slack_dm"), channelConfig = emptyMap(), filters = emptyList(), enabled = true)))
+            .thenReturn(
+                SubscribeResult.Success(
+                    SubscriptionDto(
+                        id = "sub-1",
+                        userId = "U03SRNCB1HS",
+                        notificationTypeId = "type-1",
+                        channels = listOf("slack_dm"),
+                        channelConfig = emptyMap(),
+                        filters = emptyList(),
+                        enabled = true
+                    )
+                )
+            )
 
         invokeHandleCommand()
 
@@ -527,7 +598,19 @@ class SlashCommandHandlersTest {
         whenever(apiClient.getFiltersForType("pr_created"))
             .thenThrow(RestClientException("connection refused"))
         whenever(subscriptionService.subscribeAndActivate(any(), any(), any(), any(), any()))
-            .thenReturn(SubscribeResult.Success(SubscriptionDto(id = "sub-1", userId = "U03SRNCB1HS", notificationTypeId = "type-1", channels = listOf("slack_dm"), channelConfig = emptyMap(), filters = emptyList(), enabled = true)))
+            .thenReturn(
+                SubscribeResult.Success(
+                    SubscriptionDto(
+                        id = "sub-1",
+                        userId = "U03SRNCB1HS",
+                        notificationTypeId = "type-1",
+                        channels = listOf("slack_dm"),
+                        channelConfig = emptyMap(),
+                        filters = emptyList(),
+                        enabled = true
+                    )
+                )
+            )
 
         invokeHandleCommand()
 
@@ -555,7 +638,19 @@ class SlashCommandHandlersTest {
         )
         whenever(apiClient.getFiltersForType("pr_created")).thenReturn(emptyList())
         whenever(subscriptionService.subscribeAndActivate(any(), any(), any(), any(), any()))
-            .thenReturn(SubscribeResult.Success(SubscriptionDto(id = "sub-1", userId = "U03SRNCB1HS", notificationTypeId = "type-1", channels = listOf("slack_dm"), channelConfig = emptyMap(), filters = emptyList(), enabled = true)))
+            .thenReturn(
+                SubscribeResult.Success(
+                    SubscriptionDto(
+                        id = "sub-1",
+                        userId = "U03SRNCB1HS",
+                        notificationTypeId = "type-1",
+                        channels = listOf("slack_dm"),
+                        channelConfig = emptyMap(),
+                        filters = emptyList(),
+                        enabled = true
+                    )
+                )
+            )
 
         invokeHandleCommand()
 
@@ -582,10 +677,12 @@ class SlashCommandHandlersTest {
 
         invokeHandleCommand()
 
-        verify(ctx).ack(org.mockito.kotlin.check<String> {
-            assertTrue(it.contains("bad_filter"))
-            assertTrue(it.lowercase().contains("field=value"))
-        })
+        verify(ctx).ack(
+            org.mockito.kotlin.check<String> {
+                assertTrue(it.contains("bad_filter"))
+                assertTrue(it.lowercase().contains("field=value"))
+            }
+        )
         verify(subscriptionService, org.mockito.Mockito.never()).subscribeAndActivate(any(), any(), any(), any(), any())
     }
 
@@ -599,7 +696,19 @@ class SlashCommandHandlersTest {
         )
         whenever(apiClient.getFiltersForType("pr_created")).thenReturn(emptyList())
         whenever(subscriptionService.subscribeAndActivate(any(), any(), any(), any(), any()))
-            .thenReturn(SubscribeResult.Success(SubscriptionDto(id = "sub-1", userId = "U03SRNCB1HS", notificationTypeId = "type-1", channels = listOf("slack_dm"), channelConfig = emptyMap(), filters = emptyList(), enabled = true)))
+            .thenReturn(
+                SubscribeResult.Success(
+                    SubscriptionDto(
+                        id = "sub-1",
+                        userId = "U03SRNCB1HS",
+                        notificationTypeId = "type-1",
+                        channels = listOf("slack_dm"),
+                        channelConfig = emptyMap(),
+                        filters = emptyList(),
+                        enabled = true
+                    )
+                )
+            )
 
         invokeHandleCommand()
 

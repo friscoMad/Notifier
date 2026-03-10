@@ -277,6 +277,10 @@ class SlashCommandHandlers(
         ) {
             is SubscribeResult.Success ->
                 ctx.ack("✅ Subscribed to `$typeKey`$filtersSuffix. You'll receive notifications here.")
+            SubscribeResult.AlreadySubscribed ->
+                ctx.ack(
+                    "You're already subscribed to `$typeKey`. Use `/notifyme unsubscribe $typeKey` first if you want to change your filters."
+                )
             SubscribeResult.Failure ->
                 ctx.ack("❌ Failed to subscribe to `$typeKey`. Please try again later.")
         }

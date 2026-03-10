@@ -1,5 +1,6 @@
 package com.notifier.router.api.novu
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
@@ -39,7 +40,7 @@ class NovuApiClientTest {
             RestTemplate().apply {
                 messageConverters.add(0, MappingJackson2HttpMessageConverter())
             }
-        client = NovuApiClient(restTemplate, "${wm.baseUrl()}/v1", "test-key")
+        client = NovuApiClient(restTemplate, "${wm.baseUrl()}/v1", "test-key", ObjectMapper())
     }
 
     @AfterAll

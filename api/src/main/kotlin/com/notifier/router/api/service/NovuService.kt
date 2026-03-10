@@ -467,5 +467,33 @@ class NovuService(
         }
     }
 
+    @Suppress("UNCHECKED_CAST")
+    fun listInAppNotifications(subscriberId: String): List<Map<String, Any?>> {
+        if (novuApiClient == null) return emptyList()
+        return try {
+            novuApiClient!!.listNotifications(subscriberId).mapNotNull { raw ->
+                val payload = raw["payload"] as? Map<String, Any?> ?: emptyMap()
+                val template = raw["template"] as? Map<String, Any?>
+                val templateName = template?.get("name") as? String
+                val triggers = template?.get("triggers") as? List<Map<String, Any?>>
+                val triggerIdentifier = triggers?.firstOrNull()?.get("identifier") as? String
+
+                val typeKey = templateName ?: triggerIdentifier?.replace("-", "_") ?: "notification"
+                val content = payload["content"] as? String ?: "Notification: $typeKey"
+
+                mapOf(
+                    "typeKey" to typeKey,
+                    "content" to content,
+                    "payload" to payload,
+                    "channels" to (raw["channels"] ?: emptyList<String>()),
+                    "createdAt" to raw["createdAt"],
+                )
+            }
+        } catch (e: org.springframework.web.client.RestClientException) {
+            logger.warn("Failed to fetch notifications for $subscriberId: ${e.message}")
+            emptyList()
+        }
+    }
+
     private fun getBaseUrl() = if (apiUrl.isNotBlank()) apiUrl else "https://api.novu.co/v1"
 }

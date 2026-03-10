@@ -22,6 +22,12 @@ spring:
 server:
   port: 8082
 
+app:
+  seeder:
+    # Set to true to wipe all subscriptions/users and clean up Novu on startup.
+    # false (default): only re-seeds static notification types and filter definitions.
+    full-reset: true
+
 novu:
   api:
     url: http://localhost:3000/v1

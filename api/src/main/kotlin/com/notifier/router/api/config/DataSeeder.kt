@@ -7,7 +7,9 @@ import com.notifier.router.api.repository.FilterDefinitionRepository
 import com.notifier.router.api.repository.NotificationTypeRepository
 import com.notifier.router.api.repository.SubscriptionRepository
 import com.notifier.router.api.repository.UserRepository
+import com.notifier.router.api.service.NovuService
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.CommandLineRunner
 import org.springframework.context.annotation.Profile
 import org.springframework.core.Ordered
@@ -17,25 +19,33 @@ import java.util.UUID
 
 @Component
 @Profile("local")
+@Suppress("LongParameterList")
 class DataSeeder(
     private val notificationTypeRepository: NotificationTypeRepository,
+    private val filterDefinitionRepository: FilterDefinitionRepository,
     private val subscriptionRepository: SubscriptionRepository,
     private val channelSubscriptionRepository: ChannelSubscriptionRepository,
     private val userRepository: UserRepository,
-    private val filterDefinitionRepository: FilterDefinitionRepository,
+    private val novuService: NovuService,
+    @Value("\${app.seeder.full-reset:false}") private val fullReset: Boolean,
 ) : CommandLineRunner,
     Ordered {
     private val logger = LoggerFactory.getLogger(DataSeeder::class.java)
 
     @Transactional
     override fun run(vararg args: String) {
-        logger.info("Resetting and seeding data for local profile...")
+        if (fullReset) {
+            logger.info("Full reset enabled — wiping all data including subscriptions and Novu state...")
+            userRepository.findAll().forEach { novuService.cleanupSubscriber(it.slackId) }
+            subscriptionRepository.deleteAll()
+            channelSubscriptionRepository.deleteAll()
+            userRepository.deleteAll()
+        } else {
+            logger.info("Seeding notification types and filter definitions (subscriptions preserved)...")
+        }
 
-        // Deletion order respects foreign keys
-        subscriptionRepository.deleteAll()
-        channelSubscriptionRepository.deleteAll()
+        // Always reset static reference data
         filterDefinitionRepository.deleteAll()
-        userRepository.deleteAll()
         notificationTypeRepository.deleteAll()
 
         seedData.forEach { (type, filters) ->

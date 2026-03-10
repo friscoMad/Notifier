@@ -31,6 +31,10 @@ app:
     # false (default): only re-seeds static notification types and filter definitions.
     full-reset: true
 
+buildkite:
+  webhook:
+    token: ${BUILDKITE_WEBHOOK_TOKEN:}
+
 novu:
   api:
     url: http://localhost:3000/v1

@@ -22,6 +22,7 @@ import javax.crypto.spec.SecretKeySpec
 class WebhookController(
     private val eventService: EventService,
     @Value("\${github.webhook.secret:}") private val githubSecret: String,
+    @Value("\${buildkite.webhook.token:}") private val buildkiteToken: String,
 ) {
     @PostMapping("/github")
     fun handleGitHubWebhook(
@@ -41,8 +42,14 @@ class WebhookController(
 
     @PostMapping("/buildkite")
     fun handleBuildkiteWebhook(
+        @RequestHeader("X-Buildkite-Token") token: String?,
         @RequestBody payload: String,
-    ): ResponseEntity<Void> = parseAndProcess { BuildkiteWebhookAdapter.parse(payload) }
+    ): ResponseEntity<Void> {
+        if (!verifyBuildkiteToken(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
+        }
+        return parseAndProcess { BuildkiteWebhookAdapter.parse(payload) }
+    }
 
     private fun parseAndProcess(parse: () -> NotificationEvent): ResponseEntity<Void> =
         try {
@@ -77,5 +84,15 @@ class WebhookController(
         } catch (_: Exception) {
             false
         }
+    }
+
+    private fun verifyBuildkiteToken(token: String?): Boolean {
+        if (buildkiteToken.isBlank()) return true
+        if (token.isNullOrBlank()) return false
+
+        return MessageDigest.isEqual(
+            token.toByteArray(Charsets.UTF_8),
+            buildkiteToken.toByteArray(Charsets.UTF_8),
+        )
     }
 }

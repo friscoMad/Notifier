@@ -1,5 +1,7 @@
 package com.notifier.router.api.service
 
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpEntity
@@ -22,7 +24,7 @@ class SlackOAuthService(
         "https://slack.com/oauth/v2/authorize?" +
             "client_id=$clientId" +
             "&user_scope=identity.basic,identity.email" +
-            "&redirect_uri=$redirectUri"
+            "&redirect_uri=${URLEncoder.encode(redirectUri, StandardCharsets.UTF_8)}"
 
     @Suppress("UNCHECKED_CAST")
     fun exchangeCode(code: String): SlackUser? {

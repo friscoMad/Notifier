@@ -50,6 +50,7 @@ class AuthController(
         val cookie = Cookie(COOKIE_NAME, token).apply {
             path = "/"
             isHttpOnly = true
+            secure = true
             maxAge = COOKIE_MAX_AGE
             setAttribute("SameSite", "Lax")
         }

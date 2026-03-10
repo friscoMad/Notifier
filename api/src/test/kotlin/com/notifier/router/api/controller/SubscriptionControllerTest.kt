@@ -1,12 +1,15 @@
 package com.notifier.router.api.controller
 
+import com.notifier.router.api.exception.SubscriptionNotFoundException
 import com.notifier.router.api.service.SubscriptionService
 import com.notifier.router.common.dto.SubscriptionDto
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus
 
@@ -100,5 +103,16 @@ class SubscriptionControllerTest {
 
         assert(result.statusCode == HttpStatus.NO_CONTENT)
         assert(result.body == null)
+    }
+
+    @Test
+    fun `test deleteSubscription propagates SubscriptionNotFoundException`() {
+        val id = "${java.util.UUID.randomUUID()}"
+        doThrow(SubscriptionNotFoundException("Subscription not found: $id"))
+            .whenever(subscriptionService).deleteSubscription(any())
+
+        assertThrows<SubscriptionNotFoundException> {
+            subscriptionController.deleteSubscription(id)
+        }
     }
 }

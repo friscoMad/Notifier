@@ -133,12 +133,71 @@ class SubscriptionServiceTest {
     }
 
     @Test
-    fun `test deleteSubscription deletes subscription`() {
+    fun `test deleteSubscription deletes subscription and cleans up Novu when last subscription`() {
+        val id = UUID.randomUUID()
+        val userUuid = UUID.randomUUID()
+        val slackId = "U12345"
+        val subscription = Subscription(
+            id = id,
+            userId = userUuid,
+            notificationTypeId = UUID.randomUUID(),
+            channels = listOf("slack_dm"),
+            channelConfig = emptyMap(),
+            filters = emptyList(),
+            enabled = true,
+        )
+        val mockUser = User(id = userUuid, slackId = slackId)
+
+        whenever(subscriptionRepository.findById(id)).thenReturn(Optional.of(subscription))
+        whenever(subscriptionRepository.findByUserId(userUuid)).thenReturn(emptyList())
+        whenever(userRepository.findById(userUuid)).thenReturn(Optional.of(mockUser))
+
+        subscriptionService.deleteSubscription(id.toString())
+
+        verify(subscriptionRepository).deleteById(id)
+        verify(novuService).cleanupSubscriber(slackId)
+    }
+
+    @Test
+    fun `test deleteSubscription does not clean up Novu when other subscriptions remain`() {
+        val id = UUID.randomUUID()
+        val userUuid = UUID.randomUUID()
+        val subscription = Subscription(
+            id = id,
+            userId = userUuid,
+            notificationTypeId = UUID.randomUUID(),
+            channels = listOf("slack_dm"),
+            channelConfig = emptyMap(),
+            filters = emptyList(),
+            enabled = true,
+        )
+        val remaining = Subscription(
+            id = UUID.randomUUID(),
+            userId = userUuid,
+            notificationTypeId = UUID.randomUUID(),
+            channels = listOf("slack_dm"),
+            channelConfig = emptyMap(),
+            filters = emptyList(),
+            enabled = true,
+        )
+
+        whenever(subscriptionRepository.findById(id)).thenReturn(Optional.of(subscription))
+        whenever(subscriptionRepository.findByUserId(userUuid)).thenReturn(listOf(remaining))
+
+        subscriptionService.deleteSubscription(id.toString())
+
+        verify(subscriptionRepository).deleteById(id)
+        verify(novuService, org.mockito.Mockito.never()).cleanupSubscriber(any())
+    }
+
+    @Test
+    fun `test deleteSubscription throws exception when subscription not found`() {
         val id = UUID.randomUUID().toString()
+        whenever(subscriptionRepository.findById(UUID.fromString(id))).thenReturn(Optional.empty())
 
-        subscriptionService.deleteSubscription(id)
-
-        verify(subscriptionRepository).deleteById(UUID.fromString(id))
+        assertThrows<SubscriptionNotFoundException> {
+            subscriptionService.deleteSubscription(id)
+        }
     }
 
     @Test

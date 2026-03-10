@@ -33,6 +33,12 @@ class SubscriptionService(
                         filters = filters,
                     ),
                 ) ?: return SubscribeResult.Failure
+            } catch (e: org.springframework.web.client.HttpClientErrorException) {
+                if (e.statusCode == org.springframework.http.HttpStatus.CONFLICT) {
+                    return SubscribeResult.AlreadySubscribed
+                }
+                logger.error("Failed to subscribe $userId to $notificationTypeId", e)
+                return SubscribeResult.Failure
             } catch (e: org.springframework.web.client.RestClientException) {
                 logger.error("Failed to subscribe $userId to $notificationTypeId", e)
                 return SubscribeResult.Failure
@@ -108,6 +114,8 @@ sealed interface SubscribeResult {
     data class Success(
         val subscription: SubscriptionDto,
     ) : SubscribeResult
+
+    data object AlreadySubscribed : SubscribeResult
 
     data object Failure : SubscribeResult
 }

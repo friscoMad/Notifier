@@ -192,6 +192,7 @@ class ModalHandlers(
                 )
             ) {
                 is SubscribeResult.Success -> results.add("✅ You'll receive `$typeName` notifications via DM")
+                SubscribeResult.AlreadySubscribed -> results.add("ℹ️ You're already subscribed to `$typeName` via DM")
                 SubscribeResult.Failure -> {
                     results.add("❌ Failed to create DM subscription")
                     anyFailure = true

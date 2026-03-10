@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Notifications</title>
+<link rel="icon" type="image/png" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --bg: #09090b;
+    --surface: #18181b;
+    --surface-raised: #1f1f23;
+    --border: #27272a;
+    --border-hover: #3f3f46;
+    --text: #fafafa;
+    --text-secondary: #a1a1aa;
+    --muted: #71717a;
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --accent-glow: rgba(99, 102, 241, .15);
+    --danger: #ef4444;
+    --danger-subtle: rgba(239, 68, 68, .1);
+    --success: #22c55e;
+    --success-subtle: rgba(34, 197, 94, .1);
+    --warn: #f59e0b;
+    --warn-subtle: rgba(245, 158, 11, .1);
+    --radius: 10px;
+    --radius-lg: 14px;
+    --transition: 150ms cubic-bezier(.4, 0, .2, 1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 28px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .logo { display: flex; align-items: center; gap: 10px; }
+  header h1 { font-size: 16px; font-weight: 600; letter-spacing: -.3px; }
+
+  .user-bar {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .user-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  main { max-width: 760px; margin: 0 auto; padding: 28px; }
+
+  .section { animation: fadeIn .2s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── Login ── */
+  .login-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 70vh;
+    text-align: center;
+  }
+
+  .login-logo {
+    width: 72px; height: 72px;
+    border-radius: 18px;
+    margin-bottom: 24px;
+    object-fit: contain;
+  }
+
+  .login-page h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; letter-spacing: -.4px; }
+  .login-page p { font-size: 14px; color: var(--muted); max-width: 360px; margin-bottom: 28px; }
+
+  .btn-slack {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 28px;
+    background: #fff;
+    color: #1a1a1a;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    text-decoration: none;
+  }
+
+  .btn-slack:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,.4); }
+  .btn-slack svg { width: 20px; height: 20px; }
+
+  /* ── Shared ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px;
+    margin-bottom: 10px;
+    transition: border-color var(--transition);
+  }
+  .card:hover { border-color: var(--border-hover); }
+
+  .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .card-header-left { display: flex; align-items: center; gap: 10px; }
+  .card-header-right { display: flex; gap: 8px; align-items: center; }
+  .card-title { font-size: 14px; font-weight: 600; letter-spacing: -.2px; }
+
+  .card-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .card-icon-purple { background: var(--accent-glow); color: var(--accent-hover); }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 6px;
+    font-size: 11px; font-weight: 600; letter-spacing: .3px; text-transform: uppercase;
+  }
+  .badge-type { background: var(--accent-glow); color: var(--accent-hover); }
+  .badge-enabled { background: var(--success-subtle); color: var(--success); border: 1px solid rgba(34,197,94,.2); }
+  .badge-disabled { background: var(--danger-subtle); color: var(--danger); border: 1px solid rgba(239,68,68,.2); }
+
+  .meta { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .meta i { width: 13px; height: 13px; opacity: .7; }
+
+  .filters-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .filter-chip {
+    font-size: 11px; padding: 3px 10px;
+    background: rgba(255,255,255,.04); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  button.btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border: 1px solid transparent; border-radius: 8px;
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all var(--transition); white-space: nowrap;
+  }
+  button.btn i { width: 15px; height: 15px; }
+
+  .btn-primary {
+    background: var(--accent); color: #fff;
+    box-shadow: 0 1px 3px rgba(99,102,241,.3), inset 0 1px 0 rgba(255,255,255,.1);
+  }
+  .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid rgba(239,68,68,.3); }
+  .btn-danger:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+  .btn-sm { padding: 5px 11px; font-size: 12px; border-radius: 7px; }
+  .btn-ghost { background: transparent; color: var(--muted); }
+  .btn-ghost:hover { color: var(--text); background: rgba(255,255,255,.05); }
+  .btn-outline { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-outline:hover { color: var(--text); border-color: var(--border-hover); }
+
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .toolbar h2 { font-size: 18px; font-weight: 700; letter-spacing: -.4px; }
+
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 48px 24px; text-align: center;
+  }
+  .empty-state-icon {
+    width: 56px; height: 56px; border-radius: 14px;
+    background: var(--accent-glow); display: flex; align-items: center; justify-content: center;
+    color: var(--accent-hover); margin-bottom: 16px;
+  }
+  .empty-state h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .empty-state p { font-size: 13px; color: var(--muted); max-width: 320px; }
+
+  /* ── Forms ── */
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
+
+  input, select {
+    width: 100%; padding: 9px 13px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 13px; font-family: 'Inter', sans-serif;
+    outline: none; transition: all var(--transition);
+  }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2371717a' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center; padding-right: 32px; cursor: pointer;
+  }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center; z-index: 100;
+    animation: fadeIn .15s ease;
+  }
+  .modal {
+    background: var(--surface-raised); border: 1px solid var(--border);
+    border-radius: 16px; padding: 28px; width: 90%; max-width: 540px; max-height: 85vh;
+    overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    animation: modalIn .2s cubic-bezier(.4, 0, .2, 1);
+  }
+  @keyframes modalIn { from { opacity: 0; transform: scale(.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .modal-header h3 { font-size: 16px; font-weight: 600; }
+  .modal-close {
+    width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+    border: none; background: transparent; color: var(--muted); cursor: pointer; border-radius: 8px;
+    transition: all var(--transition);
+  }
+  .modal-close:hover { background: rgba(255,255,255,.06); color: var(--text); }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+  .checkbox-group { display: flex; flex-wrap: wrap; gap: 12px; }
+  .checkbox-group label {
+    display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text);
+    cursor: pointer; padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px;
+    transition: all var(--transition);
+  }
+  .checkbox-group label:has(input:checked) { border-color: var(--accent); background: var(--accent-glow); }
+  .checkbox-group input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+  .filter-row { display: grid; grid-template-columns: 1fr 120px 1fr 36px; gap: 8px; align-items: end; margin-bottom: 8px; }
+  .filter-row .btn { height: 38px; width: 36px; padding: 0; display: flex; align-items: center; justify-content: center; }
+  .filter-hint { padding: 10px 14px; background: rgba(255,255,255,.02); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; display: flex; align-items: center; gap: 10px;
+    padding: 12px 18px; border-radius: 10px; font-size: 13px; font-weight: 500; z-index: 200;
+    box-shadow: 0 8px 32px rgba(0,0,0,.5); animation: toastIn .25s cubic-bezier(.4, 0, .2, 1);
+  }
+  .toast i { width: 18px; height: 18px; flex-shrink: 0; }
+  .toast-success { background: #166534; color: #bbf7d0; border: 1px solid rgba(34,197,94,.3); }
+  .toast-error { background: #7f1d1d; color: #fecaca; border: 1px solid rgba(239,68,68,.3); }
+  @keyframes toastIn { from { transform: translateY(16px) scale(.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+
+  /* ── Feed ── */
+  .feed-container { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .feed-item {
+    display: flex; gap: 14px; padding: 16px 18px; border-bottom: 1px solid var(--border);
+    transition: background var(--transition); animation: feedIn .3s ease;
+  }
+  @keyframes feedIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+  .feed-item:hover { background: rgba(255,255,255,.02); }
+  .feed-item:last-child { border-bottom: none; }
+
+  .feed-item-new {
+    animation: slideInNew .5s cubic-bezier(.4, 0, .2, 1);
+    background: rgba(99, 102, 241, .06);
+  }
+  .feed-item-new .feed-icon {
+    animation: iconPop .4s cubic-bezier(.4, 0, .2, 1) .1s both;
+  }
+  @keyframes slideInNew {
+    from { opacity: 0; transform: translateY(-12px); max-height: 0; padding-top: 0; padding-bottom: 0; }
+    to { opacity: 1; transform: translateY(0); max-height: 200px; }
+  }
+  @keyframes iconPop {
+    0% { transform: scale(0.5); opacity: 0; }
+    60% { transform: scale(1.15); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .badge-new {
+    background: var(--accent); color: #fff; font-size: 9px; padding: 1px 6px;
+    border-radius: 4px; animation: badgePulse 2s ease-in-out infinite;
+  }
+  @keyframes badgePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .5; }
+  }
+  .feed-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .feed-icon i { width: 18px; height: 18px; }
+  .feed-content { flex: 1; min-width: 0; }
+  .feed-title { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .feed-body { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .feed-time { font-size: 11px; color: var(--muted); margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+  .feed-time i { width: 12px; height: 12px; }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex; gap: 4px; margin-bottom: 24px;
+    padding: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  }
+  .tabs button {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 8px 14px; background: transparent; border: none; color: var(--muted);
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer;
+    border-radius: 7px; transition: all var(--transition);
+  }
+  .tabs button:hover { color: var(--text-secondary); }
+  .tabs button.active { color: var(--text); background: var(--accent-glow); }
+  .tabs button i { width: 16px; height: 16px; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN PAGE -->
+<div id="login-page" class="login-page" style="display:none">
+  <img src="/favicon.ico" class="login-logo" alt="Logo" />
+  <h2>Notification Router</h2>
+  <p>Sign in with your Slack account to manage your notification subscriptions and see your feed.</p>
+  <a href="/auth/slack" class="btn-slack">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 124 124"><path fill="#e01e5a" d="M26.4 78.7a12.9 12.9 0 1 1-12.9-12.9h12.9v12.9zm6.5 0a12.9 12.9 0 1 1 25.8 0v32.3a12.9 12.9 0 1 1-25.8 0V78.7z"/><path fill="#36c5f0" d="M45.8 26.4a12.9 12.9 0 1 1 12.9-12.9v12.9H45.8zm0 6.5a12.9 12.9 0 1 1 0 25.8H13.5a12.9 12.9 0 0 1 0-25.8h32.3z"/><path fill="#2eb67d" d="M97.6 45.8a12.9 12.9 0 1 1 12.9 12.9H97.6V45.8zm-6.5 0a12.9 12.9 0 1 1-25.8 0V13.5a12.9 12.9 0 1 1 25.8 0v32.3z"/><path fill="#ecb22e" d="M78.2 97.6a12.9 12.9 0 1 1-12.9 12.9V97.6h12.9zm0-6.5a12.9 12.9 0 1 1 0-25.8h32.3a12.9 12.9 0 0 1 0 25.8H78.2z"/></svg>
+    Sign in with Slack
+  </a>
+  <div id="login-error" style="margin-top:16px;font-size:13px;color:var(--danger);display:none"></div>
+</div>
+
+<!-- APP (shown after login) -->
+<div id="app" style="display:none">
+  <header>
+    <div class="logo">
+      <img src="/favicon.ico" alt="Logo" style="width:32px;height:32px;border-radius:8px;object-fit:contain" />
+      <h1>My Notifications</h1>
+    </div>
+    <div class="user-bar">
+      <span class="user-name" id="user-display"></span>
+      <button class="btn btn-ghost btn-sm" onclick="Auth.logout()">
+        <i data-lucide="log-out"></i> Sign out
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div class="tabs">
+      <button class="active" data-tab="notifications">
+        <i data-lucide="bell"></i> Notifications
+      </button>
+      <button data-tab="my-subscriptions">
+        <i data-lucide="settings"></i> My Subscriptions
+      </button>
+    </div>
+
+    <!-- NOTIFICATIONS -->
+    <div id="notifications" class="tab-content active">
+      <div class="toolbar">
+        <h2>Recent Notifications</h2>
+        <button class="btn btn-outline btn-sm" onclick="NotifFeed.refresh()">
+          <i data-lucide="refresh-cw"></i> Refresh
+        </button>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+        <div class="form-group" style="margin:0;flex:1;min-width:160px">
+          <label>Type</label>
+          <select id="notif-filter-type" onchange="NotifFeed.renderFiltered()">
+            <option value="">All types</option>
+            <option value="pr_created">PR Created</option>
+            <option value="pr_review_requested">Review Requested</option>
+            <option value="pr_merged_service">PR Merged (Service)</option>
+            <option value="pr_checks_passed">Checks Passed</option>
+            <option value="pr_checks_failed">Checks Failed</option>
+            <option value="deploy_started">Deploy Started</option>
+            <option value="deploy_completed">Deploy Completed</option>
+            <option value="flaky_test_detected">Flaky Test</option>
+            <option value="pr_merged_master_success">Merged Master OK</option>
+            <option value="pr_merged_master_error">Merged Master Error</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0;flex:1;min-width:160px">
+          <label>Search content</label>
+          <input id="notif-filter-text" placeholder="Filter by keyword..." oninput="NotifFeed.renderFiltered()" />
+        </div>
+      </div>
+      <div id="notif-count" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
+      <div class="feed-container">
+        <div id="notif-list">
+          <div class="empty-state">
+            <div class="empty-state-icon"><i data-lucide="inbox" style="width:24px;height:24px"></i></div>
+            <h3>No notifications yet</h3>
+            <p>When events match your subscriptions, they will appear here.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MY SUBSCRIPTIONS -->
+    <div id="my-subscriptions" class="tab-content">
+      <div class="toolbar">
+        <h2>My Subscriptions</h2>
+        <button class="btn btn-primary btn-sm" onclick="MySubs.showAdd()">
+          <i data-lucide="plus"></i> Add
+        </button>
+      </div>
+      <div id="my-sub-list"></div>
+    </div>
+  </main>
+</div>
+
+<div id="modal-root"></div>
+
+<script>
+const API = '/api/v1';
+let currentUser = null;
+let notifTypes = [];
+
+function esc(str) {
+  const d = document.createElement('div');
+  d.appendChild(document.createTextNode(String(str)));
+  return d.innerHTML;
+}
+
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  const icon = type === 'success' ? 'check-circle' : 'alert-circle';
+  el.className = `toast toast-${type}`;
+  el.innerHTML = `<i data-lucide="${icon}"></i><span>${esc(msg)}</span>`;
+  document.body.appendChild(el);
+  lucide.createIcons({ nodes: [el] });
+  setTimeout(() => { el.style.animation = 'fadeIn .2s ease reverse'; setTimeout(() => el.remove(), 200); }, 2800);
+}
+
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(API + path, { headers: { 'Content-Type': 'application/json', ...opts.headers }, ...opts });
+  if (!res.ok) { const text = await res.text(); throw new Error(text || res.statusText); }
+  if (res.status === 204 || res.status === 202) return null;
+  return res.json();
+}
+
+function showModal(html) {
+  document.getElementById('modal-root').innerHTML =
+    `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`;
+  lucide.createIcons({ nodes: [document.getElementById('modal-root')] });
+}
+function closeModal() {
+  const o = document.querySelector('.modal-overlay');
+  if (o) { o.style.animation = 'fadeIn .15s ease reverse'; setTimeout(() => { document.getElementById('modal-root').innerHTML = ''; }, 150); }
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+async function loadTypes() {
+  if (notifTypes.length) return notifTypes;
+  try { notifTypes = await apiFetch('/notification-types'); } catch { notifTypes = []; }
+  return notifTypes;
+}
+function typeNameById(id) { const t = notifTypes.find(t => t.id === id); return t ? t.name : id; }
+function typeKeyById(id) { const t = notifTypes.find(t => t.id === id); return t ? t.key : id; }
+
+// ── Tab Navigation ──
+document.querySelectorAll('.tabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Auth ──
+const Auth = {
+  async init() {
+    const params = new URLSearchParams(location.search);
+    if (params.get('error')) {
+      document.getElementById('login-error').textContent =
+        params.get('error') === 'auth_failed' ? 'Slack authentication failed. Please try again.' : 'Login error. Please try again.';
+      document.getElementById('login-error').style.display = 'block';
+    }
+
+    try {
+      const res = await fetch('/auth/me');
+      if (res.ok) {
+        currentUser = await res.json();
+        this.showApp();
+        return;
+      }
+    } catch {}
+    this.showLogin();
+  },
+
+  showLogin() {
+    document.getElementById('login-page').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  },
+
+  showApp() {
+    document.getElementById('login-page').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('user-display').textContent = currentUser.name || currentUser.slackId;
+    lucide.createIcons();
+    loadTypes().then(() => { MySubs.load(); NotifFeed.load(); });
+  },
+
+  async logout() {
+    await fetch('/auth/logout', { method: 'POST' });
+    currentUser = null;
+    location.reload();
+  },
+};
+
+// ── Notification Feed ──
+const NotifFeed = {
+  items: [],
+  knownIds: new Set(),
+  pollTimer: null,
+
+  async load() {
+    try {
+      const res = await fetch('/api/v1/notifications/me');
+      if (!res.ok) return;
+      this.items = await res.json();
+      this.knownIds = new Set(this.items.map(n => n.createdAt));
+    } catch { this.items = []; }
+    this.render();
+    this.startPolling();
+  },
+
+  startPolling() {
+    if (this.pollTimer) clearInterval(this.pollTimer);
+    this.pollTimer = setInterval(() => this.refresh(), 3000);
+  },
+
+  async refresh() {
+    try {
+      const res = await fetch('/api/v1/notifications/me');
+      if (!res.ok) return;
+      const items = await res.json();
+      const newIds = new Set(items.map(n => n.createdAt));
+      const hasNew = items.some(n => !this.knownIds.has(n.createdAt));
+      if (hasNew || items.length !== this.items.length) {
+        const brandNewIds = new Set(items.filter(n => !this.knownIds.has(n.createdAt)).map(n => n.createdAt));
+        this.items = items;
+        this.knownIds = newIds;
+        this.render(brandNewIds);
+      }
+    } catch {}
+  },
+
+  getFiltered() {
+    const typeFilter = document.getElementById('notif-filter-type')?.value || '';
+    const textFilter = (document.getElementById('notif-filter-text')?.value || '').toLowerCase();
+    return this.items.filter(n => {
+      if (typeFilter && (n.typeKey || '') !== typeFilter) return false;
+      if (textFilter && !(n.content || '').toLowerCase().includes(textFilter)) return false;
+      return true;
+    });
+  },
+
+  renderFiltered() { this.render(); },
+
+  render(newIds = null) {
+    const el = document.getElementById('notif-list');
+    const countEl = document.getElementById('notif-count');
+    if (!this.items.length) {
+      el.innerHTML = `<div class="empty-state">
+        <div class="empty-state-icon"><i data-lucide="inbox" style="width:24px;height:24px"></i></div>
+        <h3>No notifications yet</h3>
+        <p>When events match your subscriptions, they will appear here.</p>
+      </div>`;
+      if (countEl) countEl.textContent = '';
+      lucide.createIcons({ nodes: [el] });
+      return;
+    }
+    const filtered = this.getFiltered();
+    if (countEl) {
+      countEl.textContent = filtered.length === this.items.length
+        ? `${this.items.length} notification${this.items.length === 1 ? '' : 's'}`
+        : `${filtered.length} of ${this.items.length} notifications`;
+    }
+    if (!filtered.length) {
+      el.innerHTML = `<div class="empty-state" style="padding:32px">
+        <div class="empty-state-icon"><i data-lucide="filter-x" style="width:24px;height:24px"></i></div>
+        <h3>No matching notifications</h3>
+        <p>Try adjusting your filters.</p>
+      </div>`;
+      lucide.createIcons({ nodes: [el] });
+      return;
+    }
+    el.innerHTML = filtered.map(n => {
+      const typeKey = n.typeKey || 'notification';
+      const content = n.content || 'Notification';
+      const typeName = typeKey.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      const isNew = newIds && newIds.has(n.createdAt);
+
+      const { icon, color } = this.getIcon(typeKey);
+      const created = n.createdAt ? this.timeAgo(new Date(n.createdAt)) : '';
+      const channels = (n.channels || []).map(ch => `<span class="badge badge-type" style="font-size:9px">${esc(ch)}</span>`).join(' ');
+      const lines = content.split('\n');
+
+      return `<div class="feed-item${isNew ? ' feed-item-new' : ''}">
+        <div class="feed-icon" style="background:${color.bg};color:${color.fg}"><i data-lucide="${icon}"></i></div>
+        <div class="feed-content">
+          <div class="feed-title">
+            ${esc(lines[0])}
+            <span class="badge badge-type" style="font-size:9px">${esc(typeName)}</span>
+            ${channels}
+            ${isNew ? '<span class="badge badge-new">new</span>' : ''}
+          </div>
+          ${lines.length > 1 ? `<div class="feed-body" style="font-size:12px;color:var(--text-secondary);white-space:pre-line;margin-top:4px">${esc(lines.slice(1).join('\n'))}</div>` : ''}
+          <div class="feed-time"><i data-lucide="clock"></i>${esc(created)}</div>
+        </div>
+      </div>`;
+    }).join('');
+    lucide.createIcons({ nodes: [el] });
+  },
+
+  getIcon(type) {
+    if (type.includes('review')) return { icon: 'eye', color: { bg: 'var(--warn-subtle)', fg: 'var(--warn)' } };
+    if (type.includes('merged')) return { icon: 'git-merge', color: { bg: 'var(--success-subtle)', fg: 'var(--success)' } };
+    if (type.includes('pr') && type.includes('created')) return { icon: 'git-pull-request', color: { bg: 'var(--accent-glow)', fg: 'var(--accent-hover)' } };
+    if (type.includes('checks') && type.includes('fail')) return { icon: 'x-circle', color: { bg: 'var(--danger-subtle)', fg: 'var(--danger)' } };
+    if (type.includes('checks') && type.includes('pass')) return { icon: 'check-circle', color: { bg: 'var(--success-subtle)', fg: 'var(--success)' } };
+    if (type.includes('deploy') && type.includes('start')) return { icon: 'rocket', color: { bg: 'var(--warn-subtle)', fg: 'var(--warn)' } };
+    if (type.includes('deploy') && type.includes('complete')) return { icon: 'check-circle', color: { bg: 'var(--success-subtle)', fg: 'var(--success)' } };
+    if (type.includes('flaky') || type.includes('test')) return { icon: 'bug', color: { bg: 'var(--danger-subtle)', fg: 'var(--danger)' } };
+    return { icon: 'bell', color: { bg: 'var(--accent-glow)', fg: 'var(--accent-hover)' } };
+  },
+
+  timeAgo(date) {
+    const s = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (s < 5) return 'just now';
+    if (s < 60) return s + 's ago';
+    if (s < 3600) return Math.floor(s/60) + 'm ago';
+    if (s < 86400) return Math.floor(s/3600) + 'h ago';
+    return Math.floor(s/86400) + 'd ago';
+  },
+};
+
+// ── My Subscriptions ──
+const MySubs = {
+  current: [],
+
+  async load() {
+    if (!currentUser) return;
+    await loadTypes();
+    try {
+      this.current = await apiFetch(`/subscriptions/users/${encodeURIComponent(currentUser.slackId)}`);
+      this.render();
+    } catch (e) { toast('Failed to load subscriptions: ' + e.message, 'error'); }
+  },
+
+  render() {
+    const el = document.getElementById('my-sub-list');
+    if (!this.current.length) {
+      el.innerHTML = `<div class="empty-state">
+        <div class="empty-state-icon"><i data-lucide="bell-off" style="width:24px;height:24px"></i></div>
+        <h3>No subscriptions yet</h3>
+        <p>Add a subscription to start receiving notifications for events you care about.</p>
+      </div>`;
+      lucide.createIcons({ nodes: [el] });
+      return;
+    }
+    el.innerHTML = this.current.map(sub => {
+      const typeName = typeNameById(sub.notificationTypeId);
+      const typeKey = typeKeyById(sub.notificationTypeId);
+      const filters = (sub.filters || []).map(f =>
+        `<span class="filter-chip">${esc(f.field)} ${esc(f.operator)} ${esc(f.value)}</span>`
+      ).join('');
+      const channels = (sub.channels || []).map(ch => {
+        const icon = ch === 'chat' || ch === 'slack_dm' ? 'message-square' : 'layout-grid';
+        return `<span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="${icon}" style="width:12px;height:12px"></i>${esc(ch)}</span>`;
+      }).join(', ');
+      return `<div class="card">
+        <div class="card-header">
+          <div class="card-header-left">
+            <div class="card-icon card-icon-purple"><i data-lucide="bell" style="width:18px;height:18px"></i></div>
+            <div>
+              <span class="card-title">${esc(typeName)}</span>
+              <div style="margin-top:2px"><span class="badge badge-type">${esc(typeKey)}</span></div>
+            </div>
+          </div>
+          <div class="card-header-right">
+            <span class="badge ${sub.enabled ? 'badge-enabled' : 'badge-disabled'}">
+              <i data-lucide="${sub.enabled ? 'check' : 'pause'}" style="width:11px;height:11px"></i>
+              ${sub.enabled ? 'active' : 'paused'}
+            </span>
+            <button class="btn btn-danger btn-sm" onclick="MySubs.remove('${esc(sub.id)}')">
+              <i data-lucide="trash-2"></i>
+            </button>
+          </div>
+        </div>
+        <div class="meta"><i data-lucide="radio"></i>Channels: ${channels || 'none'}</div>
+        ${filters ? `<div class="filters-list">${filters}</div>` : ''}
+      </div>`;
+    }).join('');
+    lucide.createIcons({ nodes: [el] });
+  },
+
+  async remove(id) {
+    if (!confirm('Delete this subscription?')) return;
+    try {
+      await apiFetch(`/subscriptions/${id}`, { method: 'DELETE' });
+      toast('Subscription deleted');
+      this.load();
+    } catch (e) { toast('Failed: ' + e.message, 'error'); }
+  },
+
+  async showAdd() {
+    const types = await loadTypes();
+    const opts = types.map(t => `<option value="${esc(t.id)}">${esc(t.name)} (${esc(t.key)})</option>`).join('');
+    showModal(`
+      <div class="modal-header">
+        <h3>New Subscription</h3>
+        <button class="modal-close" onclick="closeModal()"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+      </div>
+      <div class="form-group">
+        <label>Notification Type</label>
+        <select id="add-sub-type" onchange="MySubs.loadFilterDefs()">${opts}</select>
+      </div>
+      <div class="form-group">
+        <label>Channels</label>
+        <div class="checkbox-group" id="add-sub-channels">
+          <label><input type="checkbox" value="in_app" checked /> In-App</label>
+          <label><input type="checkbox" value="chat" /> Slack DM</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Filters</label>
+        <div id="add-sub-filter-defs"></div>
+        <div id="add-sub-filters"></div>
+        <button class="btn btn-ghost btn-sm" onclick="MySubs.addFilterRow()" style="margin-top:6px">
+          <i data-lucide="plus" style="width:14px;height:14px"></i> Add filter
+        </button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="MySubs.create()"><i data-lucide="check"></i> Create</button>
+      </div>
+    `);
+    this.loadFilterDefs();
+  },
+
+  async loadFilterDefs() {
+    const typeId = document.getElementById('add-sub-type').value;
+    const type = notifTypes.find(t => t.id === typeId);
+    if (!type) return;
+    try {
+      const defs = await apiFetch(`/notification-types/${encodeURIComponent(type.key)}/filters`);
+      const el = document.getElementById('add-sub-filter-defs');
+      if (defs.length) {
+        el.innerHTML = `<div class="filter-hint">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:.3px">Available fields</div>
+          <div class="filters-list" style="margin:0">${defs.map(d =>
+            `<span class="filter-chip">${esc(d.field)} <span style="color:var(--muted)">(${d.operators.map(esc).join(', ')})</span></span>`
+          ).join('')}</div>
+        </div>`;
+      } else {
+        el.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0">No filter definitions for this type.</div>';
+      }
+    } catch {}
+  },
+
+  addFilterRow() {
+    const container = document.getElementById('add-sub-filters');
+    const row = document.createElement('div');
+    row.className = 'filter-row';
+    row.innerHTML = `
+      <div class="form-group" style="margin:0"><input placeholder="field" class="f-field" /></div>
+      <div class="form-group" style="margin:0">
+        <select class="f-op">
+          <option value="EQ">equals</option>
+          <option value="NEQ">not equals</option>
+          <option value="CONTAINS">contains</option>
+          <option value="IN">in</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0"><input placeholder="value" class="f-value" /></div>
+      <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()"><i data-lucide="x" style="width:14px;height:14px"></i></button>
+    `;
+    container.appendChild(row);
+    lucide.createIcons({ nodes: [row] });
+  },
+
+  async create() {
+    const typeId = document.getElementById('add-sub-type').value;
+    const channels = [...document.querySelectorAll('#add-sub-channels input:checked')].map(c => c.value);
+    const filterRows = document.querySelectorAll('#add-sub-filters .filter-row');
+    const filters = [...filterRows].map(row => ({
+      field: row.querySelector('.f-field').value,
+      operator: row.querySelector('.f-op').value,
+      value: row.querySelector('.f-value').value,
+    })).filter(f => f.field && f.value);
+
+    try {
+      await apiFetch('/subscriptions', {
+        method: 'POST',
+        body: JSON.stringify({
+          userId: currentUser.slackId,
+          notificationTypeId: typeId,
+          channels,
+          filters,
+          enabled: true,
+        }),
+      });
+      // Create Slack endpoint so Novu can deliver DMs
+      if (channels.includes('chat') || channels.includes('slack_dm')) {
+        try {
+          await fetch(`${API}/subscribers/${encodeURIComponent(currentUser.slackId)}/slack/endpoint`, { method: 'POST' });
+        } catch {}
+      }
+      toast('Subscription created');
+      closeModal();
+      this.load();
+    } catch (e) { toast('Failed: ' + e.message, 'error'); }
+  },
+};
+
+// ── Init ──
+Auth.init();
+</script>
+</body>
+</html>

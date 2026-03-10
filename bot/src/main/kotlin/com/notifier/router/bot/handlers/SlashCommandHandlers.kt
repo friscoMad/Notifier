@@ -326,13 +326,40 @@ class SlashCommandHandlers(
         val typeId = match.id!!
         val filters = mutableListOf<Filter>()
 
-        // Parse filter arguments (e.g., repo=api)
         if (args.size > 1) {
+            val validFields = try {
+                apiClient.getFiltersForType(typeKey).map { it.field }.toSet()
+            } catch (e: org.springframework.web.client.RestClientException) {
+                logger.warn("Could not fetch filter definitions for $typeKey", e)
+                emptySet()
+            }
+
             for (i in 1 until args.size) {
-                val pair = args[i].split("=", limit = 2)
-                if (pair.size == 2) {
-                    filters.add(Filter(pair[0], "EQ", pair[1]))
+                val filterArg = args[i]
+                val pair = filterArg.split("=", limit = 2)
+                if (pair.size != 2) {
+                    return ctx.ack(
+                        "Invalid filter format: `$filterArg`. Filters must use `field=value` syntax " +
+                            "(e.g. `repo=api`).",
+                    )
                 }
+                val field = pair[0]
+                val rawValue = pair[1]
+
+                if (validFields.isNotEmpty() && field !in validFields) {
+                    val validList = validFields.joinToString { "`$it`" }
+                    return ctx.ack(
+                        "Unknown filter field: `$field`. Valid fields for `$typeKey` are: $validList",
+                    )
+                }
+
+                filters.add(
+                    if (rawValue.contains(",")) {
+                        Filter(field, "IN", rawValue.split(",").map { it.trim() }.filter { it.isNotEmpty() })
+                    } else {
+                        Filter(field, "EQ", rawValue)
+                    },
+                )
             }
         }
 
@@ -348,6 +375,10 @@ class SlashCommandHandlers(
         ) {
             is SubscribeResult.Success ->
                 ctx.ack("✅ Subscribed to `$typeKey`$filtersSuffix. You'll receive notifications here.")
+            SubscribeResult.AlreadySubscribed ->
+                ctx.ack(
+                    "You're already subscribed to `$typeKey`. Use `/notifyme unsubscribe $typeKey` first if you want to change your filters."
+                )
             SubscribeResult.Failure ->
                 ctx.ack("❌ Failed to subscribe to `$typeKey`. Please try again later.")
         }

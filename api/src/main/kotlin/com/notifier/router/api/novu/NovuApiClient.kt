@@ -173,6 +173,19 @@ class NovuApiClient(
         )
     }
 
+    // ── Notifications ────────────────────────────────────────────────────────
+
+    @Suppress("UNCHECKED_CAST")
+    fun listNotifications(subscriberId: String): List<Map<String, Any?>> =
+        restTemplate
+            .exchange(
+                "$baseUrl/notifications?subscriberIds=$subscriberId&limit=$NOTIFICATION_PAGE_SIZE",
+                HttpMethod.GET,
+                HttpEntity<Unit>(headers()),
+                Map::class.java,
+            ).body
+            .dataRawList() as List<Map<String, Any?>>
+
     // ── Private Helpers ───────────────────────────────────────────────────────
 
     private fun headers(): HttpHeaders =
@@ -180,6 +193,10 @@ class NovuApiClient(
             it.set(HttpHeaders.AUTHORIZATION, "ApiKey $apiKey")
             it.contentType = MediaType.APPLICATION_JSON
         }
+
+    companion object {
+        private const val NOTIFICATION_PAGE_SIZE = 50
+    }
 }
 
 @Suppress("UNCHECKED_CAST")

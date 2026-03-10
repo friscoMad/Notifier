@@ -19,8 +19,10 @@ class WebhookControllerTest {
 
     private lateinit var webhookController: WebhookController
 
-    private val testSecret = "my-test-secret"
-    private val samplePayload =
+    private val testGithubSecret = "my-test-secret"
+    private val testBuildkiteToken = "my-buildkite-token"
+
+    private val sampleGithubPayload =
         """
         {
           "action": "opened",
@@ -38,9 +40,23 @@ class WebhookControllerTest {
         }
         """.trimIndent()
 
+    private val sampleBuildkitePayload =
+        """
+        {
+          "event": "build.finished",
+          "pipeline": { "slug": "my-pipeline", "web_url": "https://buildkite.com/org/my-pipeline" },
+          "build": {
+            "state": "passed",
+            "message": "production",
+            "web_url": "https://buildkite.com/org/my-pipeline/builds/1",
+            "finished_at": "2023-01-01T00:00:00Z"
+          }
+        }
+        """.trimIndent()
+
     @BeforeEach
     fun setup() {
-        webhookController = WebhookController(eventService, testSecret)
+        webhookController = WebhookController(eventService, testGithubSecret, testBuildkiteToken)
     }
 
     private fun generateHmac(
@@ -54,11 +70,13 @@ class WebhookControllerTest {
         return "sha256=" + hashBytes.joinToString("") { "%02x".format(it) }
     }
 
+    // --- GitHub tests ---
+
     @Test
     fun `handleGitHubWebhook accepts valid signature and yields Accepted`() {
-        val signature = generateHmac(samplePayload, testSecret)
+        val signature = generateHmac(sampleGithubPayload, testGithubSecret)
 
-        val response = webhookController.handleGitHubWebhook(signature, samplePayload)
+        val response = webhookController.handleGitHubWebhook(signature, sampleGithubPayload)
 
         assert(response.statusCode == HttpStatus.ACCEPTED)
         verify(eventService).processEventAsync(any())
@@ -68,7 +86,7 @@ class WebhookControllerTest {
     fun `handleGitHubWebhook rejects invalid signature and yields Unauthorized`() {
         val invalidSignature = "sha256=invalidhashvalue"
 
-        val response = webhookController.handleGitHubWebhook(invalidSignature, samplePayload)
+        val response = webhookController.handleGitHubWebhook(invalidSignature, sampleGithubPayload)
 
         assert(response.statusCode == HttpStatus.UNAUTHORIZED)
         verify(eventService, never()).processEventAsync(any())
@@ -76,9 +94,45 @@ class WebhookControllerTest {
 
     @Test
     fun `handleGitHubWebhook accepts payload if secret is totally blank`() {
-        webhookController = WebhookController(eventService, "")
+        webhookController = WebhookController(eventService, "", testBuildkiteToken)
 
-        val response = webhookController.handleGitHubWebhook(null, samplePayload)
+        val response = webhookController.handleGitHubWebhook(null, sampleGithubPayload)
+
+        assert(response.statusCode == HttpStatus.ACCEPTED)
+        verify(eventService).processEventAsync(any())
+    }
+
+    // --- Buildkite tests ---
+
+    @Test
+    fun `handleBuildkiteWebhook accepts valid token and yields Accepted`() {
+        val response = webhookController.handleBuildkiteWebhook(testBuildkiteToken, sampleBuildkitePayload)
+
+        assert(response.statusCode == HttpStatus.ACCEPTED)
+        verify(eventService).processEventAsync(any())
+    }
+
+    @Test
+    fun `handleBuildkiteWebhook rejects wrong token and yields Unauthorized`() {
+        val response = webhookController.handleBuildkiteWebhook("wrong-token", sampleBuildkitePayload)
+
+        assert(response.statusCode == HttpStatus.UNAUTHORIZED)
+        verify(eventService, never()).processEventAsync(any())
+    }
+
+    @Test
+    fun `handleBuildkiteWebhook rejects missing token and yields Unauthorized`() {
+        val response = webhookController.handleBuildkiteWebhook(null, sampleBuildkitePayload)
+
+        assert(response.statusCode == HttpStatus.UNAUTHORIZED)
+        verify(eventService, never()).processEventAsync(any())
+    }
+
+    @Test
+    fun `handleBuildkiteWebhook accepts payload if token is not configured`() {
+        webhookController = WebhookController(eventService, testGithubSecret, "")
+
+        val response = webhookController.handleBuildkiteWebhook(null, sampleBuildkitePayload)
 
         assert(response.statusCode == HttpStatus.ACCEPTED)
         verify(eventService).processEventAsync(any())

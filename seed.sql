@@ -1,3 +1,0 @@
-INSERT INTO notification_types (id, type_key, name, description, created_at) VALUES ('123e4567-e89b-12d3-a456-426614174000', 'pr_created', 'PR Created', 'Fired when PR created', NOW()) ON CONFLICT (id) DO NOTHING;
-INSERT INTO users (id, slack_id, email, name, created_at, updated_at) VALUES ('123e4567-e89b-12d3-a456-426614174001', 'johndoe', 'johndoe@example.com', 'John Doe', NOW(), NOW()) ON CONFLICT (id) DO NOTHING;
-INSERT INTO subscriptions (id, user_id, notification_type_id, channels, channel_config, filters, enabled, created_at, updated_at) VALUES ('123e4567-e89b-12d3-a456-426614174002', '123e4567-e89b-12d3-a456-426614174001', '123e4567-e89b-12d3-a456-426614174000', '["inbox"]', '{}', '[]', true, NOW(), NOW()) ON CONFLICT (id) DO NOTHING;

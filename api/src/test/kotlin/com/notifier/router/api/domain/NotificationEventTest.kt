@@ -286,36 +286,39 @@ class NotificationEventTest {
 
     @Nested
     inner class JobFinishedEventTest {
-        @Test fun `passed status shows success icon and typeKey pr_checks_passed`() {
+        @Test fun `passed status shows success icon and typeKey buildkite_job_finished`() {
             val event = JobFinishedEvent(
-                service = "api",
-                testName = "unit-tests",
-                team = "backend",
+                pipeline = "api",
+                jobName = "unit-tests",
+                buildNumber = 42,
+                branch = "master",
                 status = "passed",
+                exitStatus = 0,
                 jobUrl = "https://buildkite.com/job/1",
                 buildUrl = "https://buildkite.com/build/1",
                 finishedAt = "2024-01-01T00:00:00Z",
             )
-            assertEquals("pr_checks_passed", event.typeKey)
+            assertEquals("buildkite_job_finished", event.typeKey)
             val content = event.payload["content"] as String
-            assertTrue(content.startsWith("✅ *Build Passed:*"), "content=$content")
+            assertTrue(content.startsWith("✅ *Job Passed:*"), "content=$content")
             assertTrue(content.contains("unit-tests"), "content=$content")
-            assertTrue(content.contains("<https://buildkite.com/build/1|View build>"), "content=$content")
+            assertTrue(content.contains("<https://buildkite.com/build/1|#42>"), "content=$content")
         }
 
-        @Test fun `failed status shows failure icon and typeKey pr_checks_failed`() {
+        @Test fun `failed status shows failure icon`() {
             val event = JobFinishedEvent(
-                service = "api",
-                testName = "unit-tests",
-                team = "backend",
+                pipeline = "api",
+                jobName = "unit-tests",
+                buildNumber = 42,
+                branch = "master",
                 status = "failed",
+                exitStatus = 1,
                 jobUrl = "https://buildkite.com/job/1",
                 buildUrl = "https://buildkite.com/build/1",
                 finishedAt = "2024-01-01T00:00:00Z",
             )
-            assertEquals("pr_checks_failed", event.typeKey)
             val content = event.payload["content"] as String
-            assertTrue(content.startsWith("❌ *Build Failed:*"), "content=$content")
+            assertTrue(content.startsWith("❌ *Job Failed:*"), "content=$content")
         }
     }
 
@@ -340,32 +343,32 @@ class NotificationEventTest {
 
     @Nested
     inner class BuildFinishedEventTest {
-        @Test fun `passed status shows success icon and typeKey deploy_completed`() {
+        @Test fun `passed status shows success icon and typeKey buildkite_build_finished`() {
             val event = BuildFinishedEvent(
-                service = "api",
-                environment = "staging",
+                pipeline = "api",
+                buildNumber = 42,
+                branch = "master",
                 status = "passed",
                 buildUrl = "https://buildkite.com/build/1",
                 finishedAt = "2024-01-01T00:00:00Z",
             )
-            assertEquals("deploy_completed", event.typeKey)
+            assertEquals("buildkite_build_finished", event.typeKey)
             val content = event.payload["content"] as String
-            assertTrue(content.startsWith("✅ *Build Completed*"), "content=$content")
-            assertTrue(content.contains("<https://buildkite.com/build/1|api>"), "content=$content")
-            assertTrue(content.contains("staging"), "content=$content")
+            assertTrue(content.startsWith("✅ *Build Passed:*"), "content=$content")
+            assertTrue(content.contains("<https://buildkite.com/build/1|#42 api>"), "content=$content")
         }
 
-        @Test fun `failed status shows failure icon and typeKey deploy_failed`() {
+        @Test fun `failed status shows failure icon`() {
             val event = BuildFinishedEvent(
-                service = "api",
-                environment = "staging",
+                pipeline = "api",
+                buildNumber = 42,
+                branch = "master",
                 status = "failed",
                 buildUrl = "https://buildkite.com/build/1",
                 finishedAt = "2024-01-01T00:00:00Z",
             )
-            assertEquals("deploy_failed", event.typeKey)
             val content = event.payload["content"] as String
-            assertTrue(content.startsWith("❌ *Build Failed*"), "content=$content")
+            assertTrue(content.startsWith("❌ *Build Failed:*"), "content=$content")
         }
     }
 

@@ -240,31 +240,133 @@ data class DeployCompletedEvent(
 
 // ── Buildkite Events ──────────────────────────────────────────
 
-data class JobFinishedEvent(
-    val service: String,
-    val testName: String,
-    val team: String,
+data class BuildScheduledEvent(
+    val pipeline: String,
+    val buildNumber: Int,
+    val branch: String,
+    val creator: String,
+    val buildUrl: String,
+) : NotificationEvent {
+    override val typeKey = "buildkite_build_scheduled"
+    override val metadata
+        get() = mapOf("pipeline" to pipeline, "branch" to branch, "creator" to creator)
+    override val payload
+        get() =
+            mapOf<String, Any>(
+                "content" to "🕐 *Build Scheduled:* <$buildUrl|#$buildNumber $pipeline>\n*Branch:* $branch  ·  *By:* $creator",
+                "build_url" to buildUrl,
+            )
+}
+
+data class BuildRunningEvent(
+    val pipeline: String,
+    val buildNumber: Int,
+    val branch: String,
+    val creator: String,
+    val buildUrl: String,
+) : NotificationEvent {
+    override val typeKey = "buildkite_build_running"
+    override val metadata
+        get() = mapOf("pipeline" to pipeline, "branch" to branch, "creator" to creator)
+    override val payload
+        get() =
+            mapOf<String, Any>(
+                "content" to "🏃 *Build Running:* <$buildUrl|#$buildNumber $pipeline>\n*Branch:* $branch  ·  *By:* $creator",
+                "build_url" to buildUrl,
+            )
+}
+
+data class BuildFinishedEvent(
+    val pipeline: String,
+    val buildNumber: Int,
+    val branch: String,
     val status: String,
+    val buildUrl: String,
+    val finishedAt: String,
+) : NotificationEvent {
+    override val typeKey = "buildkite_build_finished"
+    override val metadata
+        get() = mapOf("pipeline" to pipeline, "branch" to branch, "status" to status)
+    override val payload
+        get() =
+            mapOf<String, Any>(
+                "content" to if (status == "passed") {
+                    "✅ *Build Passed:* <$buildUrl|#$buildNumber $pipeline>\n*Branch:* $branch"
+                } else {
+                    "❌ *Build Failed:* <$buildUrl|#$buildNumber $pipeline>\n*Branch:* $branch  ·  *Status:* $status"
+                },
+                "build_url" to buildUrl,
+                "finished_at" to finishedAt,
+                "state" to status,
+            )
+}
+
+data class JobScheduledEvent(
+    val pipeline: String,
+    val jobName: String,
+    val buildNumber: Int,
+    val branch: String,
+    val buildUrl: String,
+) : NotificationEvent {
+    override val typeKey = "buildkite_job_scheduled"
+    override val metadata
+        get() = mapOf("pipeline" to pipeline, "job_name" to jobName, "branch" to branch)
+    override val payload
+        get() =
+            mapOf<String, Any>(
+                "content" to "🕐 *Job Scheduled:* $jobName\n*Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>  ·  *Branch:* $branch",
+                "build_url" to buildUrl,
+            )
+}
+
+data class JobStartedEvent(
+    val pipeline: String,
+    val jobName: String,
+    val buildNumber: Int,
+    val branch: String,
+    val agentName: String,
+    val jobUrl: String,
+    val buildUrl: String,
+) : NotificationEvent {
+    override val typeKey = "buildkite_job_started"
+    override val metadata
+        get() = mapOf("pipeline" to pipeline, "job_name" to jobName, "branch" to branch)
+    override val payload
+        get() =
+            mapOf<String, Any>(
+                "content" to "🏃 *Job Started:* <$jobUrl|$jobName>\n*Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>  ·  *Agent:* $agentName",
+                "job_url" to jobUrl,
+                "build_url" to buildUrl,
+            )
+}
+
+data class JobFinishedEvent(
+    val pipeline: String,
+    val jobName: String,
+    val buildNumber: Int,
+    val branch: String,
+    val status: String,
+    val exitStatus: Int?,
     val jobUrl: String,
     val buildUrl: String,
     val finishedAt: String,
 ) : NotificationEvent {
-    override val typeKey = if (status == "passed") "pr_checks_passed" else "pr_checks_failed"
+    override val typeKey = "buildkite_job_finished"
     override val metadata
         get() =
             mapOf(
-                "service" to service,
-                "test_name" to testName,
-                "team" to team,
+                "pipeline" to pipeline,
+                "job_name" to jobName,
+                "branch" to branch,
                 "status" to status,
             )
     override val payload
         get() =
             mapOf<String, Any>(
                 "content" to if (status == "passed") {
-                    "✅ *Build Passed:* $testName\n<$buildUrl|View build>  ·  *Service:* $service  ·  *Team:* $team"
+                    "✅ *Job Passed:* <$jobUrl|$jobName>\n*Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>"
                 } else {
-                    "❌ *Build Failed:* $testName\n<$buildUrl|View build>  ·  *Service:* $service  ·  *Team:* $team"
+                    "❌ *Job Failed:* <$jobUrl|$jobName>\n*Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>  ·  *Exit:* ${exitStatus ?: "?"}"
                 },
                 "job_url" to jobUrl,
                 "build_url" to buildUrl,
@@ -291,32 +393,35 @@ data class PipelineUpdatedEvent(
             )
 }
 
-data class BuildFinishedEvent(
-    val service: String,
-    val environment: String,
-    val status: String,
-    val buildUrl: String,
-    val finishedAt: String,
+data class AgentConnectedEvent(
+    val agentName: String,
+    val hostname: String,
+    val agentUrl: String,
 ) : NotificationEvent {
-    override val typeKey = if (status == "passed") "deploy_completed" else "deploy_failed"
+    override val typeKey = "buildkite_agent_connected"
     override val metadata
-        get() =
-            mapOf(
-                "service" to service,
-                "environment" to environment,
-                "status" to status,
-            )
+        get() = mapOf("agent_name" to agentName, "hostname" to hostname)
     override val payload
         get() =
             mapOf<String, Any>(
-                "content" to if (status == "passed") {
-                    "✅ *Build Completed*\n<$buildUrl|$service>  ·  *Environment:* $environment"
-                } else {
-                    "❌ *Build Failed*\n<$buildUrl|$service>  ·  *Environment:* $environment"
-                },
-                "build_url" to buildUrl,
-                "finished_at" to finishedAt,
-                "state" to status,
+                "content" to "🟢 *Agent Connected:* $agentName\n*Host:* $hostname\n<$agentUrl|View agent>",
+                "agent_url" to agentUrl,
+            )
+}
+
+data class AgentDisconnectedEvent(
+    val agentName: String,
+    val hostname: String,
+    val agentUrl: String,
+) : NotificationEvent {
+    override val typeKey = "buildkite_agent_disconnected"
+    override val metadata
+        get() = mapOf("agent_name" to agentName, "hostname" to hostname)
+    override val payload
+        get() =
+            mapOf<String, Any>(
+                "content" to "🔴 *Agent Disconnected:* $agentName\n*Host:* $hostname\n<$agentUrl|View agent>",
+                "agent_url" to agentUrl,
             )
 }
 

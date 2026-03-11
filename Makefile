@@ -1,4 +1,4 @@
-.PHONY: up novu-up novu-seed db-migrate run-api run-bot run-simulator
+.PHONY: up novu-up novu-seed db-migrate run-api run-bot run-simulator buildkite-agent ngrok-buildkite
 
 up:
 	@echo "Starting all infrastructure (Postgres + Novu stack)..."
@@ -28,3 +28,11 @@ run-bot:
 run-simulator:
 	@echo "Starting Webhook Simulator..."
 	@./gradlew :tools:webhook-simulator:bootRun
+
+buildkite-agent:
+	@echo "Starting Buildkite agent (queue: default-self-hosted)..."
+	@bash scripts/start-buildkite-agent.sh
+
+ngrok-buildkite:
+	@echo "Starting ngrok tunnel for Buildkite webhooks..."
+	@bash scripts/start-ngrok-buildkite.sh

@@ -59,7 +59,7 @@ object GitHubWebhookAdapter {
             repo = w.repository.fullName,
             baseBranch = pr.base.ref,
             title = pr.title,
-            description = pr.body,
+            description = pr.body ?: "",
             url = pr.htmlUrl,
             createdAt = pr.createdAt,
         )

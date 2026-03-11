@@ -17,6 +17,7 @@ import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.whenever
 import java.util.UUID
 
@@ -99,6 +100,61 @@ class EventServiceTest {
 
         verify(novuService).triggerChannelWorkflow("pr_created", "in_app", listOf("U123"), event.payload)
         verify(novuService).triggerChannelWorkflow("pr_created", "chat", listOf("U123"), event.payload)
+    }
+
+    @Test
+    fun `processEventAsync triggers digest workflow when subscription has digest enabled`() {
+        val typeId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+
+        val event =
+            GenericEvent(
+                typeKey = "pr_created",
+                metadata = mapOf("repo" to "api"),
+                rawPayload = mapOf("pr_url" to "https://github.com/pull/1"),
+            )
+
+        val notifType =
+            NotificationType(
+                id = typeId,
+                typeKey = "pr_created",
+                name = "PR Created",
+                description = "Opened PR",
+            )
+
+        val digestSub =
+            Subscription(
+                id = UUID.randomUUID(),
+                userId = userId,
+                notificationTypeId = typeId,
+                channels = listOf("slack_dm"),
+                channelConfig = mapOf("digest" to true, "digestInterval" to "1d"),
+                filters = emptyList(),
+            )
+
+        val user =
+            User(
+                id = userId,
+                slackId = "U123",
+                slackTeamId = "T1",
+                email = "test@x.com",
+                name = "User",
+            )
+
+        whenever(notificationTypeRepository.findByTypeKey("pr_created")).thenReturn(notifType)
+        whenever(subscriptionRepository.findByNotificationTypeId(typeId)).thenReturn(listOf(digestSub))
+        whenever(filterEvaluator.evaluate(event, digestSub.filters)).thenReturn(true)
+        whenever(userRepository.findAllById(listOf(userId))).thenReturn(listOf(user))
+        whenever(channelSubscriptionRepository.findByNotificationTypeId(typeId)).thenReturn(emptyList())
+
+        eventService.processEventAsync(event)
+
+        // in_app is always immediate
+        verify(novuService).triggerChannelWorkflow("pr_created", "in_app", listOf("U123"), event.payload)
+        // chat is routed to digest workflow (12h interval → pr_created_chat_digest_12h)
+        verify(novuService).triggerWorkflow("pr_created_chat_digest_1d", listOf("U123"), event.payload)
+        // immediate chat workflow must NOT be triggered
+        verify(novuService, never()).triggerChannelWorkflow(eq("pr_created"), eq("chat"), any(), any())
     }
 
     @Test

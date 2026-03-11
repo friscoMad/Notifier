@@ -210,6 +210,8 @@ class ModalHandlers(
                     channelName = channelName,
                     notificationTypeId = typeId,
                     filters = extractedFilters,
+                    digestEnabled = channelConfig["digest"] == true,
+                    digestInterval = channelConfig["digestInterval"] as? String ?: "1w",
                 )
             ) {
                 is ChannelSubscribeResult.Success -> results.add(

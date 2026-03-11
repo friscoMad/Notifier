@@ -44,9 +44,10 @@ class DataSeeder(
             logger.info("Seeding notification types and filter definitions (subscriptions preserved)...")
         }
 
-        // Always reset static reference data
+        // Refresh filter definitions (no FK dependencies from subscriptions)
         filterDefinitionRepository.deleteAllInBatch()
-        notificationTypeRepository.deleteAllInBatch()
+        // Notification types are upserted via save() — deleteAllInBatch() would violate the FK
+        // constraint from `subscriptions.notification_type_id` when full-reset is disabled.
 
         seedData.forEach { (type, filters) ->
             notificationTypeRepository.save(type)

@@ -28,7 +28,7 @@ data class PrCreatedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
-                "content" to "PR opened by $author: <$url|$title> ($repo)",
+                "content" to "🔔 *PR Opened*\n<$url|$title>\n*Repo:* $repo  ·  *Branch:* $baseBranch  ·  *Author:* $author",
                 "title" to title,
                 "description" to description,
                 "url" to url,
@@ -57,7 +57,7 @@ data class PrReviewRequestedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
-                "content" to "$reviewer requested to review: $title",
+                "content" to "👀 *Review Requested*\n<$url|$title>\n*Reviewer:* $reviewer  ·  *Repo:* $repo  ·  *Author:* $author",
                 "title" to title,
                 "url" to url,
                 "requested_at" to requestedAt,
@@ -78,7 +78,7 @@ data class PrUpdatedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
-                "content" to "PR updated by $author: $title ($repo)",
+                "content" to "🔄 *PR Updated*\n<$url|$title>\n*Repo:* $repo  ·  *Branch:* $baseBranch  ·  *Author:* $author",
                 "title" to title,
                 "url" to url,
                 "updated_at" to updatedAt,
@@ -101,7 +101,11 @@ data class PrClosedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
-                "content" to "PR ${if (merged) "merged" else "closed"}: $title ($repo)",
+                "content" to if (merged) {
+                    "✅ *PR Merged*\n<$url|$title>\n*Repo:* $repo  ·  *Merged by:* $mergedBy"
+                } else {
+                    "❌ *PR Closed (unmerged)*\n<$url|$title>\n*Repo:* $repo  ·  *Author:* $author"
+                },
                 "title" to title,
                 "url" to url,
                 "merged_at" to mergedAt,
@@ -131,7 +135,7 @@ data class PrCheckReRequestedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
-                "content" to "Check $checkName re-requested on $repo",
+                "content" to "🔁 *Check Re-requested:* $checkName\n<$checkSuiteUrl|View suite>  ·  *Repo:* $repo  ·  *Author:* $author",
                 "check_suite_url" to checkSuiteUrl,
                 "rerequested_at" to reRequestedAt,
             )
@@ -158,7 +162,11 @@ data class PrCheckCompletedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
-                "content" to "Check $checkName $conclusion on $repo",
+                "content" to if (conclusion == "success") {
+                    "✅ *Check Passed:* $checkName\n<$checkRunUrl|View run>  ·  *Repo:* $repo  ·  *Author:* $author"
+                } else {
+                    "❌ *Check Failed:* $checkName\n<$checkRunUrl|View run>  ·  *Repo:* $repo  ·  *Author:* $author"
+                },
                 "check_run_url" to checkRunUrl,
                 "conclusion" to conclusion,
                 "completed_at" to completedAt,
@@ -188,7 +196,7 @@ data class DeployStartedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
-                "content" to "Deploy of $service to $environment started",
+                "content" to "🚀 *Deploy Started*\n*Service:* $service  ·  *Environment:* $environment  ·  *Author:* $author",
                 "deployment_url" to deploymentUrl,
                 "status" to status,
                 "created_at" to createdAt,
@@ -218,7 +226,11 @@ data class DeployCompletedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
-                "content" to "Deploy of $service to $environment: $status",
+                "content" to if (status == "success") {
+                    "✅ *Deploy Completed*\n<$deploymentUrl|$service>  ·  *Environment:* $environment  ·  *Author:* $author"
+                } else {
+                    "❌ *Deploy Failed*\n<$deploymentUrl|$service>  ·  *Environment:* $environment  ·  *Status:* $status  ·  *Author:* $author"
+                },
                 "deployment_url" to deploymentUrl,
                 "status_url" to statusUrl,
                 "status" to status,
@@ -249,7 +261,11 @@ data class JobFinishedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
-                "content" to "Build $status for $service ($testName)",
+                "content" to if (status == "passed") {
+                    "✅ *Build Passed:* $testName\n<$buildUrl|View build>  ·  *Service:* $service  ·  *Team:* $team"
+                } else {
+                    "❌ *Build Failed:* $testName\n<$buildUrl|View build>  ·  *Service:* $service  ·  *Team:* $team"
+                },
                 "job_url" to jobUrl,
                 "build_url" to buildUrl,
                 "finished_at" to finishedAt,
@@ -269,7 +285,7 @@ data class PipelineUpdatedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
-                "content" to "Pipeline updated for $service",
+                "content" to "🔧 *Pipeline Updated*\n<$pipelineUrl|$service>  ·  *Team:* $team",
                 "pipeline_url" to pipelineUrl,
                 "updated_at" to updatedAt,
             )
@@ -293,7 +309,11 @@ data class BuildFinishedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
-                "content" to "Build $status for $service on $environment",
+                "content" to if (status == "passed") {
+                    "✅ *Build Completed*\n<$buildUrl|$service>  ·  *Environment:* $environment"
+                } else {
+                    "❌ *Build Failed*\n<$buildUrl|$service>  ·  *Environment:* $environment"
+                },
                 "build_url" to buildUrl,
                 "finished_at" to finishedAt,
                 "state" to status,
@@ -309,5 +329,5 @@ data class GenericEvent(
     private val rawPayload: Map<String, Any> = emptyMap(),
 ) : NotificationEvent {
     override val payload
-        get() = mapOf("content" to "Notification: $typeKey") + rawPayload
+        get() = mapOf("content" to "🔔 *Notification:* $typeKey") + rawPayload
 }

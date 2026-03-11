@@ -1,7 +1,7 @@
 {
-    "name": "pr_created",
-    "identifier": "pr-created",
-    "description": "Triggered when a new pull request is opened",
+    "name": "deploy_completed",
+    "identifier": "deploy-completed",
+    "description": "Triggered when a deployment finishes (success or failure)",
     "active": true,
     "draft": false,
     "preferenceSettings": {

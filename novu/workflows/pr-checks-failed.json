@@ -1,7 +1,7 @@
 {
-    "name": "pr_created",
-    "identifier": "pr-created",
-    "description": "Triggered when a new pull request is opened",
+    "name": "pr_checks_failed",
+    "identifier": "pr-checks-failed",
+    "description": "Triggered when PR checks fail or are re-requested",
     "active": true,
     "draft": false,
     "preferenceSettings": {

@@ -234,6 +234,44 @@ class NovuService(
         logger.info("Novu trigger response: ${response.data}")
     }
 
+    /**
+     * Triggers the channel-specific workflow variant for the given channel
+     * (e.g. `pr_created_chat` for Slack, `pr_created_email` for email).
+     */
+    fun triggerChannelWorkflow(
+        typeKey: String,
+        channel: String,
+        subscriberIds: List<String>,
+        payload: Map<String, Any>,
+    ) {
+        val workflowKey = "${typeKey}_$channel"
+        if (!this::novuClient.isInitialized) {
+            logger.info("MOCK Trigger Channel Workflow: $workflowKey to $subscriberIds")
+            return
+        }
+
+        subscriberIds.forEach { subscriberId ->
+            try {
+                ensureSubscriberExists(subscriberId)
+            } catch (e: org.springframework.web.client.RestClientException) {
+                logger.warn("Could not pre-register subscriber $subscriberId in Novu, attempting trigger anyway", e)
+            }
+        }
+
+        val novuIdentifier = workflowRegistry[workflowKey] ?: workflowKey
+        val request = TriggerEventRequest()
+        request.name = novuIdentifier
+        request.to = subscriberIds
+        val enrichedPayload = payload.toMutableMap()
+        if ("subject" !in enrichedPayload) {
+            enrichedPayload["subject"] = enrichedPayload["content"] ?: "Notification"
+        }
+        request.payload = enrichedPayload
+
+        val response = novuClient.triggerEvent(request)
+        logger.info("Novu channel trigger ($workflowKey) response: ${response.data}")
+    }
+
     fun syncSubscriberPreferences(
         subscriberId: String,
         workflowKey: String,
@@ -320,6 +358,61 @@ class NovuService(
             logger.info("Provisioned Novu workflow: $key -> $novuIdentifier ($name)")
         } else {
             logger.warn("Created Novu workflow $key but could not extract trigger identifier")
+        }
+    }
+
+    /**
+     * Ensures a single-channel workflow variant exists in Novu (e.g. `pr_created_chat`).
+     * Each variant has only one step matching its channel type.
+     */
+    fun ensureChannelWorkflowExists(
+        typeKey: String,
+        name: String,
+        channel: String,
+    ) {
+        if (!this::novuClient.isInitialized) {
+            logger.warn("Novu client not initialized, skipping workflow check for ${typeKey}_$channel")
+            return
+        }
+
+        val workflowKey = "${typeKey}_$channel"
+        val workflows = novuApiClient!!.listWorkflows()
+        val existing = workflows.find { it.name == workflowKey }
+
+        if (existing != null) {
+            val novuIdentifier = existing.triggers?.firstOrNull()?.identifier
+            if (novuIdentifier != null) workflowRegistry[workflowKey] = novuIdentifier
+            logger.info("Registered existing channel workflow: $workflowKey -> $novuIdentifier")
+            return
+        }
+
+        val groups = novuApiClient!!.listNotificationGroups()
+        val groupId =
+            (groups.firstOrNull()?.get("_id") as? String)
+                ?: return logger.error("Could not find any notification groups in Novu")
+
+        val step = when (channel) {
+            "email" -> NovuWorkflowStep(NovuStepTemplate("email", "{{content}}", "customHtml", "{{subject}}"))
+            else -> NovuWorkflowStep(NovuStepTemplate(channel, "{{content}}"))
+        }
+
+        val created =
+            novuApiClient!!.createWorkflow(
+                NovuWorkflow(
+                    name = workflowKey,
+                    notificationGroupId = groupId,
+                    steps = listOf(step),
+                    active = true,
+                    draft = false,
+                    critical = false,
+                ),
+            )
+        val novuIdentifier = created.triggers?.firstOrNull()?.identifier
+        if (novuIdentifier != null) {
+            workflowRegistry[workflowKey] = novuIdentifier
+            logger.info("Provisioned channel workflow: $workflowKey -> $novuIdentifier ($name)")
+        } else {
+            logger.warn("Created channel workflow $workflowKey but could not extract trigger identifier")
         }
     }
 
@@ -631,13 +724,14 @@ class NovuService(
         if (novuApiClient == null) return emptyList()
         return try {
             novuApiClient!!.listNotifications(subscriberId).mapNotNull { raw ->
-                val payload = raw["payload"] as? Map<String, Any?> ?: emptyMap()
                 val template = raw["template"] as? Map<String, Any?>
-                val templateName = template?.get("name") as? String
-                val triggers = template?.get("triggers") as? List<Map<String, Any?>>
-                val triggerIdentifier = triggers?.firstOrNull()?.get("identifier") as? String
+                val templateName = template?.get("name") as? String ?: ""
 
-                val typeKey = templateName ?: triggerIdentifier?.replace("-", "_") ?: "notification"
+                // Only show in_app workflow notifications to avoid duplicates
+                if (!templateName.endsWith("_in_app")) return@mapNotNull null
+
+                val payload = raw["payload"] as? Map<String, Any?> ?: emptyMap()
+                val typeKey = templateName.removeSuffix("_in_app")
                 val content = payload["content"] as? String ?: "Notification: $typeKey"
 
                 mapOf(

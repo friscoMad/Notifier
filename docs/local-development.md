@@ -162,3 +162,4 @@ Invoke-RestMethod -Uri http://localhost:8080/api/v1/webhooks/github `
 ```
 
 You can then log into Novu on `http://localhost:4000` (User: `admin@notifier.local` Password: `admin123`) and verify the payload triggers your `pr-created` pipeline!
+

@@ -1,7 +1,7 @@
 {
-    "name": "pr_created",
-    "identifier": "pr-created",
-    "description": "Triggered when a new pull request is opened",
+    "name": "pr_merged_master_error",
+    "identifier": "pr-merged-master-error",
+    "description": "Triggered when a pull request is closed without being merged",
     "active": true,
     "draft": false,
     "preferenceSettings": {

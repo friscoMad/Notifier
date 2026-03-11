@@ -1,7 +1,7 @@
 {
-    "name": "pr_created",
-    "identifier": "pr-created",
-    "description": "Triggered when a new pull request is opened",
+    "name": "pr_review_requested",
+    "identifier": "pr-review-requested",
+    "description": "Triggered when someone is requested to review a pull request",
     "active": true,
     "draft": false,
     "preferenceSettings": {

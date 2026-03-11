@@ -1,7 +1,7 @@
 {
-    "name": "pr_created",
-    "identifier": "pr-created",
-    "description": "Triggered when a new pull request is opened",
+    "name": "pr_merged_master_success",
+    "identifier": "pr-merged-master-success",
+    "description": "Triggered when a pull request is successfully merged to master",
     "active": true,
     "draft": false,
     "preferenceSettings": {

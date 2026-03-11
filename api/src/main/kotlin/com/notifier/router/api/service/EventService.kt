@@ -17,6 +17,7 @@ class EventService(
     private val userRepository: UserRepository,
     private val filterEvaluator: FilterEvaluator,
     private val novuService: NovuService,
+    private val slackNotificationService: SlackNotificationService,
 ) {
     private val logger = LoggerFactory.getLogger(EventService::class.java)
 
@@ -98,18 +99,26 @@ class EventService(
             }
 
             logger.info(
-                "Triggering Novu for event ${event.typeKey}: " +
+                "Triggering notifications for event ${event.typeKey}: " +
                     channelToSubscribers.entries.joinToString { "${it.key}=${it.value.size}" },
             )
 
-            // Trigger each channel-specific workflow with the right subscribers
+            val slackContent = event.payload["content"] as? String ?: "🔔 *Notification:* ${event.typeKey}"
+
+            // Dispatch each channel: chat goes directly via Slack API (mrkdwn links); others via Novu
             channelToSubscribers.forEach { (channel, subscribers) ->
-                novuService.triggerChannelWorkflow(
-                    event.typeKey,
-                    channel,
-                    subscribers.toList(),
-                    event.payload,
-                )
+                if (channel == "chat") {
+                    subscribers.forEach { slackId ->
+                        slackNotificationService.sendMessage(slackId, slackContent)
+                    }
+                } else {
+                    novuService.triggerChannelWorkflow(
+                        event.typeKey,
+                        channel,
+                        subscribers.toList(),
+                        event.payload,
+                    )
+                }
             }
 
             // Trigger digest workflows for digest-enabled subscribers

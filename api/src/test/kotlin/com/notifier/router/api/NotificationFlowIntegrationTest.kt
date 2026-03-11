@@ -7,6 +7,7 @@ import com.notifier.router.api.repository.NotificationTypeRepository
 import com.notifier.router.api.repository.SubscriptionRepository
 import com.notifier.router.api.repository.UserRepository
 import com.notifier.router.api.service.NovuService
+import com.notifier.router.api.service.SlackNotificationService
 import com.notifier.router.common.domain.Filter
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -35,6 +36,8 @@ class NotificationFlowIntegrationTest : BaseIntegrationTest() {
     @Autowired private lateinit var subscriptionRepository: SubscriptionRepository
 
     @MockitoBean private lateinit var novuService: NovuService
+
+    @MockitoBean private lateinit var slackNotificationService: SlackNotificationService
 
     @BeforeEach
     fun setup() {
@@ -109,9 +112,10 @@ class NotificationFlowIntegrationTest : BaseIntegrationTest() {
         // Give Async processing a moment
         Thread.sleep(500)
 
-        // Verify NovuService was called for "U77777"
+        // Verify NovuService was called for in_app and SlackNotificationService for chat
         verify(novuService).triggerChannelWorkflow(eq("pr_created"), eq("in_app"), eq(listOf("U77777")), any())
-        verify(novuService).triggerChannelWorkflow(eq("pr_created"), eq("chat"), eq(listOf("U77777")), any())
+        verify(novuService, org.mockito.Mockito.never()).triggerChannelWorkflow(any(), eq("chat"), any(), any())
+        verify(slackNotificationService).sendMessage(eq("U77777"), any())
     }
 
     @Test

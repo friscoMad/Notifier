@@ -7,7 +7,6 @@ import jakarta.persistence.EntityListeners
 import jakarta.persistence.Id
 import jakarta.persistence.Index
 import jakarta.persistence.Table
-import jakarta.persistence.UniqueConstraint
 import jakarta.validation.constraints.NotBlank
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
@@ -19,13 +18,6 @@ import java.util.UUID
 @Entity
 @Table(
     name = "channel_subscriptions",
-    uniqueConstraints =
-    [
-        UniqueConstraint(
-            name = "uc_channel_sub_channel_type",
-            columnNames = ["slack_channel_id", "notification_type_id"],
-        ),
-    ],
     indexes =
     [
         Index(name = "idx_channel_sub_channel_id", columnList = "slack_channel_id"),

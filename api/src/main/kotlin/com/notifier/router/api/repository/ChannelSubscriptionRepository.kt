@@ -9,11 +9,6 @@ import java.util.UUID
 interface ChannelSubscriptionRepository : JpaRepository<ChannelSubscription, UUID> {
     fun findBySlackChannelId(slackChannelId: String): List<ChannelSubscription>
 
-    fun findBySlackChannelIdAndNotificationTypeId(
-        slackChannelId: String,
-        notificationTypeId: UUID,
-    ): ChannelSubscription?
-
     fun findByNotificationTypeId(notificationTypeId: UUID): List<ChannelSubscription>
 
     fun findBySlackChannelIdAndEnabledTrue(slackChannelId: String): List<ChannelSubscription>

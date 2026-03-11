@@ -133,8 +133,14 @@ class NotificationEventTest {
 
         @Test fun `content contains clickable link`() {
             val event = PrClosedEvent(
-                merged = true, author = "a", repo = "r", baseBranch = "main",
-                title = "My PR", url = "https://github.com/r/pull/1", mergedAt = "", mergedBy = "b",
+                merged = true,
+                author = "a",
+                repo = "r",
+                baseBranch = "main",
+                title = "My PR",
+                url = "https://github.com/r/pull/1",
+                mergedAt = "",
+                mergedBy = "b",
             )
             val content = event.payload["content"] as String
             assertTrue(content.contains("<https://github.com/r/pull/1|My PR>"), "content=$content")
@@ -203,8 +209,13 @@ class NotificationEventTest {
 
         @Test fun `content contains clickable link to run`() {
             val event = PrCheckCompletedEvent(
-                conclusion = "success", author = "a", repo = "r", checkName = "ci",
-                baseBranch = "main", checkRunUrl = "https://github.com/r/runs/1", completedAt = "",
+                conclusion = "success",
+                author = "a",
+                repo = "r",
+                checkName = "ci",
+                baseBranch = "main",
+                checkRunUrl = "https://github.com/r/runs/1",
+                completedAt = "",
             )
             val content = event.payload["content"] as String
             assertTrue(content.contains("<https://github.com/r/runs/1|View run>"), "content=$content")

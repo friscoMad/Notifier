@@ -60,8 +60,9 @@ class EventService(
                     .map { it.slackChannelId }
                     .distinct()
 
+            // Channel subscriptions only get chat delivery (Slack channel IDs
+            // are not valid Novu subscriber IDs for in_app workflows)
             channelSlackIds.forEach { chId ->
-                channelToSubscribers.getOrPut("in_app") { mutableSetOf() }.add(chId)
                 channelToSubscribers.getOrPut("chat") { mutableSetOf() }.add(chId)
             }
 

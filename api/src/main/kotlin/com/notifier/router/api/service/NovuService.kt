@@ -5,6 +5,10 @@ import co.novu.common.base.Novu
 import co.novu.common.base.NovuConfig
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.notifier.router.api.config.LoggingInterceptor
+import com.notifier.router.api.config.NovuApiProperties
+import com.notifier.router.api.config.NovuResendProperties
+import com.notifier.router.api.config.NovuSesProperties
+import com.notifier.router.api.config.NovuSlackProperties
 import com.notifier.router.api.novu.NovuApiClient
 import com.notifier.router.api.novu.NovuChannelConnection
 import com.notifier.router.api.novu.NovuChannelEndpoint
@@ -20,7 +24,6 @@ import com.notifier.router.api.novu.NovuWorkflowStep
 import com.notifier.router.api.novu.NovuWorkspace
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.client.BufferingClientHttpRequestFactory
 import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter
@@ -29,24 +32,11 @@ import org.springframework.web.client.RestTemplate
 import retrofit2.Retrofit
 
 @Service
-@Suppress("LongParameterList")
 class NovuService(
-    @Value("\${novu.api.key:not-set}") private val apiKey: String,
-    @Value("\${novu.api.url:}") private val apiUrl: String,
-    @Value("\${novu.slack.client-id:}") private val slackClientId: String,
-    @Value("\${novu.slack.client-secret:}") private val slackClientSecret: String,
-    @Value("\${novu.slack.application-id:}") private val slackApplicationId: String,
-    @Value("\${novu.slack.bot-token:}") private val slackBotToken: String,
-    @Value("\${novu.slack.workspace-id:}") private val slackWorkspaceId: String,
-    @Value("\${novu.slack.workspace-name:Slack Workspace}") private val slackWorkspaceName: String,
-    @Value("\${novu.ses.access-key-id:}") private val sesAccessKeyId: String,
-    @Value("\${novu.ses.secret-access-key:}") private val sesSecretAccessKey: String,
-    @Value("\${novu.ses.region:us-east-1}") private val sesRegion: String,
-    @Value("\${novu.ses.from:}") private val sesFrom: String,
-    @Value("\${novu.ses.sender-name:Notifier}") private val sesSenderName: String,
-    @Value("\${novu.resend.api-key:}") private val resendApiKey: String,
-    @Value("\${novu.resend.from:}") private val resendFrom: String,
-    @Value("\${novu.resend.sender-name:Notifier}") private val resendSenderName: String,
+    private val novuApiProps: NovuApiProperties,
+    private val slackProps: NovuSlackProperties,
+    private val sesProps: NovuSesProperties,
+    private val resendProps: NovuResendProperties,
     private val objectMapper: ObjectMapper,
 ) {
     private val logger = LoggerFactory.getLogger(NovuService::class.java)
@@ -95,19 +85,19 @@ class NovuService(
 
     @PostConstruct
     fun init() {
-        if (apiKey == "not-set" || apiKey.isBlank()) {
+        if (novuApiProps.key == "not-set" || novuApiProps.key.isBlank()) {
             logger.warn("Novu API Key is not set or empty. NovuService will log triggers instead.")
         } else {
             logger.info("Initializing Novu client")
-            novuClient = Novu(apiKey)
+            novuClient = Novu(novuApiProps.key)
 
             // If a custom API URL is configured, override the SDK's internal baseUrl
             // using reflection since the Novu Java SDK v1.6.0 does not expose a setter.
-            if (apiUrl.isNotBlank()) {
-                overrideBaseUrl(apiUrl)
+            if (novuApiProps.url.isNotBlank()) {
+                overrideBaseUrl(novuApiProps.url)
             }
 
-            novuApiClient = NovuApiClient(restTemplate, getBaseUrl(), apiKey, objectMapper)
+            novuApiClient = NovuApiClient(restTemplate, getBaseUrl(), novuApiProps.key, objectMapper)
         }
     }
 
@@ -286,31 +276,17 @@ class NovuService(
             val hasWrongTemplate = steps.any {
                 when (it.template.type) {
                     "chat" -> it.template.content != "{{content}}"
-                    "email" -> it.template.content != "{{content}}" ||
-                        it.template.contentType != "customHtml" ||
-                        it.template.subject.isNullOrBlank()
+                    "email" ->
+                        it.template.content != "{{content}}" ||
+                            it.template.contentType != "customHtml" ||
+                            it.template.subject.isNullOrBlank()
                     else -> false
                 }
             }
 
-            if (!hasChatStep || !hasEmailStep || hasPushStep || hasWrongTemplate) {
-                logger.info(
-                    "Workflow $key needs patching (hasChatStep=$hasChatStep, hasEmailStep=$hasEmailStep, hasPushStep=$hasPushStep, hasWrongTemplate=$hasWrongTemplate)"
-                )
-                val cleanSteps =
-                    steps
-                        .filter { it.template.type != "push" }
-                        .map {
-                            when (it.template.type) {
-                                "chat" -> NovuWorkflowStep(NovuStepTemplate("chat", "{{content}}"))
-                                "email" -> NovuWorkflowStep(NovuStepTemplate("email", "{{content}}", "customHtml", "{{subject}}"))
-                                else -> it
-                            }
-                        }
-                        .let { if (!hasChatStep) it + NovuWorkflowStep(NovuStepTemplate("chat", "{{content}}")) else it }
-                        .let { if (!hasEmailStep) it + NovuWorkflowStep(NovuStepTemplate("email", "{{content}}", "customHtml", "{{subject}}")) else it }
-                novuApiClient!!.updateWorkflow(existing._id!!, existing.copy(steps = cleanSteps))
-                logger.info("Patched workflow $key: ensured correct template syntax, removed push, ensured chat and email steps")
+            val needsPatching = !hasChatStep || !hasEmailStep || hasPushStep || hasWrongTemplate
+            if (needsPatching) {
+                patchWorkflow(key, existing, steps, hasChatStep, hasEmailStep)
             } else {
                 logger.info("Registered existing Novu workflow: $key -> $novuIdentifier")
             }
@@ -347,18 +323,55 @@ class NovuService(
         }
     }
 
+    private fun patchWorkflow(
+        key: String,
+        existing: NovuWorkflow,
+        steps: List<NovuWorkflowStep>,
+        hasChatStep: Boolean,
+        hasEmailStep: Boolean,
+    ) {
+        logger.info("Workflow $key needs patching — ensuring chat and email steps with correct templates")
+        val cleanSteps =
+            steps
+                .filter { it.template.type != "push" }
+                .map {
+                    when (it.template.type) {
+                        "chat" -> NovuWorkflowStep(NovuStepTemplate("chat", "{{content}}"))
+                        "email" -> NovuWorkflowStep(
+                            NovuStepTemplate("email", "{{content}}", "customHtml", "{{subject}}")
+                        )
+                        else -> it
+                    }
+                }
+                .let { if (!hasChatStep) it + NovuWorkflowStep(NovuStepTemplate("chat", "{{content}}")) else it }
+                .let {
+                    if (!hasEmailStep) {
+                        it + NovuWorkflowStep(NovuStepTemplate("email", "{{content}}", "customHtml", "{{subject}}"))
+                    } else {
+                        it
+                    }
+                }
+        novuApiClient!!.updateWorkflow(existing._id!!, existing.copy(steps = cleanSteps))
+        logger.info("Patched workflow $key: correct templates, removed push, ensured chat and email steps")
+    }
+
     fun ensureSlackIntegrationExists() {
         if (!this::novuClient.isInitialized) {
             logger.warn("Novu client not initialized, skipping Slack integration check")
             return
         }
 
-        if (slackClientId.isBlank() || slackClientSecret.isBlank() || slackApplicationId.isBlank()) {
+        if (slackProps.clientId.isBlank() || slackProps.clientSecret.isBlank() || slackProps.applicationId.isBlank()) {
             logger.warn("novu.slack credentials not configured — skipping Slack integration setup")
             return
         }
 
-        val credentials = NovuSlackCredentials(slackClientId, slackClientSecret, slackApplicationId, slackBotToken)
+        val credentials = NovuSlackCredentials(
+            slackProps.clientId,
+            slackProps.clientSecret,
+            slackProps.applicationId,
+            slackProps.botToken,
+        )
         val allIntegrations = novuApiClient!!.listIntegrations()
         val slackIntegrations = allIntegrations.filter { it.providerId == "slack" && it.channel == "chat" }
 
@@ -378,7 +391,13 @@ class NovuService(
             } else {
                 val created =
                     novuApiClient!!.createIntegration(
-                        NovuIntegration(providerId = "slack", channel = "chat", name = "Slack", active = true, credentials = credentials),
+                        NovuIntegration(
+                            providerId = "slack",
+                            channel = "chat",
+                            name = "Slack",
+                            active = true,
+                            credentials = credentials
+                        ),
                     )
                 logger.info("Created Slack integration: ${created.identifier}")
                 created
@@ -392,17 +411,17 @@ class NovuService(
             return
         }
 
-        if (sesAccessKeyId.isBlank() || sesSecretAccessKey.isBlank() || sesFrom.isBlank()) {
+        if (sesProps.accessKeyId.isBlank() || sesProps.secretAccessKey.isBlank() || sesProps.from.isBlank()) {
             logger.warn("novu.ses credentials not configured — skipping SES integration setup")
             return
         }
 
         val credentials = NovuSesCredentials(
-            apiKey = sesAccessKeyId,
-            secretKey = sesSecretAccessKey,
-            region = sesRegion,
-            from = sesFrom,
-            senderName = sesSenderName,
+            apiKey = sesProps.accessKeyId,
+            secretKey = sesProps.secretAccessKey,
+            region = sesProps.region,
+            from = sesProps.from,
+            senderName = sesProps.senderName,
         )
         val allIntegrations = novuApiClient!!.listIntegrations()
         val sesIntegrations = allIntegrations.filter { it.providerId == "ses" && it.channel == "email" }
@@ -423,7 +442,13 @@ class NovuService(
             } else {
                 val created =
                     novuApiClient!!.createIntegration(
-                        NovuIntegration(providerId = "ses", channel = "email", name = "SES", active = true, credentials = credentials),
+                        NovuIntegration(
+                            providerId = "ses",
+                            channel = "email",
+                            name = "SES",
+                            active = true,
+                            credentials = credentials
+                        ),
                     )
                 logger.info("Created SES integration: ${created.identifier}")
                 created
@@ -437,15 +462,15 @@ class NovuService(
             return
         }
 
-        if (resendApiKey.isBlank() || resendFrom.isBlank()) {
+        if (resendProps.apiKey.isBlank() || resendProps.from.isBlank()) {
             logger.warn("novu.resend credentials not configured — skipping Resend integration setup")
             return
         }
 
         val credentials = NovuResendCredentials(
-            apiKey = resendApiKey,
-            from = resendFrom,
-            senderName = resendSenderName,
+            apiKey = resendProps.apiKey,
+            from = resendProps.from,
+            senderName = resendProps.senderName,
         )
         val allIntegrations = novuApiClient!!.listIntegrations()
         val resendIntegrations = allIntegrations.filter { it.providerId == "resend" && it.channel == "email" }
@@ -461,7 +486,13 @@ class NovuService(
                 updated
             } else {
                 val created = novuApiClient!!.createIntegration(
-                    NovuIntegration(providerId = "resend", channel = "email", name = "Resend", active = true, credentials = credentials),
+                    NovuIntegration(
+                        providerId = "resend",
+                        channel = "email",
+                        name = "Resend",
+                        active = true,
+                        credentials = credentials
+                    ),
                 )
                 logger.info("Created Resend integration: ${created.identifier}")
                 created
@@ -493,15 +524,15 @@ class NovuService(
             }
         }
 
-        val workspaceId = slackWorkspaceId.ifBlank { "unknown" }
+        val workspaceId = slackProps.workspaceId.ifBlank { "unknown" }
         val connId =
             novuApiClient!!
                 .createChannelConnection(
                     NovuChannelConnection(
                         subscriberId = subscriberId,
                         integrationIdentifier = integrationId,
-                        workspace = NovuWorkspace(workspaceId, slackWorkspaceName),
-                        auth = NovuConnectionAuth(slackBotToken),
+                        workspace = NovuWorkspace(workspaceId, slackProps.workspaceName),
+                        auth = NovuConnectionAuth(slackProps.botToken),
                     ),
                 ).identifier!!
         slackConnectionIdentifier = connId
@@ -621,5 +652,5 @@ class NovuService(
         }
     }
 
-    private fun getBaseUrl() = if (apiUrl.isNotBlank()) apiUrl else "https://api.novu.co/v1"
+    private fun getBaseUrl() = if (novuApiProps.url.isNotBlank()) novuApiProps.url else "https://api.novu.co/v1"
 }

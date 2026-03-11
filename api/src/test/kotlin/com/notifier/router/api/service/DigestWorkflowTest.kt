@@ -104,7 +104,6 @@ class DigestWorkflowTest {
                 assert(steps[1].template.content.contains("step.total_count"))
                 assert(steps[1].template.content.contains("step.events"))
                 assert(steps[1].template.content.contains("{{{content}}}"))
-
             },
         )
         assertEquals("pr-created-chat-digest-abc", readWorkflowRegistry()["pr_created_chat_digest_1d"])

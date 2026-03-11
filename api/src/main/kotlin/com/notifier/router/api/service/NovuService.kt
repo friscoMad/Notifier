@@ -257,14 +257,17 @@ class NovuService(
             val hasChatStep = steps.any { it.template.type == "chat" }
             val hasPushStep = steps.any { it.template.type == "push" }
 
-            if (!hasChatStep || hasPushStep) {
-                logger.info("Workflow $key needs patching (hasChatStep=$hasChatStep, hasPushStep=$hasPushStep)")
+            val chatStepNeedsUpdate = steps.any { it.template.type == "chat" && it.template.content != "{{{content}}}" }
+
+            if (!hasChatStep || hasPushStep || chatStepNeedsUpdate) {
+                logger.info("Workflow $key needs patching (hasChatStep=$hasChatStep, hasPushStep=$hasPushStep, chatStepNeedsUpdate=$chatStepNeedsUpdate)")
                 val cleanSteps =
                     steps
                         .filter { it.template.type != "push" }
-                        .let { if (!hasChatStep) it + NovuWorkflowStep(NovuStepTemplate("chat", "{{content}}")) else it }
+                        .map { if (it.template.type == "chat") NovuWorkflowStep(NovuStepTemplate("chat", "{{{content}}}")) else it }
+                        .let { if (!hasChatStep) it + NovuWorkflowStep(NovuStepTemplate("chat", "{{{content}}}")) else it }
                 novuApiClient!!.updateWorkflow(existing._id!!, existing.copy(steps = cleanSteps))
-                logger.info("Patched workflow $key: removed push, ensured chat step")
+                logger.info("Patched workflow $key: removed push, ensured unescaped chat step")
             } else {
                 logger.info("Registered existing Novu workflow: $key -> $novuIdentifier")
             }
@@ -283,8 +286,8 @@ class NovuService(
                     notificationGroupId = groupId,
                     steps =
                     listOf(
-                        NovuWorkflowStep(NovuStepTemplate("in_app", "{{content}}")),
-                        NovuWorkflowStep(NovuStepTemplate("chat", "{{content}}")),
+                        NovuWorkflowStep(NovuStepTemplate("in_app", "{{{content}}}")),
+                        NovuWorkflowStep(NovuStepTemplate("chat", "{{{content}}}")),
                     ),
                     active = true,
                     draft = false,

@@ -1,5 +1,7 @@
 package com.notifier.router.api.adapter
 
+import com.notifier.router.api.domain.AgentConnectedEvent
+import com.notifier.router.api.domain.AgentDisconnectedEvent
 import com.notifier.router.api.domain.BuildFinishedEvent
 import com.notifier.router.api.domain.GenericEvent
 import com.notifier.router.api.domain.JobFinishedEvent
@@ -21,6 +23,24 @@ object BuildkiteWebhookAdapter {
 
             "build.finished" -> {
                 parseBuildFinished(w)
+            }
+
+            "agent.connected" -> {
+                val a = webhookMapper.readValue<BuildkiteAgentPayload>(payload)
+                AgentConnectedEvent(
+                    agentName = a.agent.name,
+                    hostname = a.agent.hostname,
+                    agentUrl = a.agent.webUrl,
+                )
+            }
+
+            "agent.disconnected" -> {
+                val a = webhookMapper.readValue<BuildkiteAgentPayload>(payload)
+                AgentDisconnectedEvent(
+                    agentName = a.agent.name,
+                    hostname = a.agent.hostname,
+                    agentUrl = a.agent.webUrl,
+                )
             }
 
             "ping" -> {

@@ -98,6 +98,23 @@ data class GitHubActionsPayload(
 )
 
 /** Buildkite webhook payload data classes. */
+
+/** Agent event payload — different structure from build/job events (no pipeline or build). */
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class BuildkiteAgentInfo(
+    val name: String = "",
+    val hostname: String = "",
+    val connectionState: String = "",
+    val webUrl: String = "",
+    val version: String = "",
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class BuildkiteAgentPayload(
+    val event: String? = null,
+    val agent: BuildkiteAgentInfo = BuildkiteAgentInfo(),
+)
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class BuildkiteJob(
     val name: String = "",

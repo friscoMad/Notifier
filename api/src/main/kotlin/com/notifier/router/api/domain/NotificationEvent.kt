@@ -320,6 +320,38 @@ data class BuildFinishedEvent(
             )
 }
 
+data class AgentConnectedEvent(
+    val agentName: String,
+    val hostname: String,
+    val agentUrl: String,
+) : NotificationEvent {
+    override val typeKey = "buildkite_agent_connected"
+    override val metadata
+        get() = mapOf("agent_name" to agentName, "hostname" to hostname)
+    override val payload
+        get() =
+            mapOf<String, Any>(
+                "content" to "🟢 *Agent Connected:* $agentName\n*Host:* $hostname\n<$agentUrl|View agent>",
+                "agent_url" to agentUrl,
+            )
+}
+
+data class AgentDisconnectedEvent(
+    val agentName: String,
+    val hostname: String,
+    val agentUrl: String,
+) : NotificationEvent {
+    override val typeKey = "buildkite_agent_disconnected"
+    override val metadata
+        get() = mapOf("agent_name" to agentName, "hostname" to hostname)
+    override val payload
+        get() =
+            mapOf<String, Any>(
+                "content" to "🔴 *Agent Disconnected:* $agentName\n*Host:* $hostname\n<$agentUrl|View agent>",
+                "agent_url" to agentUrl,
+            )
+}
+
 // ── Generic / Fallback ────────────────────────────────────────
 
 /** Generic event for the REST API (EventController) and unknown webhook types. */

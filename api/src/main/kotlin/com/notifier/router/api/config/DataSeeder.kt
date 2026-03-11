@@ -240,6 +240,28 @@ class DataSeeder(
                         "Buildkite Ping",
                         "Triggered when Buildkite sends a webhook ping (connection confirmed)",
                     ) to emptyList(),
+                    // Buildkite Agent Connected
+                    createType(
+                        "00000000-0000-0000-0000-000000000012",
+                        "buildkite_agent_connected",
+                        "Buildkite Agent Connected",
+                        "Triggered when a Buildkite agent connects to the queue",
+                    ) to
+                        listOf(
+                            createFilter("00000000-0000-0000-0000-000000000012", "agent_name"),
+                            createFilter("00000000-0000-0000-0000-000000000012", "hostname"),
+                        ),
+                    // Buildkite Agent Disconnected
+                    createType(
+                        "00000000-0000-0000-0000-000000000013",
+                        "buildkite_agent_disconnected",
+                        "Buildkite Agent Disconnected",
+                        "Triggered when a Buildkite agent disconnects from the queue",
+                    ) to
+                        listOf(
+                            createFilter("00000000-0000-0000-0000-000000000013", "agent_name"),
+                            createFilter("00000000-0000-0000-0000-000000000013", "hostname"),
+                        ),
                 )
             }
     }

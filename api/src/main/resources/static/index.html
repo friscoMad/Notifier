@@ -1074,17 +1074,61 @@ document.querySelectorAll('nav button').forEach(btn => {
 // ── Feed ──
 const Feed = {
   items: [],
+  pollTimer: null,
+
+  mapNovuItem(n) {
+    return {
+      typeKey: n.typeKey || 'notification',
+      content: n.content || '',
+      subscriberId: n.subscriberId || '',
+      payload: n.payload || {},
+      time: n.createdAt ? new Date(n.createdAt) : new Date(),
+      source: 'novu',
+    };
+  },
+
+  async load() {
+    try {
+      const res = await fetch(API + '/notifications/all');
+      if (!res.ok) return;
+      this.items = (await res.json()).map(n => this.mapNovuItem(n));
+    } catch { this.items = []; }
+    this.render();
+    this.startPolling();
+  },
+
+  startPolling() {
+    if (this.pollTimer) clearInterval(this.pollTimer);
+    this.pollTimer = setInterval(() => this.refresh(), 5000);
+  },
+
+  async refresh() {
+    try {
+      const res = await fetch(API + '/notifications/all');
+      if (!res.ok) return;
+      const novuItems = (await res.json()).map(n => this.mapNovuItem(n));
+      // Keep local items that are newer than any Novu item (not yet processed)
+      const newestNovu = novuItems.length ? novuItems[0].time.getTime() : 0;
+      const localPending = this.items.filter(i => i.source === 'local' && i.time.getTime() > newestNovu);
+      const merged = [...localPending, ...novuItems].slice(0, 50);
+      if (JSON.stringify(merged.map(i => i.time.getTime())) !== JSON.stringify(this.items.map(i => i.time.getTime()))) {
+        this.items = merged;
+        this.render();
+      }
+    } catch {}
+  },
 
   add(event) {
     this.items.unshift({
       typeKey: event.typeKey,
-      metadata: event.metadata || {},
+      content: (event.payload || {}).content || '',
+      subscriberId: '',
       payload: event.payload || {},
       time: new Date(),
+      source: 'local',
     });
     if (this.items.length > 50) this.items.pop();
     this.render();
-    // Pulse the Feed tab if not active
     const feedTab = document.querySelector('nav button[data-tab="feed"]');
     if (!feedTab.classList.contains('active')) {
       feedTab.style.color = 'var(--accent-hover)';
@@ -1104,12 +1148,12 @@ const Feed = {
     return this.items.filter(item => {
       if (typeFilter && item.typeKey !== typeFilter) return false;
       if (authorFilter) {
-        const author = String(item.metadata.author || item.metadata.team || '').toLowerCase();
-        if (!author.includes(authorFilter)) return false;
+        const searchText = String(item.content || '').toLowerCase();
+        if (!searchText.includes(authorFilter)) return false;
       }
       if (scopeFilter) {
-        const scope = String(item.metadata.repo || item.metadata.service || '').toLowerCase();
-        if (!scope.includes(scopeFilter)) return false;
+        const searchText = String(item.content || '').toLowerCase();
+        if (!searchText.includes(scopeFilter)) return false;
       }
       return true;
     });
@@ -1145,20 +1189,20 @@ const Feed = {
     }
     el.innerHTML = filtered.map(item => {
       const { icon, color } = this.getIcon(item.typeKey);
-      const metaStr = Object.entries(item.metadata)
-        .map(([k,v]) => `<span class="filter-chip">${esc(k)}: ${esc(Array.isArray(v) ? v.join(', ') : v)}</span>`)
-        .join('');
       const ago = this.timeAgo(item.time);
+      const lines = (item.content || '').split('\n');
+      const subscriber = item.subscriberId ? `<span class="filter-chip">${esc(item.subscriberId)}</span>` : '';
       return `<div class="feed-item">
         <div class="feed-icon" style="background:${color.bg};color:${color.fg}">
           <i data-lucide="${icon}"></i>
         </div>
         <div class="feed-content">
           <div class="feed-title">
-            ${esc(this.formatType(item.typeKey))}
+            ${esc(lines[0] || this.formatType(item.typeKey))}
             <span class="badge badge-type" style="font-size:10px">${esc(item.typeKey)}</span>
+            ${subscriber}
           </div>
-          <div class="feed-body">${metaStr || '<span style="color:var(--muted);font-size:12px">No metadata</span>'}</div>
+          ${lines.length > 1 ? `<div class="feed-body" style="font-size:12px;color:var(--text-secondary);white-space:pre-line;margin-top:4px">${esc(lines.slice(1).join('\n'))}</div>` : ''}
           <div class="feed-time"><i data-lucide="clock"></i>${ago}</div>
         </div>
       </div>`;
@@ -1553,6 +1597,8 @@ const Channels = {
           enabled: true,
         }),
       });
+      // Create Slack endpoint so Novu can deliver to the channel
+      try { await fetch(`${API}/subscribers/${encodeURIComponent(channelId)}/slack/endpoint`, { method: 'POST' }); } catch {}
       toast('Channel subscription created');
       closeModal();
       this.load();
@@ -1642,6 +1688,7 @@ const Testing = {
 
 // ── Init ──
 loadTypes();
+Feed.load();
 lucide.createIcons();
 </script>
 </body>

@@ -52,7 +52,6 @@ GitHub Webhook / GitHub Actions / Buildkite
 | `bot/` | Slack Bolt bot — slash commands, modals, subscription management |
 | `common/` | Shared domain models with JPA annotations |
 | `docs/` | Architecture, API spec, DB schema, local dev guide |
-| `novu/workflows/` | Novu JSON workflow definitions |
 | `scripts/` | Setup scripts for Novu seeding |
 
 ## Key Files
@@ -239,6 +238,18 @@ Slack delivery chain: Integration → ChannelConnection → ChannelEndpoint → 
 - **ChannelEndpoint**: per-subscriber. `slack_user` for DMs (U/W prefix), `slack_channel` for channels (C/G prefix). Always check for existing valid endpoint before creating — duplicates cause Novu fanout (N deliveries per event).
 - `POST /v1/channel-connections` requires `subscriberId` — cannot be called at startup without subscriber context.
 - `SimpleClientHttpRequestFactory` does NOT support HTTP PATCH — avoid PATCH calls in `NovuService`; use PUT or POST instead.
+
+## Git Workflow
+
+- **Always work on a dedicated branch**, never directly on `master`. If the work relates to a GitHub issue, name the branch `issue-<number>-<short-description>` (e.g., `issue-7-buildkite-hmac`).
+- **If the requested task is unrelated to the current branch**, ask whether to use `git worktree` to work in an isolated environment before proceeding.
+- **Always ask before committing and/or pushing.**
+- **Always ask before creating a PR.**
+- **Java version:** Always use Java 21. Set `JAVA_HOME` before running Gradle:
+  ```bash
+  export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home
+  ```
+  Only set this if the path exists (`test -d "$JAVA_HOME"`).
 
 ## In Progress
 

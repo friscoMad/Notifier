@@ -56,7 +56,19 @@ class WebhookControllerTest {
 
     @BeforeEach
     fun setup() {
-        webhookController = WebhookController(eventService, testGithubSecret, testBuildkiteToken)
+        webhookController = WebhookController(eventService, testGithubSecret, testBuildkiteToken, buildkiteEnforceHmac = false)
+    }
+
+    private fun buildkiteHmacSignature(
+        payload: String,
+        secret: String,
+        timestamp: String = "1700000000",
+    ): String {
+        val hmac = Mac.getInstance("HmacSHA256")
+        hmac.init(SecretKeySpec(secret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
+        val sig = hmac.doFinal("$timestamp.$payload".toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+        return "timestamp=$timestamp,signature=$sig"
     }
 
     private fun generateHmac(
@@ -94,7 +106,7 @@ class WebhookControllerTest {
 
     @Test
     fun `handleGitHubWebhook accepts payload if secret is totally blank`() {
-        webhookController = WebhookController(eventService, "", testBuildkiteToken)
+        webhookController = WebhookController(eventService, "", testBuildkiteToken, buildkiteEnforceHmac = false)
 
         val response = webhookController.handleGitHubWebhook(null, sampleGithubPayload)
 
@@ -102,11 +114,11 @@ class WebhookControllerTest {
         verify(eventService).processEventAsync(any())
     }
 
-    // --- Buildkite tests ---
+    // --- Buildkite plain token tests ---
 
     @Test
     fun `handleBuildkiteWebhook accepts valid token and yields Accepted`() {
-        val response = webhookController.handleBuildkiteWebhook(testBuildkiteToken, sampleBuildkitePayload)
+        val response = webhookController.handleBuildkiteWebhook(testBuildkiteToken, null, sampleBuildkitePayload)
 
         assert(response.statusCode == HttpStatus.ACCEPTED)
         verify(eventService).processEventAsync(any())
@@ -114,7 +126,7 @@ class WebhookControllerTest {
 
     @Test
     fun `handleBuildkiteWebhook rejects wrong token and yields Unauthorized`() {
-        val response = webhookController.handleBuildkiteWebhook("wrong-token", sampleBuildkitePayload)
+        val response = webhookController.handleBuildkiteWebhook("wrong-token", null, sampleBuildkitePayload)
 
         assert(response.statusCode == HttpStatus.UNAUTHORIZED)
         verify(eventService, never()).processEventAsync(any())
@@ -122,7 +134,7 @@ class WebhookControllerTest {
 
     @Test
     fun `handleBuildkiteWebhook rejects missing token and yields Unauthorized`() {
-        val response = webhookController.handleBuildkiteWebhook(null, sampleBuildkitePayload)
+        val response = webhookController.handleBuildkiteWebhook(null, null, sampleBuildkitePayload)
 
         assert(response.statusCode == HttpStatus.UNAUTHORIZED)
         verify(eventService, never()).processEventAsync(any())
@@ -130,9 +142,9 @@ class WebhookControllerTest {
 
     @Test
     fun `handleBuildkiteWebhook accepts payload if token is not configured`() {
-        webhookController = WebhookController(eventService, testGithubSecret, "")
+        webhookController = WebhookController(eventService, testGithubSecret, "", buildkiteEnforceHmac = false)
 
-        val response = webhookController.handleBuildkiteWebhook(null, sampleBuildkitePayload)
+        val response = webhookController.handleBuildkiteWebhook(null, null, sampleBuildkitePayload)
 
         assert(response.statusCode == HttpStatus.ACCEPTED)
         verify(eventService).processEventAsync(any())
@@ -150,9 +162,64 @@ class WebhookControllerTest {
             }
             """.trimIndent()
 
-        val response = webhookController.handleBuildkiteWebhook(testBuildkiteToken, pingPayload)
+        val response = webhookController.handleBuildkiteWebhook(testBuildkiteToken, null, pingPayload)
 
         assert(response.statusCode == HttpStatus.OK)
         verify(eventService).processEventAsync(any())
+    }
+
+    // --- Buildkite HMAC tests ---
+
+    @Test
+    fun `handleBuildkiteWebhook accepts valid HMAC signature and yields Accepted`() {
+        val sig = buildkiteHmacSignature(sampleBuildkitePayload, testBuildkiteToken)
+
+        val response = webhookController.handleBuildkiteWebhook(null, sig, sampleBuildkitePayload)
+
+        assert(response.statusCode == HttpStatus.ACCEPTED)
+        verify(eventService).processEventAsync(any())
+    }
+
+    @Test
+    fun `handleBuildkiteWebhook rejects invalid HMAC signature and yields Unauthorized`() {
+        val sig = "timestamp=1700000000,signature=deadbeef"
+
+        val response = webhookController.handleBuildkiteWebhook(null, sig, sampleBuildkitePayload)
+
+        assert(response.statusCode == HttpStatus.UNAUTHORIZED)
+        verify(eventService, never()).processEventAsync(any())
+    }
+
+    @Test
+    fun `handleBuildkiteWebhook HMAC takes precedence over plain token when both present`() {
+        val sig = buildkiteHmacSignature(sampleBuildkitePayload, testBuildkiteToken)
+
+        val response = webhookController.handleBuildkiteWebhook(testBuildkiteToken, sig, sampleBuildkitePayload)
+
+        assert(response.statusCode == HttpStatus.ACCEPTED)
+        verify(eventService).processEventAsync(any())
+    }
+
+    // --- enforce-hmac mode ---
+
+    @Test
+    fun `enforce-hmac mode accepts valid HMAC signature`() {
+        webhookController = WebhookController(eventService, testGithubSecret, testBuildkiteToken, buildkiteEnforceHmac = true)
+        val sig = buildkiteHmacSignature(sampleBuildkitePayload, testBuildkiteToken)
+
+        val response = webhookController.handleBuildkiteWebhook(null, sig, sampleBuildkitePayload)
+
+        assert(response.statusCode == HttpStatus.ACCEPTED)
+        verify(eventService).processEventAsync(any())
+    }
+
+    @Test
+    fun `enforce-hmac mode rejects plain token even if valid`() {
+        webhookController = WebhookController(eventService, testGithubSecret, testBuildkiteToken, buildkiteEnforceHmac = true)
+
+        val response = webhookController.handleBuildkiteWebhook(testBuildkiteToken, null, sampleBuildkitePayload)
+
+        assert(response.statusCode == HttpStatus.UNAUTHORIZED)
+        verify(eventService, never()).processEventAsync(any())
     }
 }

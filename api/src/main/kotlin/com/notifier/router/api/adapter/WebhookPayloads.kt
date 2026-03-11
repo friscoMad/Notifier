@@ -98,12 +98,43 @@ data class GitHubActionsPayload(
 )
 
 /** Buildkite webhook payload data classes. */
+
+/** Agent event payload — different structure from build/job events (no pipeline or build). */
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class BuildkiteAgentInfo(
+    val name: String = "",
+    val hostname: String = "",
+    val connectionState: String = "",
+    val webUrl: String = "",
+    val version: String = "",
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class BuildkiteAgentPayload(
+    val event: String? = null,
+    val agent: BuildkiteAgentInfo = BuildkiteAgentInfo(),
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class BuildkiteJobAgent(
+    val name: String = "",
+    val hostname: String = "",
+)
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class BuildkiteJob(
     val name: String = "",
     val state: String = "",
     val webUrl: String = "",
+    val startedAt: String? = null,
     val finishedAt: String? = null,
+    val exitStatus: Int? = null,
+    val agent: BuildkiteJobAgent? = null,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class BuildkiteCreator(
+    val name: String = "",
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -111,12 +142,17 @@ data class BuildkiteBuild(
     val state: String = "",
     val message: String = "",
     val webUrl: String = "",
+    val number: Int = 0,
+    val branch: String = "",
+    val startedAt: String? = null,
     val finishedAt: String? = null,
+    val creator: BuildkiteCreator? = null,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class BuildkitePipeline(
     val slug: String = "",
+    val name: String = "",
     val team: String? = null,
     val webUrl: String = "",
 )

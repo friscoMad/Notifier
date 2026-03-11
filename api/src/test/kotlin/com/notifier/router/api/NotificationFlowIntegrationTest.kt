@@ -110,7 +110,8 @@ class NotificationFlowIntegrationTest : BaseIntegrationTest() {
         Thread.sleep(500)
 
         // Verify NovuService was called for "U77777"
-        verify(novuService).triggerWorkflow(eq("pr_created"), eq(listOf("U77777")), any())
+        verify(novuService).triggerChannelWorkflow(eq("pr_created"), eq("in_app"), eq(listOf("U77777")), any())
+        verify(novuService).triggerChannelWorkflow(eq("pr_created"), eq("chat"), eq(listOf("U77777")), any())
     }
 
     @Test
@@ -145,6 +146,6 @@ class NotificationFlowIntegrationTest : BaseIntegrationTest() {
 
         // Verify NovuService was NOT called (filter did not match)
         verify(novuService, org.mockito.Mockito.never())
-            .triggerWorkflow(any(), any(), any())
+            .triggerChannelWorkflow(any(), any(), any(), any())
     }
 }

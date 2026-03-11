@@ -4,6 +4,7 @@ import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.equalTo
+import com.github.tomakehurst.wiremock.client.WireMock.matching
 import com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
@@ -197,10 +198,11 @@ class NovuWireMockIntegrationTest : BaseIntegrationTest() {
         // Verify WireMock received the actual HTTP POST from the Novu SDK
         // using the instance client (not static WireMock.verify which defaults to port
         // 8080)
+        // Channel-specific workflows: verify the in_app trigger was sent
         wireMockClient.verifyThat(
             postRequestedFor(urlPathEqualTo("/v1/events/trigger"))
                 .withHeader("Authorization", equalTo("ApiKey test-wiremock-key"))
-                .withRequestBody(matchingJsonPath("$.name", equalTo("pr_created")))
+                .withRequestBody(matchingJsonPath("$.name", matching("pr_created_.*")))
                 .withRequestBody(
                     matchingJsonPath(
                         "$.payload.title",

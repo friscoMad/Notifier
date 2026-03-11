@@ -88,72 +88,6 @@ object ModalViewBuilder {
         channelName: String? = null,
     ): View =
         view { v ->
-            val blocks =
-                withBlocks {
-                    section {
-                        blockId("type_block")
-                        plainText("Which event do you want to be notified about?")
-                        accessory {
-                            staticSelect(
-                                actionId = "type_select",
-                                placeholder = "Select an event...",
-                                options = availableTypes.map { Option(it.name, it.key, it.description) },
-                                initialValue = selectedTypeKey,
-                            )
-                        }
-                    }
-
-                    filters.forEach { filterDef ->
-                        val fieldName = filterDef.field
-                        input {
-                            blockId("filter_block_$fieldName")
-                            label("Filter by $fieldName (Optional)")
-                            optional(true)
-                            plainTextInput { actionId("filter_input_$fieldName") }
-                        }
-                    }
-
-                    input {
-                        blockId("channels_block")
-                        label("Delivery Channels")
-                        checkboxes {
-                            actionId("channels_checkboxes")
-                            options {
-                                option {
-                                    plainText(channelDisplayName("slack_dm"))
-                                    value("slack_dm")
-                                }
-                                if (channelId != null) {
-                                    option {
-                                        plainText("#$channelName")
-                                        value("channel:$channelId")
-                                    }
-                                }
-                            }
-                            initialOptions {
-                                option {
-                                    plainText(channelDisplayName("slack_dm"))
-                                    value("slack_dm")
-                                }
-                            }
-                        }
-                    }
-
-                    input {
-                        blockId("digest_block")
-                        label("Delivery Speed (Digesting)")
-                        staticSelect(
-                            actionId = "digest_select",
-                            options =
-                            listOf(
-                                Option("Immediate", "immediate"),
-                                Option("Daily (24h)", "24h"),
-                                Option("Half-Day (12h)", "12h"),
-                            ),
-                            initialValue = "immediate",
-                        )
-                    }
-                }
             v
                 .callbackId("create_subscription_modal")
                 .type("modal")
@@ -165,8 +99,85 @@ object ModalViewBuilder {
                 .title(viewTitle { it.type("plain_text").text("Configure Notifications") })
                 .submit(viewSubmit { it.type("plain_text").text("Save") })
                 .close(viewClose { it.type("plain_text").text("Cancel") })
-                .blocks(blocks)
+                .blocks(buildDynamicModalBlocks(selectedTypeKey, availableTypes, filters, channelId, channelName))
         }
+
+    private fun buildDynamicModalBlocks(
+        selectedTypeKey: String,
+        availableTypes: List<NotificationTypeDto>,
+        filters: List<FilterDefinitionDto>,
+        channelId: String?,
+        channelName: String?,
+    ) = withBlocks {
+        section {
+            blockId("type_block")
+            plainText("Which event do you want to be notified about?")
+            accessory {
+                staticSelect(
+                    actionId = "type_select",
+                    placeholder = "Select an event...",
+                    options = availableTypes.map { Option(it.name, it.key, it.description) },
+                    initialValue = selectedTypeKey,
+                )
+            }
+        }
+
+        filters.forEach { filterDef ->
+            val fieldName = filterDef.field
+            input {
+                blockId("filter_block_$fieldName")
+                label("Filter by $fieldName (Optional)")
+                optional(true)
+                plainTextInput { actionId("filter_input_$fieldName") }
+            }
+        }
+
+        input {
+            blockId("channels_block")
+            label("Delivery Channels")
+            checkboxes {
+                actionId("channels_checkboxes")
+                options {
+                    option {
+                        plainText(channelDisplayName("slack_dm"))
+                        value("slack_dm")
+                    }
+                    option {
+                        plainText(channelDisplayName("email"))
+                        value("email")
+                        description("Sent to your work email address")
+                    }
+                    if (channelId != null) {
+                        option {
+                            plainText("#$channelName")
+                            value("channel:$channelId")
+                        }
+                    }
+                }
+                initialOptions {
+                    option {
+                        plainText(channelDisplayName("slack_dm"))
+                        value("slack_dm")
+                    }
+                }
+            }
+        }
+
+        input {
+            blockId("digest_block")
+            label("Delivery Speed (Digesting)")
+            staticSelect(
+                actionId = "digest_select",
+                options =
+                listOf(
+                    Option("Immediate", "immediate"),
+                    Option("Daily (24h)", "24h"),
+                    Option("Half-Day (12h)", "12h"),
+                ),
+                initialValue = "immediate",
+            )
+        }
+    }
 
     private fun BlockElementInputDsl.staticSelect(
         actionId: String,
@@ -207,6 +218,7 @@ object ModalViewBuilder {
     fun channelDisplayName(channel: String) =
         when (channel) {
             "slack_dm" -> "Slack DM"
+            "email" -> "Email"
             "in_app" -> "Inbox"
             else -> channel
         }

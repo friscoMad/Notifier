@@ -8,6 +8,7 @@ import com.notifier.router.api.repository.SubscriptionRepository
 import com.notifier.router.api.repository.UserRepository
 import com.notifier.router.common.domain.Filter
 import com.notifier.router.common.dto.SubscriptionDto
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
@@ -16,6 +17,8 @@ import org.mockito.Mock
 import org.mockito.Mockito.verify
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.mockito.kotlin.check
+import org.mockito.kotlin.never
 import org.mockito.kotlin.whenever
 import java.util.Optional
 import java.util.UUID
@@ -198,6 +201,101 @@ class SubscriptionServiceTest {
         assertThrows<SubscriptionNotFoundException> {
             subscriptionService.deleteSubscription(id)
         }
+    }
+
+    @Test
+    fun `createSubscription stores email on new user`() {
+        val slackId = "U99999"
+        val email = "user@example.com"
+        val userUuid = UUID.randomUUID()
+        val dto =
+            SubscriptionDto(
+                userId = slackId,
+                email = email,
+                notificationTypeId = "${UUID.randomUUID()}",
+                channels = listOf("slack_dm")
+            )
+
+        whenever(userRepository.findBySlackId(slackId)).thenReturn(null)
+        whenever(userRepository.save(any<User>())).thenAnswer { it.getArgument(0) }
+        whenever(subscriptionRepository.save(any<Subscription>())).thenAnswer {
+            Subscription(
+                id = UUID.randomUUID(),
+                userId = userUuid,
+                notificationTypeId = UUID.fromString(dto.notificationTypeId),
+                channels = dto.channels,
+                channelConfig = emptyMap(),
+                filters = emptyList(),
+                enabled = true,
+            )
+        }
+
+        subscriptionService.createSubscription(dto)
+
+        verify(userRepository).save(check<User> { assertEquals(email, it.email) })
+    }
+
+    @Test
+    fun `createSubscription updates email on existing user when provided`() {
+        val slackId = "U88888"
+        val userUuid = UUID.randomUUID()
+        val existingUser = User(id = userUuid, slackId = slackId, email = null)
+        val dto =
+            SubscriptionDto(
+                userId = slackId,
+                email = "new@example.com",
+                notificationTypeId = "${UUID.randomUUID()}",
+                channels = listOf("slack_dm")
+            )
+
+        whenever(userRepository.findBySlackId(slackId)).thenReturn(existingUser)
+        whenever(userRepository.save(any<User>())).thenAnswer { it.getArgument(0) }
+        whenever(subscriptionRepository.save(any<Subscription>())).thenAnswer {
+            Subscription(
+                id = UUID.randomUUID(),
+                userId = userUuid,
+                notificationTypeId = UUID.fromString(dto.notificationTypeId),
+                channels = dto.channels,
+                channelConfig = emptyMap(),
+                filters = emptyList(),
+                enabled = true
+            )
+        }
+
+        subscriptionService.createSubscription(dto)
+
+        verify(userRepository).save(check<User> { assertEquals("new@example.com", it.email) })
+    }
+
+    @Test
+    fun `createSubscription keeps existing user when dto email is null`() {
+        val slackId = "U77777"
+        val userUuid = UUID.randomUUID()
+        val existingUser = User(id = userUuid, slackId = slackId, email = "existing@example.com")
+        val dto =
+            SubscriptionDto(
+                userId = slackId,
+                email = null,
+                notificationTypeId = "${UUID.randomUUID()}",
+                channels = listOf("slack_dm")
+            )
+
+        whenever(userRepository.findBySlackId(slackId)).thenReturn(existingUser)
+        whenever(subscriptionRepository.save(any<Subscription>())).thenAnswer {
+            Subscription(
+                id = UUID.randomUUID(),
+                userId = userUuid,
+                notificationTypeId = UUID.fromString(dto.notificationTypeId),
+                channels = dto.channels,
+                channelConfig = emptyMap(),
+                filters = emptyList(),
+                enabled = true
+            )
+        }
+
+        subscriptionService.createSubscription(dto)
+
+        verify(userRepository, never()).save(any<User>())
     }
 
     @Test

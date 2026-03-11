@@ -19,7 +19,9 @@ import com.slack.api.bolt.response.Response
 import com.slack.api.methods.MethodsClient
 import com.slack.api.methods.request.chat.ChatPostEphemeralRequest
 import com.slack.api.methods.request.chat.ChatPostMessageRequest
+import com.slack.api.methods.request.users.UsersInfoRequest
 import com.slack.api.methods.request.views.ViewsOpenRequest
+import com.slack.api.methods.response.users.UsersInfoResponse
 import com.slack.api.methods.response.views.ViewsOpenResponse
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -32,6 +34,7 @@ import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.junit.jupiter.MockitoSettings
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.check
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.doThrow
@@ -67,9 +70,16 @@ class SlashCommandHandlersTest {
     @Mock
     private lateinit var payload: com.slack.api.app_backend.slash_commands.payload.SlashCommandPayload
 
+    @Mock
+    private lateinit var methodsClient: MethodsClient
+
     @BeforeEach
     fun setup() {
         whenever(req.payload).thenReturn(payload)
+        whenever(ctx.client()).thenReturn(methodsClient)
+        // fetchUserEmail is best-effort; return a failed response so email is null
+        whenever(methodsClient.usersInfo(any<RequestConfigurator<UsersInfoRequest.UsersInfoRequestBuilder>>()))
+            .thenReturn(UsersInfoResponse().apply { isOk = false })
     }
 
     @Test
@@ -448,7 +458,7 @@ class SlashCommandHandlersTest {
         whenever(apiClient.getNotificationTypes()).thenReturn(
             listOf(NotificationTypeDto(id = "type-1", key = "pr_created", name = "PR Created")),
         )
-        whenever(subscriptionService.subscribeAndActivate(any(), any(), any(), any(), any()))
+        whenever(subscriptionService.subscribeAndActivate(any(), anyOrNull(), any(), any(), any(), any()))
             .thenReturn(
                 SubscribeResult.Success(
                     SubscriptionDto(
@@ -488,7 +498,7 @@ class SlashCommandHandlersTest {
                 )
             ),
         )
-        whenever(subscriptionService.subscribeAndActivate(any(), any(), any(), any(), any()))
+        whenever(subscriptionService.subscribeAndActivate(any(), anyOrNull(), any(), any(), any(), any()))
             .thenReturn(
                 SubscribeResult.Success(
                     SubscriptionDto(
@@ -508,6 +518,7 @@ class SlashCommandHandlersTest {
         assertEquals(200, response.statusCode)
         verify(subscriptionService).subscribeAndActivate(
             userId = any(),
+            email = anyOrNull(),
             notificationTypeId = any(),
             channels = any(),
             filters = org.mockito.kotlin.check { filters ->
@@ -539,7 +550,7 @@ class SlashCommandHandlersTest {
                 )
             ),
         )
-        whenever(subscriptionService.subscribeAndActivate(any(), any(), any(), any(), any()))
+        whenever(subscriptionService.subscribeAndActivate(any(), anyOrNull(), any(), any(), any(), any()))
             .thenReturn(
                 SubscribeResult.Success(
                     SubscriptionDto(
@@ -559,6 +570,7 @@ class SlashCommandHandlersTest {
         assertEquals(200, response.statusCode)
         verify(subscriptionService).subscribeAndActivate(
             userId = any(),
+            email = anyOrNull(),
             notificationTypeId = any(),
             channels = any(),
             filters = org.mockito.kotlin.check { filters ->
@@ -600,7 +612,7 @@ class SlashCommandHandlersTest {
         whenever(apiClient.getNotificationTypes()).thenReturn(
             listOf(NotificationTypeDto(id = "type-1", key = "pr_created", name = "PR Created")),
         )
-        whenever(subscriptionService.subscribeAndActivate(any(), any(), any(), any(), any()))
+        whenever(subscriptionService.subscribeAndActivate(any(), anyOrNull(), any(), any(), any(), any()))
             .thenReturn(SubscribeResult.AlreadySubscribed)
 
         val response = invokeHandleCommand()
@@ -622,7 +634,7 @@ class SlashCommandHandlersTest {
         whenever(apiClient.getNotificationTypes()).thenReturn(
             listOf(NotificationTypeDto(id = "type-1", key = "pr_created", name = "PR Created")),
         )
-        whenever(subscriptionService.subscribeAndActivate(any(), any(), any(), any(), any()))
+        whenever(subscriptionService.subscribeAndActivate(any(), anyOrNull(), any(), any(), any(), any()))
             .thenReturn(SubscribeResult.Failure)
 
         val response = invokeHandleCommand()
@@ -657,7 +669,7 @@ class SlashCommandHandlersTest {
                 ),
             ),
         )
-        whenever(subscriptionService.subscribeAndActivate(any(), any(), any(), any(), any()))
+        whenever(subscriptionService.subscribeAndActivate(any(), anyOrNull(), any(), any(), any(), any()))
             .thenReturn(
                 SubscribeResult.Success(
                     SubscriptionDto(
@@ -676,6 +688,7 @@ class SlashCommandHandlersTest {
 
         verify(subscriptionService).subscribeAndActivate(
             userId = any(),
+            email = anyOrNull(),
             notificationTypeId = any(),
             channels = any(),
             filters = org.mockito.kotlin.check { filters ->
@@ -713,7 +726,7 @@ class SlashCommandHandlersTest {
                 ),
             ),
         )
-        whenever(subscriptionService.subscribeAndActivate(any(), any(), any(), any(), any()))
+        whenever(subscriptionService.subscribeAndActivate(any(), anyOrNull(), any(), any(), any(), any()))
             .thenReturn(
                 SubscribeResult.Success(
                     SubscriptionDto(
@@ -732,6 +745,7 @@ class SlashCommandHandlersTest {
 
         verify(subscriptionService).subscribeAndActivate(
             userId = any(),
+            email = anyOrNull(),
             notificationTypeId = any(),
             channels = any(),
             filters = org.mockito.kotlin.check { filters ->
@@ -756,7 +770,7 @@ class SlashCommandHandlersTest {
         )
         whenever(apiClient.getFiltersForType("pr_created"))
             .thenThrow(RestClientException("connection refused"))
-        whenever(subscriptionService.subscribeAndActivate(any(), any(), any(), any(), any()))
+        whenever(subscriptionService.subscribeAndActivate(any(), anyOrNull(), any(), any(), any(), any()))
             .thenReturn(
                 SubscribeResult.Success(
                     SubscriptionDto(
@@ -776,6 +790,7 @@ class SlashCommandHandlersTest {
         // Field validation was skipped — filter still passed through to the service
         verify(subscriptionService).subscribeAndActivate(
             userId = any(),
+            email = anyOrNull(),
             notificationTypeId = any(),
             channels = any(),
             filters = org.mockito.kotlin.check { filters ->
@@ -796,7 +811,7 @@ class SlashCommandHandlersTest {
             listOf(NotificationTypeDto(id = "type-1", key = "pr_created", name = "PR Created")),
         )
         whenever(apiClient.getFiltersForType("pr_created")).thenReturn(emptyList())
-        whenever(subscriptionService.subscribeAndActivate(any(), any(), any(), any(), any()))
+        whenever(subscriptionService.subscribeAndActivate(any(), anyOrNull(), any(), any(), any(), any()))
             .thenReturn(
                 SubscribeResult.Success(
                     SubscriptionDto(
@@ -815,6 +830,7 @@ class SlashCommandHandlersTest {
 
         verify(subscriptionService).subscribeAndActivate(
             userId = any(),
+            email = anyOrNull(),
             notificationTypeId = any(),
             channels = any(),
             filters = org.mockito.kotlin.check { filters ->
@@ -842,7 +858,10 @@ class SlashCommandHandlersTest {
                 assertTrue(it.lowercase().contains("field=value"))
             }
         )
-        verify(subscriptionService, org.mockito.Mockito.never()).subscribeAndActivate(any(), any(), any(), any(), any())
+        verify(
+            subscriptionService,
+            org.mockito.Mockito.never()
+        ).subscribeAndActivate(any(), anyOrNull(), any(), any(), any(), any())
     }
 
     @Test
@@ -854,7 +873,7 @@ class SlashCommandHandlersTest {
             listOf(NotificationTypeDto(id = "type-1", key = "pr_created", name = "PR Created")),
         )
         whenever(apiClient.getFiltersForType("pr_created")).thenReturn(emptyList())
-        whenever(subscriptionService.subscribeAndActivate(any(), any(), any(), any(), any()))
+        whenever(subscriptionService.subscribeAndActivate(any(), anyOrNull(), any(), any(), any(), any()))
             .thenReturn(
                 SubscribeResult.Success(
                     SubscriptionDto(
@@ -874,6 +893,7 @@ class SlashCommandHandlersTest {
         // split("=", limit = 2) keeps everything after the first = as the value
         verify(subscriptionService).subscribeAndActivate(
             userId = any(),
+            email = anyOrNull(),
             notificationTypeId = any(),
             channels = any(),
             filters = org.mockito.kotlin.check { filters ->

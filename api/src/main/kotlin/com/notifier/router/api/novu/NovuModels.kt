@@ -1,8 +1,35 @@
 package com.notifier.router.api.novu
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonInclude
+
 // ── Integrations ──────────────────────────────────────────────────────────────
 
+sealed class NovuCredentials
+
+data class NovuSlackCredentials(
+    val clientId: String = "",
+    val secretKey: String = "",
+    val applicationId: String = "",
+    val token: String = "",
+) : NovuCredentials()
+
+data class NovuSesCredentials(
+    val apiKey: String = "",
+    val secretKey: String = "",
+    val region: String = "",
+    val from: String = "",
+    val senderName: String = "",
+) : NovuCredentials()
+
+data class NovuResendCredentials(
+    val apiKey: String = "",
+    val from: String = "",
+    val senderName: String = "",
+) : NovuCredentials()
+
 @Suppress("ConstructorParameterNaming")
+@JsonIgnoreProperties(value = ["credentials"], allowGetters = true)
 data class NovuIntegration(
     val _id: String? = null,
     val identifier: String? = null,
@@ -10,14 +37,7 @@ data class NovuIntegration(
     val channel: String = "",
     val name: String? = null,
     val active: Boolean = true,
-    val credentials: NovuSlackCredentials? = null,
-)
-
-data class NovuSlackCredentials(
-    val clientId: String = "",
-    val secretKey: String = "",
-    val applicationId: String = "",
-    val token: String = "",
+    val credentials: NovuCredentials? = null,
 )
 
 // ── Workflows ─────────────────────────────────────────────────────────────────
@@ -45,6 +65,8 @@ data class NovuWorkflowStep(
 data class NovuStepTemplate(
     val type: String = "",
     val content: String = "",
+    val contentType: String? = null,
+    val subject: String? = null,
 )
 
 // ── Channel Connections ───────────────────────────────────────────────────────
@@ -80,8 +102,10 @@ data class NovuChannelEndpoint(
 
 // ── Subscribers ───────────────────────────────────────────────────────────────
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 data class NovuSubscriber(
     val subscriberId: String = "",
     val firstName: String? = null,
     val lastName: String? = null,
+    val email: String? = null,
 )

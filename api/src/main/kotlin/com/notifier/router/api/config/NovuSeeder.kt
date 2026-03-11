@@ -25,8 +25,9 @@ class NovuSeeder(
     override fun run(vararg args: String) {
         logger.info("Starting Novu workflow provisioning...")
 
-        // 1. Ensure the Slack integration exists first
+        // 1. Ensure the Slack and SES integrations exist first
         novuService.ensureSlackIntegrationExists()
+        novuService.ensureResendIntegrationExists()
 
         val types = notificationTypeRepository.findAll()
         if (types.isEmpty()) {

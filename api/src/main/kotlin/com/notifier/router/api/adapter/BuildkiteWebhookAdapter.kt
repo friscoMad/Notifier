@@ -23,6 +23,14 @@ object BuildkiteWebhookAdapter {
                 parseBuildFinished(w)
             }
 
+            "ping" -> {
+                GenericEvent(
+                    typeKey = "buildkite_ping",
+                    metadata = emptyMap(),
+                    rawPayload = emptyMap(),
+                )
+            }
+
             else -> {
                 GenericEvent(
                     typeKey = w.event ?: "buildkite_event",

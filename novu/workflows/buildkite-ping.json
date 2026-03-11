@@ -1,0 +1,28 @@
+{
+    "name": "Buildkite Ping",
+    "identifier": "buildkite_ping",
+    "description": "Triggered when Buildkite sends a webhook ping (connection confirmed)",
+    "active": true,
+    "draft": false,
+    "preferenceSettings": {
+        "email": true,
+        "sms": true,
+        "in_app": true,
+        "push": true,
+        "chat": true
+    },
+    "steps": [
+        {
+            "name": "In-App Notification",
+            "uuid": "in-app-step-buildkite-ping",
+            "template": {
+                "type": "inApp",
+                "content": "Buildkite webhook ping received — connection confirmed",
+                "variables": []
+            },
+            "active": true,
+            "filters": []
+        }
+    ],
+    "__version": "1.0.0"
+}

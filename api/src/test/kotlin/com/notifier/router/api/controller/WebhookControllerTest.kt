@@ -137,4 +137,22 @@ class WebhookControllerTest {
         assert(response.statusCode == HttpStatus.ACCEPTED)
         verify(eventService).processEventAsync(any())
     }
+
+    @Test
+    fun `handleBuildkiteWebhook returns Ok for ping and dispatches event`() {
+        val pingPayload =
+            """
+            {
+              "event": "ping",
+              "service": { "id": "abc", "provider": "webhook" },
+              "organization": { "slug": "my-org" },
+              "sender": { "name": "Test User" }
+            }
+            """.trimIndent()
+
+        val response = webhookController.handleBuildkiteWebhook(testBuildkiteToken, pingPayload)
+
+        assert(response.statusCode == HttpStatus.OK)
+        verify(eventService).processEventAsync(any())
+    }
 }

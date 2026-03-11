@@ -5,6 +5,7 @@ import com.notifier.router.api.adapter.GitHubActionsWebhookAdapter
 import com.notifier.router.api.adapter.GitHubWebhookAdapter
 import com.notifier.router.api.domain.NotificationEvent
 import com.notifier.router.api.service.EventService
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -24,6 +25,8 @@ class WebhookController(
     @Value("\${github.webhook.secret:}") private val githubSecret: String,
     @Value("\${buildkite.webhook.token:}") private val buildkiteToken: String,
 ) {
+    private val logger = LoggerFactory.getLogger(WebhookController::class.java)
+
     @PostMapping("/github")
     fun handleGitHubWebhook(
         @RequestHeader("X-Hub-Signature-256") signature: String?,
@@ -48,7 +51,18 @@ class WebhookController(
         if (!verifyBuildkiteToken(token)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
         }
-        return parseAndProcess { BuildkiteWebhookAdapter.parse(payload) }
+        return try {
+            val event = BuildkiteWebhookAdapter.parse(payload)
+            if (event.typeKey == "buildkite_ping") {
+                logger.info("Received Buildkite ping — webhook connection confirmed")
+                eventService.processEventAsync(event)
+                return ResponseEntity.ok().build()
+            }
+            eventService.processEventAsync(event)
+            ResponseEntity.accepted().build()
+        } catch (_: Exception) {
+            ResponseEntity.badRequest().build()
+        }
     }
 
     private fun parseAndProcess(parse: () -> NotificationEvent): ResponseEntity<Void> =

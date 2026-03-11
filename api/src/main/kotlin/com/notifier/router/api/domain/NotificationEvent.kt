@@ -28,7 +28,7 @@ data class PrCreatedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
-                "content" to "PR opened by $author: $title ($repo)",
+                "content" to "PR opened by $author: <$url|$title> ($repo)",
                 "title" to title,
                 "description" to description,
                 "url" to url,

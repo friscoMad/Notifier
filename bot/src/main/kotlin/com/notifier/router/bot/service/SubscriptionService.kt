@@ -59,6 +59,8 @@ class SubscriptionService(
         channelName: String,
         notificationTypeId: String,
         filters: List<Filter> = emptyList(),
+        digestEnabled: Boolean = false,
+        digestInterval: String = "1w",
     ): ChannelSubscribeResult {
         val subscription =
             try {
@@ -68,6 +70,8 @@ class SubscriptionService(
                         slackChannelName = channelName,
                         notificationTypeId = notificationTypeId,
                         filters = filters,
+                        digestEnabled = digestEnabled,
+                        digestInterval = digestInterval,
                     ),
                 ) ?: return ChannelSubscribeResult.Failure
             } catch (e: org.springframework.web.client.RestClientException) {

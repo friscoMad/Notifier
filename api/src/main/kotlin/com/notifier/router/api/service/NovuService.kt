@@ -13,6 +13,7 @@ import com.notifier.router.api.novu.NovuApiClient
 import com.notifier.router.api.novu.NovuChannelConnection
 import com.notifier.router.api.novu.NovuChannelEndpoint
 import com.notifier.router.api.novu.NovuConnectionAuth
+import com.notifier.router.api.novu.NovuDigestMetadata
 import com.notifier.router.api.novu.NovuIntegration
 import com.notifier.router.api.novu.NovuResendCredentials
 import com.notifier.router.api.novu.NovuSesCredentials
@@ -31,7 +32,8 @@ import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 import retrofit2.Retrofit
 
-@Suppress("LargeClass") // NovuService orchestrates all Novu API interactions; splitting would scatter cohesive logic
+// All ensure*/trigger*/cleanup methods belong together as the single Novu integration surface.
+@Suppress("LargeClass", "TooManyFunctions")
 @Service
 class NovuService(
     private val novuApiProps: NovuApiProperties,
@@ -791,6 +793,83 @@ class NovuService(
         }
     }
 
+    /**
+     * Ensures a digest-variant channel workflow exists in Novu (e.g. `pr_created_chat_digest_1d`).
+     * The workflow has two steps: a digest step (accumulates events over a time window) followed
+     * by the delivery step for the given channel.
+     *
+     * @param intervalKey either `"1d"` or `"1w"` — determines the Novu digest window.
+     */
+    fun ensureDigestChannelWorkflowExists(
+        typeKey: String,
+        name: String,
+        channel: String,
+        intervalKey: String,
+        existingNames: Map<String, NovuWorkflow> = emptyMap(),
+    ) {
+        if (!this::novuClient.isInitialized) {
+            logger.warn(
+                "Novu client not initialized, skipping digest workflow check for ${typeKey}_${channel}_digest_$intervalKey"
+            )
+            return
+        }
+
+        val workflowKey = "${typeKey}_${channel}_digest_$intervalKey"
+        val digestAmount = DIGEST_AMOUNT_BY_INTERVAL[intervalKey] ?: DIGEST_AMOUNT_24H
+
+        val digestStep = NovuWorkflowStep(
+            template = NovuStepTemplate(type = "digest"),
+            metadata = NovuDigestMetadata(type = "regular", amount = digestAmount, unit = DIGEST_UNIT),
+        )
+        // Delivery step iterates over all events accumulated by the digest step.
+        // Within {{#each step.events}}, payload fields are accessed directly (each item IS the payload).
+        val deliveryStep = when (channel) {
+            "email" -> NovuWorkflowStep(
+                NovuStepTemplate(
+                    "email",
+                    DIGEST_EMAIL_TEMPLATE,
+                    "customHtml",
+                    "🔔 PR Digest — {{step.total_count}} pull request(s)",
+                ),
+            )
+            else -> NovuWorkflowStep(NovuStepTemplate(channel, DIGEST_CHAT_TEMPLATE))
+        }
+        val steps = listOf(digestStep, deliveryStep)
+
+        val existing = existingNames[workflowKey]
+        if (existing != null) {
+            val novuIdentifier = existing.triggers?.firstOrNull()?.identifier
+            novuApiClient!!.updateWorkflow(existing._id!!, existing.copy(steps = steps))
+            if (novuIdentifier != null) workflowRegistry[workflowKey] = novuIdentifier
+            logger.info("Updated existing digest workflow: $workflowKey -> $novuIdentifier")
+            return
+        }
+
+        val groups = novuApiClient!!.listNotificationGroups()
+        val groupId =
+            (groups.firstOrNull()?.get("_id") as? String)
+                ?: return logger.error("Could not find any notification groups in Novu")
+
+        val created =
+            novuApiClient!!.createWorkflow(
+                NovuWorkflow(
+                    name = workflowKey,
+                    notificationGroupId = groupId,
+                    steps = steps,
+                    active = true,
+                    draft = false,
+                    critical = false,
+                ),
+            )
+        val novuIdentifier = created.triggers?.firstOrNull()?.identifier
+        if (novuIdentifier != null) {
+            workflowRegistry[workflowKey] = novuIdentifier
+            logger.info("Provisioned digest workflow: $workflowKey -> $novuIdentifier ($name)")
+        } else {
+            logger.warn("Created digest workflow $workflowKey but could not extract trigger identifier")
+        }
+    }
+
     @Suppress("UNCHECKED_CAST")
     fun listAllInAppNotifications(): List<Map<String, Any?>> {
         if (novuApiClient == null) return emptyList()
@@ -822,6 +901,40 @@ class NovuService(
     }
 
     private fun getBaseUrl() = if (novuApiProps.url.isNotBlank()) novuApiProps.url else "https://api.novu.co/v1"
+
+    companion object {
+        private const val DIGEST_AMOUNT_12H = 1
+        private const val DIGEST_AMOUNT_24H = 2
+        private const val DIGEST_UNIT = "minutes"
+        private val DIGEST_AMOUNT_BY_INTERVAL = mapOf("1d" to DIGEST_AMOUNT_12H, "1w" to DIGEST_AMOUNT_24H)
+
+        // Novu v3 legacy workflow template context exposes digest data under `step`:
+        //   step.events      — array of accumulated trigger payloads (each item IS the payload)
+        //   step.total_count — total number of digested events
+        // Within {{#each step.events}}, payload fields are accessed directly (no `payload.` prefix).
+        private const val DIGEST_CHAT_TEMPLATE =
+            "📋 *PR Digest — {{step.total_count}} new PR(s)*\n" +
+                "{{#each step.events}}\n" +
+                "─────────────────────\n" +
+                "{{{content}}}\n" +
+                "{{/each}}"
+
+        private const val DIGEST_EMAIL_TEMPLATE =
+            "<div style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;" +
+                "max-width:600px;margin:0 auto;color:#24292f\">" +
+                "<div style=\"background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;" +
+                "padding:16px 20px;margin-bottom:16px\">" +
+                "<h2 style=\"margin:0;font-size:18px\">🔔 PR Digest</h2>" +
+                "<p style=\"margin:6px 0 0;color:#57606a;font-size:14px\">" +
+                "{{step.total_count}} pull request(s) to review</p>" +
+                "</div>" +
+                "{{#each step.events}}" +
+                "<div style=\"border:1px solid #d0d7de;border-radius:6px;padding:16px;margin-bottom:12px\">" +
+                "{{{content}}}" +
+                "</div>" +
+                "{{/each}}" +
+                "</div>"
+    }
 }
 
 /**

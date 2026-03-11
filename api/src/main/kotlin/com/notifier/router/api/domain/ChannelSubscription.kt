@@ -35,7 +35,7 @@ data class ChannelSubscription(
     @Column(nullable = false) val notificationTypeId: UUID,
     @JdbcTypeCode(SqlTypes.JSON) val filters: List<Filter> = emptyList(),
     val digestEnabled: Boolean = false,
-    val digestInterval: String = "24h",
+    val digestInterval: String = "1w",
     val enabled: Boolean = true,
     @CreatedDate
     @Column(nullable = false, updatable = false)

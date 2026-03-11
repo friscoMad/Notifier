@@ -58,8 +58,18 @@ data class NovuWorkflowTrigger(
     val identifier: String = "",
 )
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 data class NovuWorkflowStep(
     val template: NovuStepTemplate = NovuStepTemplate(),
+    val metadata: NovuDigestMetadata? = null,
+)
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class NovuDigestMetadata(
+    val type: String? = null,
+    val amount: Int? = null,
+    val unit: String? = null,
+    val digestKey: String? = null,
 )
 
 data class NovuStepTemplate(

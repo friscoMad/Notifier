@@ -515,13 +515,11 @@ class NovuService(
                 ?: error("Slack integration not initialized")
 
         val existing = novuApiClient!!.listChannelConnections().filter { it.providerId == "slack" }
-        existing.forEach { conn ->
-            try {
-                novuApiClient!!.deleteChannelConnection(conn.identifier!!)
-                logger.info("Deleted stale Slack channel connection ${conn.identifier}")
-            } catch (e: org.springframework.web.client.RestClientException) {
-                logger.warn("Could not delete stale channel connection ${conn.identifier}", e)
-            }
+        val reused = existing.firstOrNull()?.identifier
+        if (reused != null) {
+            slackConnectionIdentifier = reused
+            logger.debug("Reusing existing Slack channel connection $reused")
+            return reused
         }
 
         val workspaceId = slackProps.workspaceId.ifBlank { "unknown" }
@@ -564,7 +562,11 @@ class NovuService(
                 emptyList()
             }
 
-        val alreadyValid = existing.any { it.integrationIdentifier == integrationId && it.connectionIdentifier != null }
+        val alreadyValid = existing.any { ep ->
+            ep.integrationIdentifier == integrationId &&
+                ep.connectionIdentifier != null &&
+                (!isChannel || !ep.endpoint?.get("token").isNullOrBlank())
+        }
         if (alreadyValid) {
             logger.debug("Slack endpoint already up-to-date for $subscriberId, skipping")
             return

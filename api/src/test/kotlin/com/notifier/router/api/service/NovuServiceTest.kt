@@ -258,14 +258,11 @@ class NovuServiceTest {
     // ── resolveSlackConnectionIdentifier (via createSlackEndpoint) ────────────
 
     @Test
-    fun `deletes stale connection and creates fresh one`() {
+    fun `reuses existing connection`() {
         setSlackIntegrationIdentifier("slack-abc")
         whenever(apiClient.listChannelEndpoints("U123")).thenReturn(emptyList())
         whenever(apiClient.listChannelConnections()).thenReturn(
-            listOf(NovuChannelConnection(identifier = "chconn-stale", providerId = "slack")),
-        )
-        whenever(apiClient.createChannelConnection(any())).thenReturn(
-            NovuChannelConnection(identifier = "chconn-new", providerId = "slack"),
+            listOf(NovuChannelConnection(identifier = "chconn-existing", providerId = "slack")),
         )
         whenever(apiClient.createChannelEndpoint(any())).thenReturn(
             NovuChannelEndpoint(identifier = "ep-new", type = "slack_user"),
@@ -273,8 +270,8 @@ class NovuServiceTest {
 
         service.createSlackEndpoint("U123")
 
-        verify(apiClient).deleteChannelConnection("chconn-stale")
-        verify(apiClient).createChannelConnection(any())
+        verify(apiClient, never()).createChannelConnection(any())
+        verify(apiClient, never()).deleteChannelConnection(any())
     }
 
     @Test

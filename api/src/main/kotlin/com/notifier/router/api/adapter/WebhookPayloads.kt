@@ -30,7 +30,7 @@ data class GitHubPullRequest(
     val user: GitHubUser = GitHubUser(),
     val base: GitHubRef = GitHubRef(),
     val title: String = "",
-    val body: String = "",
+    val body: String? = null,
     val htmlUrl: String = "",
     val createdAt: String = "",
     val updatedAt: String = "",

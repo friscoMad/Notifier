@@ -359,8 +359,8 @@ class NotificationEventTest {
             assertEquals("buildkite_build_finished", event.typeKey)
             val content = event.payload["content"] as String
             assertTrue(content.startsWith("✅ *Build Passed* —"), "content=$content")
-            assertTrue(content.contains("<https://buildkite.com/build/1|#42>"), "content=$content")
             assertTrue(content.contains("*Pipeline:* api"), "content=$content")
+            assertTrue(content.contains("<https://buildkite.com/build/1|#42>"), "content=$content")
             assertTrue(content.contains("alice"), "content=$content")
         }
 

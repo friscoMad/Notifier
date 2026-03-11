@@ -255,7 +255,7 @@ data class BuildScheduledEvent(
         get() {
             val linkText = if (buildMessage.isNotBlank()) buildMessage else "#$buildNumber"
             return mapOf(
-                "content" to "🕐 *Build Scheduled* — <$buildUrl|$linkText>\n*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* #$buildNumber",
+                "content" to "🕐 *Build Scheduled* — <$buildUrl|$linkText>\n*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>",
                 "build_url" to buildUrl,
             )
         }
@@ -276,7 +276,7 @@ data class BuildRunningEvent(
         get() {
             val linkText = if (buildMessage.isNotBlank()) buildMessage else "#$buildNumber"
             return mapOf(
-                "content" to "🏃 *Build Running* — <$buildUrl|$linkText>\n*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* #$buildNumber",
+                "content" to "🏃 *Build Running* — <$buildUrl|$linkText>\n*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>",
                 "build_url" to buildUrl,
             )
         }
@@ -298,7 +298,7 @@ data class BuildFinishedEvent(
     override val payload: Map<String, Any>
         get() {
             val linkText = if (buildMessage.isNotBlank()) buildMessage else "#$buildNumber"
-            val line2 = "*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* #$buildNumber"
+            val line2 = "*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>"
             return mapOf(
                 "content" to if (status == "passed") {
                     "✅ *Build Passed* — <$buildUrl|$linkText>\n$line2"
@@ -325,13 +325,15 @@ data class JobScheduledEvent(
     override val typeKey = "buildkite_job_scheduled"
     override val metadata
         get() = mapOf("pipeline" to pipeline, "job_name" to jobName, "branch" to branch)
-    override val payload
-        get() =
-            mapOf<String, Any>(
-                "content" to "🕐 *Job Scheduled* — <$jobUrl|$jobName>\n*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>",
+    override val payload: Map<String, Any>
+        get() {
+            val linkText = if (buildMessage.isNotBlank()) "$buildMessage - $jobName" else jobName
+            return mapOf(
+                "content" to "🕐 *Job Scheduled* — <$jobUrl|$linkText>\n*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>",
                 "job_url" to jobUrl,
                 "build_url" to buildUrl,
             )
+        }
 }
 
 data class JobStartedEvent(
@@ -350,7 +352,7 @@ data class JobStartedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
-                "content" to "🏃 *Job Started* — <$jobUrl|$jobName>\n*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>  ·  *Agent:* $agentName",
+                "content" to "🏃 *Job Started* — <$jobUrl|$jobName>\n*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>",
                 "job_url" to jobUrl,
                 "build_url" to buildUrl,
             )

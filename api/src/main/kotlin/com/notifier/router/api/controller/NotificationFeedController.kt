@@ -21,9 +21,12 @@ class NotificationFeedController(
         val claims = token?.let { jwtService.verify(it) }
             ?: return ResponseEntity.status(UNAUTHORIZED).build()
 
-        val notifications = novuService.listInAppNotifications(claims.sub)
-        return ResponseEntity.ok(notifications)
+        return ResponseEntity.ok(novuService.listInAppNotifications(claims.sub))
     }
+
+    @GetMapping("/all")
+    fun allNotifications(): ResponseEntity<List<Map<String, Any?>>> =
+        ResponseEntity.ok(novuService.listAllInAppNotifications())
 
     companion object {
         private const val UNAUTHORIZED = 401

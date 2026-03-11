@@ -394,7 +394,32 @@ class NovuService(
         if (existing != null) {
             val novuIdentifier = existing.triggers?.firstOrNull()?.identifier
             if (novuIdentifier != null) workflowRegistry[workflowKey] = novuIdentifier
-            logger.info("Registered existing channel workflow: $workflowKey -> $novuIdentifier")
+            val steps = existing.steps ?: emptyList()
+            val hasWrongTemplate = steps.any {
+                when (it.template.type) {
+                    "chat" -> it.template.content != "{{{content}}}"
+                    "email" ->
+                        it.template.content != "{{{content}}}" ||
+                            it.template.contentType != "customHtml" ||
+                            it.template.subject.isNullOrBlank()
+                    else -> false
+                }
+            }
+            if (hasWrongTemplate) {
+                val fixedSteps = steps.map {
+                    when (it.template.type) {
+                        "chat" -> NovuWorkflowStep(NovuStepTemplate("chat", "{{{content}}}"))
+                        "email" -> NovuWorkflowStep(
+                            NovuStepTemplate("email", "{{{content}}}", "customHtml", "{{subject}}")
+                        )
+                        else -> it
+                    }
+                }
+                novuApiClient!!.updateWorkflow(existing._id!!, existing.copy(steps = fixedSteps))
+                logger.info("Patched channel workflow $workflowKey: corrected template")
+            } else {
+                logger.info("Registered existing channel workflow: $workflowKey -> $novuIdentifier")
+            }
             return
         }
 
@@ -761,7 +786,7 @@ class NovuService(
     }
 
     /**
-     * Ensures a digest-variant channel workflow exists in Novu (e.g. `pr_created_chat_digest_12h`).
+     * Ensures a digest-variant channel workflow exists in Novu (e.g. `pr_created_chat_digest_1d`).
      * The workflow has two steps: a digest step (accumulates events over a time window) followed
      * by the delivery step for the given channel.
      *
@@ -789,7 +814,7 @@ class NovuService(
             metadata = NovuDigestMetadata(type = "regular", amount = digestAmount, unit = DIGEST_UNIT),
         )
         // Delivery step iterates over all events accumulated by the digest step.
-        // `steps.digest-step.events` is Novu's fixed variable name for the preceding digest step.
+        // Within {{#each step.events}}, payload fields are accessed directly (each item IS the payload).
         val deliveryStep = when (channel) {
             "email" -> NovuWorkflowStep(
                 NovuStepTemplate(
@@ -834,6 +859,36 @@ class NovuService(
             logger.info("Provisioned digest workflow: $workflowKey -> $novuIdentifier ($name)")
         } else {
             logger.warn("Created digest workflow $workflowKey but could not extract trigger identifier")
+        }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun listAllInAppNotifications(): List<Map<String, Any?>> {
+        if (novuApiClient == null) return emptyList()
+        return try {
+            novuApiClient!!.listAllNotifications().mapNotNull { raw ->
+                val template = raw["template"] as? Map<String, Any?>
+                val templateName = template?.get("name") as? String ?: ""
+
+                if (!templateName.endsWith("_in_app")) return@mapNotNull null
+
+                val payload = raw["payload"] as? Map<String, Any?> ?: emptyMap()
+                val typeKey = templateName.removeSuffix("_in_app")
+                val content = payload["content"] as? String ?: "Notification: $typeKey"
+                val subscriber = raw["subscriber"] as? Map<String, Any?>
+
+                mapOf(
+                    "typeKey" to typeKey,
+                    "content" to content,
+                    "payload" to payload,
+                    "channels" to (raw["channels"] ?: emptyList<String>()),
+                    "createdAt" to raw["createdAt"],
+                    "subscriberId" to (subscriber?.get("subscriberId") ?: ""),
+                )
+            }
+        } catch (e: org.springframework.web.client.RestClientException) {
+            logger.warn("Failed to fetch all notifications: ${e.message}")
+            emptyList()
         }
     }
 

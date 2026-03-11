@@ -124,11 +124,16 @@ object ModalViewBuilder {
 
         filters.forEach { filterDef ->
             val fieldName = filterDef.field
+            val operatorsText = filterDef.operators.joinToString("  ·  ")
             input {
                 blockId("filter_block_$fieldName")
-                label("Filter by $fieldName (Optional)")
+                label(fieldLabel(fieldName))
+                hint("Operators: $operatorsText  ·  Separate multiple values with commas (OR match)")
                 optional(true)
-                plainTextInput { actionId("filter_input_$fieldName") }
+                plainTextInput {
+                    actionId("filter_input_$fieldName")
+                    placeholder(fieldPlaceholder(fieldName))
+                }
             }
         }
 
@@ -221,5 +226,25 @@ object ModalViewBuilder {
             "email" -> "Email"
             "in_app" -> "Inbox"
             else -> channel
+        }
+
+    /** Converts a snake_case field name to a Title Case label, e.g. "base_branch" → "Base Branch". */
+    fun fieldLabel(field: String): String =
+        field.split("_").joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
+
+    /** Returns a contextual placeholder example for well-known filter fields. */
+    fun fieldPlaceholder(field: String): String =
+        when (field) {
+            "author" -> "e.g. alice, bob"
+            "repo" -> "e.g. org/my-repo"
+            "base_branch" -> "e.g. main, develop"
+            "reviewer" -> "e.g. alice"
+            "check_name" -> "e.g. ci/build"
+            "service" -> "e.g. api, worker"
+            "environment" -> "e.g. production, staging"
+            "status" -> "e.g. success, failure"
+            "team" -> "e.g. backend"
+            "test_name" -> "e.g. unit-tests"
+            else -> "Enter value..."
         }
 }

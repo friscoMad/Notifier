@@ -75,7 +75,7 @@ db.organizations.updateOne(
 $MONGO_CMD "
 db.organizations.updateOne(
   { name: 'NotifierLocal' },
-  { \$set: { apiServiceLevel: 'business' } }
+  { \$set: { apiServiceLevel: 'enterprise' } }
 );
 "
 

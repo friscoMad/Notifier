@@ -35,12 +35,14 @@ class NovuSeeder(
             return
         }
 
+        val existingWorkflows = novuService.listExistingWorkflowNames()
         types.forEach { type ->
             WORKFLOW_CHANNELS.forEach { channel ->
                 novuService.ensureChannelWorkflowExists(
                     typeKey = type.typeKey,
                     name = type.name,
                     channel = channel,
+                    existingNames = existingWorkflows,
                 )
             }
         }

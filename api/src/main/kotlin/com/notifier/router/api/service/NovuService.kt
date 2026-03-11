@@ -365,10 +365,20 @@ class NovuService(
      * Ensures a single-channel workflow variant exists in Novu (e.g. `pr_created_chat`).
      * Each variant has only one step matching its channel type.
      */
+    /**
+     * Fetches all existing workflow names from Novu in a single call.
+     * Used by the seeder to avoid repeated API calls per workflow.
+     */
+    fun listExistingWorkflowNames(): Map<String, NovuWorkflow> {
+        if (!this::novuClient.isInitialized || novuApiClient == null) return emptyMap()
+        return novuApiClient!!.listWorkflows().associateBy { it.name ?: "" }
+    }
+
     fun ensureChannelWorkflowExists(
         typeKey: String,
         name: String,
         channel: String,
+        existingNames: Map<String, NovuWorkflow> = emptyMap(),
     ) {
         if (!this::novuClient.isInitialized) {
             logger.warn("Novu client not initialized, skipping workflow check for ${typeKey}_$channel")
@@ -376,8 +386,7 @@ class NovuService(
         }
 
         val workflowKey = "${typeKey}_$channel"
-        val workflows = novuApiClient!!.listWorkflows()
-        val existing = workflows.find { it.name == workflowKey }
+        val existing = existingNames[workflowKey]
 
         if (existing != null) {
             val novuIdentifier = existing.triggers?.firstOrNull()?.identifier

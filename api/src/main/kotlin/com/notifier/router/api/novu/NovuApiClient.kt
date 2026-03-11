@@ -57,8 +57,12 @@ class NovuApiClient(
 
     fun listWorkflows(): List<NovuWorkflow> =
         restTemplate
-            .exchange("$baseUrl/workflows", HttpMethod.GET, HttpEntity<Unit>(headers()), Map::class.java)
-            .body
+            .exchange(
+                "$baseUrl/workflows?limit=$MAX_WORKFLOWS_PAGE_SIZE",
+                HttpMethod.GET,
+                HttpEntity<Unit>(headers()),
+                Map::class.java,
+            ).body
             .dataRawList()
             .map { objectMapper.convertValue(it, NovuWorkflow::class.java) }
 
@@ -196,6 +200,7 @@ class NovuApiClient(
 
     companion object {
         private const val NOTIFICATION_PAGE_SIZE = 50
+        private const val MAX_WORKFLOWS_PAGE_SIZE = 100
     }
 }
 

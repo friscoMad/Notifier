@@ -226,7 +226,7 @@ class NovuService(
         request.to = subscriberIds
         val enrichedPayload = payload.toMutableMap()
         if ("subject" !in enrichedPayload) {
-            enrichedPayload["subject"] = enrichedPayload["content"] ?: "Notification"
+            enrichedPayload["subject"] = enrichedPayload["title"] ?: "Notification"
         }
         request.payload = enrichedPayload
 
@@ -264,7 +264,7 @@ class NovuService(
         request.to = subscriberIds
         val enrichedPayload = payload.toMutableMap()
         if ("subject" !in enrichedPayload) {
-            enrichedPayload["subject"] = enrichedPayload["content"] ?: "Notification"
+            enrichedPayload["subject"] = enrichedPayload["title"] ?: "Notification"
         }
         request.payload = enrichedPayload
 

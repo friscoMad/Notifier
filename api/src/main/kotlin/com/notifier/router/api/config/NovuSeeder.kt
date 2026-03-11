@@ -38,12 +38,17 @@ class NovuSeeder(
         val existingWorkflows = novuService.listExistingWorkflowNames()
         types.forEach { type ->
             WORKFLOW_CHANNELS.forEach { channel ->
-                novuService.ensureChannelWorkflowExists(
-                    typeKey = type.typeKey,
-                    name = type.name,
-                    channel = channel,
-                    existingNames = existingWorkflows,
-                )
+                try {
+                    novuService.ensureChannelWorkflowExists(
+                        typeKey = type.typeKey,
+                        name = type.name,
+                        channel = channel,
+                        existingNames = existingWorkflows,
+                    )
+                } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+                    // Novu plan limits (e.g. workflow cap) must not prevent startup.
+                    logger.warn("Could not provision Novu workflow for ${type.typeKey}/$channel: ${e.message}")
+                }
             }
         }
 

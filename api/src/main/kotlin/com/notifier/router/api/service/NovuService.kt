@@ -32,6 +32,7 @@ import org.springframework.web.client.RestTemplate
 import retrofit2.Retrofit
 
 @Service
+@Suppress("LargeClass")
 class NovuService(
     private val novuApiProps: NovuApiProperties,
     private val slackProps: NovuSlackProperties,
@@ -778,6 +779,36 @@ class NovuService(
             }
         } catch (e: org.springframework.web.client.RestClientException) {
             logger.warn("Failed to fetch notifications for $subscriberId: ${e.message}")
+            emptyList()
+        }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun listAllInAppNotifications(): List<Map<String, Any?>> {
+        if (novuApiClient == null) return emptyList()
+        return try {
+            novuApiClient!!.listAllNotifications().mapNotNull { raw ->
+                val template = raw["template"] as? Map<String, Any?>
+                val templateName = template?.get("name") as? String ?: ""
+
+                if (!templateName.endsWith("_in_app")) return@mapNotNull null
+
+                val payload = raw["payload"] as? Map<String, Any?> ?: emptyMap()
+                val typeKey = templateName.removeSuffix("_in_app")
+                val content = payload["content"] as? String ?: "Notification: $typeKey"
+                val subscriber = raw["subscriber"] as? Map<String, Any?>
+
+                mapOf(
+                    "typeKey" to typeKey,
+                    "content" to content,
+                    "payload" to payload,
+                    "channels" to (raw["channels"] ?: emptyList<String>()),
+                    "createdAt" to raw["createdAt"],
+                    "subscriberId" to (subscriber?.get("subscriberId") ?: ""),
+                )
+            }
+        } catch (e: org.springframework.web.client.RestClientException) {
+            logger.warn("Failed to fetch all notifications: ${e.message}")
             emptyList()
         }
     }

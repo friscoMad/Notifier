@@ -190,6 +190,17 @@ class NovuApiClient(
             ).body
             .dataRawList() as List<Map<String, Any?>>
 
+    @Suppress("UNCHECKED_CAST")
+    fun listAllNotifications(): List<Map<String, Any?>> =
+        restTemplate
+            .exchange(
+                "$baseUrl/notifications?limit=$NOTIFICATION_PAGE_SIZE",
+                HttpMethod.GET,
+                HttpEntity<Unit>(headers()),
+                Map::class.java,
+            ).body
+            .dataRawList() as List<Map<String, Any?>>
+
     // ── Private Helpers ───────────────────────────────────────────────────────
 
     private fun headers(): HttpHeaders =

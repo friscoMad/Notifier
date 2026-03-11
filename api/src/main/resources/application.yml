@@ -31,6 +31,7 @@ app:
 buildkite:
   webhook:
     token: ${BUILDKITE_WEBHOOK_TOKEN:}
+    enforce-hmac: ${BUILDKITE_ENFORCE_HMAC:false}
 
 novu:
   api:

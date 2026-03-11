@@ -24,6 +24,7 @@ class WebhookController(
     private val eventService: EventService,
     @Value("\${github.webhook.secret:}") private val githubSecret: String,
     @Value("\${buildkite.webhook.token:}") private val buildkiteToken: String,
+    @Value("\${buildkite.webhook.enforce-hmac:false}") private val buildkiteEnforceHmac: Boolean,
 ) {
     private val logger = LoggerFactory.getLogger(WebhookController::class.java)
 
@@ -45,10 +46,11 @@ class WebhookController(
 
     @PostMapping("/buildkite")
     fun handleBuildkiteWebhook(
-        @RequestHeader("X-Buildkite-Token") token: String?,
+        @RequestHeader("X-Buildkite-Token", required = false) token: String?,
+        @RequestHeader("X-Buildkite-Signature", required = false) hmacSignature: String?,
         @RequestBody payload: String,
     ): ResponseEntity<Void> {
-        if (!verifyBuildkiteToken(token)) {
+        if (!verifyBuildkiteRequest(token, hmacSignature, payload)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
         }
         return try {
@@ -100,13 +102,56 @@ class WebhookController(
         }
     }
 
-    private fun verifyBuildkiteToken(token: String?): Boolean {
+    private fun verifyBuildkiteRequest(
+        token: String?,
+        hmacSignature: String?,
+        payload: String,
+    ): Boolean {
         if (buildkiteToken.isBlank()) return true
-        if (token.isNullOrBlank()) return false
 
-        return MessageDigest.isEqual(
-            token.toByteArray(Charsets.UTF_8),
-            buildkiteToken.toByteArray(Charsets.UTF_8),
-        )
+        if (buildkiteEnforceHmac) {
+            if (hmacSignature.isNullOrBlank()) return false
+            return verifyBuildkiteHmac(payload, hmacSignature)
+        }
+
+        return when {
+            !hmacSignature.isNullOrBlank() -> verifyBuildkiteHmac(payload, hmacSignature)
+            !token.isNullOrBlank() -> MessageDigest.isEqual(
+                token.toByteArray(Charsets.UTF_8),
+                buildkiteToken.toByteArray(Charsets.UTF_8),
+            )
+            else -> false
+        }
     }
+
+    /**
+     * Verifies a Buildkite HMAC-SHA256 signature.
+     *
+     * Header format: `timestamp=<unix-ts>&signature=<hex-hmac-sha256>`
+     * HMAC is computed over `<timestamp>.<payload-body>` using [buildkiteToken] as the secret.
+     */
+    private fun verifyBuildkiteHmac(
+        payload: String,
+        signature: String,
+    ): Boolean =
+        try {
+            val params = signature.split("&").associate {
+                val (k, v) = it.split("=", limit = 2)
+                k to v
+            }
+            val timestamp = params["timestamp"] ?: return false
+            val receivedSig = params["signature"] ?: return false
+
+            val hmac = Mac.getInstance("HmacSHA256")
+            hmac.init(SecretKeySpec(buildkiteToken.toByteArray(Charsets.UTF_8), "HmacSHA256"))
+            val computed = hmac.doFinal("$timestamp.$payload".toByteArray(Charsets.UTF_8))
+                .joinToString("") { "%02x".format(it) }
+
+            MessageDigest.isEqual(
+                receivedSig.toByteArray(Charsets.UTF_8),
+                computed.toByteArray(Charsets.UTF_8),
+            )
+        } catch (_: Exception) {
+            false
+        }
 }

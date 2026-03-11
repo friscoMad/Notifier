@@ -262,6 +262,79 @@ class DataSeeder(
                             createFilter("00000000-0000-0000-0000-000000000013", "agent_name"),
                             createFilter("00000000-0000-0000-0000-000000000013", "hostname"),
                         ),
+                    // Buildkite Build Scheduled
+                    createType(
+                        "00000000-0000-0000-0000-000000000014",
+                        "buildkite_build_scheduled",
+                        "Buildkite Build Scheduled",
+                        "Triggered when a Buildkite build is scheduled",
+                    ) to
+                        listOf(
+                            createFilter("00000000-0000-0000-0000-000000000014", "pipeline"),
+                            createFilter("00000000-0000-0000-0000-000000000014", "branch"),
+                            createFilter("00000000-0000-0000-0000-000000000014", "creator"),
+                        ),
+                    // Buildkite Build Running
+                    createType(
+                        "00000000-0000-0000-0000-000000000015",
+                        "buildkite_build_running",
+                        "Buildkite Build Running",
+                        "Triggered when a Buildkite build starts running",
+                    ) to
+                        listOf(
+                            createFilter("00000000-0000-0000-0000-000000000015", "pipeline"),
+                            createFilter("00000000-0000-0000-0000-000000000015", "branch"),
+                            createFilter("00000000-0000-0000-0000-000000000015", "creator"),
+                        ),
+                    // Buildkite Build Finished
+                    createType(
+                        "00000000-0000-0000-0000-000000000016",
+                        "buildkite_build_finished",
+                        "Buildkite Build Finished",
+                        "Triggered when a Buildkite build finishes (passed or failed)",
+                    ) to
+                        listOf(
+                            createFilter("00000000-0000-0000-0000-000000000016", "pipeline"),
+                            createFilter("00000000-0000-0000-0000-000000000016", "branch"),
+                            createFilter("00000000-0000-0000-0000-000000000016", "status"),
+                        ),
+                    // Buildkite Job Scheduled
+                    createType(
+                        "00000000-0000-0000-0000-000000000017",
+                        "buildkite_job_scheduled",
+                        "Buildkite Job Scheduled",
+                        "Triggered when a Buildkite job is scheduled",
+                    ) to
+                        listOf(
+                            createFilter("00000000-0000-0000-0000-000000000017", "pipeline"),
+                            createFilter("00000000-0000-0000-0000-000000000017", "job_name"),
+                            createFilter("00000000-0000-0000-0000-000000000017", "branch"),
+                        ),
+                    // Buildkite Job Started
+                    createType(
+                        "00000000-0000-0000-0000-000000000018",
+                        "buildkite_job_started",
+                        "Buildkite Job Started",
+                        "Triggered when a Buildkite job starts running on an agent",
+                    ) to
+                        listOf(
+                            createFilter("00000000-0000-0000-0000-000000000018", "pipeline"),
+                            createFilter("00000000-0000-0000-0000-000000000018", "job_name"),
+                            createFilter("00000000-0000-0000-0000-000000000018", "branch"),
+                        ),
+                    // Buildkite Job Finished
+                    createType(
+                        "00000000-0000-0000-0000-000000000019",
+                        "buildkite_job_finished",
+                        "Buildkite Job Finished",
+                        "Triggered when a Buildkite job finishes (passed or failed)",
+                    ) to
+                        listOf(
+                            createFilter("00000000-0000-0000-0000-000000000019", "pipeline"),
+                            createFilter("00000000-0000-0000-0000-000000000019", "job_name"),
+                            createFilter("00000000-0000-0000-0000-000000000019", "branch"),
+                            createFilter("00000000-0000-0000-0000-000000000019", "status"),
+                        ),
                 )
             }
     }

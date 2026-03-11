@@ -1,0 +1,33 @@
+{
+    "name": 'Buildkite Job Started',
+    "identifier": "buildkite_job_started",
+    "description": "Triggered on buildkite job started Buildkite event",
+    "active": true,
+    "draft": false,
+    "preferenceSettings": {
+        "email": false,
+        "sms": false,
+        "in_app": true,
+        "push": false,
+        "chat": true
+    },
+    "steps": [
+        {
+            "name": "In-App Notification",
+            "template": {
+                "type": "in_app",
+                "content": "{{{content}}}"
+            },
+            "active": true
+        },
+        {
+            "name": "Slack Message",
+            "template": {
+                "type": "chat",
+                "content": "{{{content}}}"
+            },
+            "active": true
+        }
+    ],
+    "__version": "1.0.0"
+}

@@ -127,7 +127,7 @@ class WebhookController(
     /**
      * Verifies a Buildkite HMAC-SHA256 signature.
      *
-     * Header format: `timestamp=<unix-ts>&signature=<hex-hmac-sha256>`
+     * Header format: `timestamp=<unix-ts>,signature=<hex-hmac-sha256>`
      * HMAC is computed over `<timestamp>.<payload-body>` using [buildkiteToken] as the secret.
      */
     private fun verifyBuildkiteHmac(
@@ -135,7 +135,7 @@ class WebhookController(
         signature: String,
     ): Boolean =
         try {
-            val params = signature.split("&").associate {
+            val params = signature.split(",").associate {
                 val (k, v) = it.split("=", limit = 2)
                 k to v
             }

@@ -68,7 +68,7 @@ class WebhookControllerTest {
         hmac.init(SecretKeySpec(secret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
         val sig = hmac.doFinal("$timestamp.$payload".toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
-        return "timestamp=$timestamp&signature=$sig"
+        return "timestamp=$timestamp,signature=$sig"
     }
 
     private fun generateHmac(
@@ -182,7 +182,7 @@ class WebhookControllerTest {
 
     @Test
     fun `handleBuildkiteWebhook rejects invalid HMAC signature and yields Unauthorized`() {
-        val sig = "timestamp=1700000000&signature=deadbeef"
+        val sig = "timestamp=1700000000,signature=deadbeef"
 
         val response = webhookController.handleBuildkiteWebhook(null, sig, sampleBuildkitePayload)
 

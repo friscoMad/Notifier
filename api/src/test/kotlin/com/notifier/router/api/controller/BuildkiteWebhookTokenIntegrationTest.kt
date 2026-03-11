@@ -48,7 +48,7 @@ class BuildkiteWebhookTokenIntegrationTest : BaseIntegrationTest() {
         hmac.init(SecretKeySpec(secret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
         val sig = hmac.doFinal("$timestamp.$payload".toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
-        return "timestamp=$timestamp&signature=$sig"
+        return "timestamp=$timestamp,signature=$sig"
     }
 
     @Nested
@@ -103,7 +103,7 @@ class BuildkiteWebhookTokenIntegrationTest : BaseIntegrationTest() {
         fun `invalid HMAC signature returns 401`() {
             restTemplate.post().uri("/api/v1/webhooks/buildkite")
                 .contentType(MediaType.APPLICATION_JSON)
-                .header("X-Buildkite-Signature", "timestamp=1700000000&signature=deadbeef")
+                .header("X-Buildkite-Signature", "timestamp=1700000000,signature=deadbeef")
                 .body(validPayload).exchange().expectStatus().isUnauthorized
         }
     }

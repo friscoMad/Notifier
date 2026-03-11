@@ -35,15 +35,25 @@ class NovuSeeder(
             return
         }
 
+        val existingWorkflows = novuService.listExistingWorkflowNames()
         types.forEach { type ->
-            novuService.ensureWorkflowExists(
-                key = type.typeKey,
-                name = type.name,
-            )
+            WORKFLOW_CHANNELS.forEach { channel ->
+                novuService.ensureChannelWorkflowExists(
+                    typeKey = type.typeKey,
+                    name = type.name,
+                    channel = channel,
+                    existingNames = existingWorkflows,
+                )
+            }
         }
 
         logger.info("Novu workflow provisioning completed.")
     }
 
     override fun getOrder(): Int = 20 // Runs after DataSeeder (which is default 0)
+
+    companion object {
+        /** Each notification type gets one Novu workflow per delivery channel. */
+        private val WORKFLOW_CHANNELS = listOf("in_app", "chat", "email")
+    }
 }

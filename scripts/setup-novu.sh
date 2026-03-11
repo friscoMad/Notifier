@@ -70,6 +70,15 @@ db.organizations.updateOne(
 );
 "
 
+# 2b. Remove workflow limit (self-hosted free tier caps at 20 workflows;
+#     we need 30 = 10 notification types x 3 channels: in_app, chat, email)
+$MONGO_CMD "
+db.organizations.updateOne(
+  { name: 'NotifierLocal' },
+  { \$set: { apiServiceLevel: 'enterprise' } }
+);
+"
+
 # 3. Create Default Member mapping
 $MONGO_CMD "
 db.members.updateOne(

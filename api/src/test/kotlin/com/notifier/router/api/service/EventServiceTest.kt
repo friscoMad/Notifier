@@ -97,7 +97,8 @@ class EventServiceTest {
 
         eventService.processEventAsync(event)
 
-        verify(novuService).triggerWorkflow("pr_created", listOf("U123"), event.payload)
+        verify(novuService).triggerChannelWorkflow("pr_created", "in_app", listOf("U123"), event.payload)
+        verify(novuService).triggerChannelWorkflow("pr_created", "chat", listOf("U123"), event.payload)
     }
 
     @Test
@@ -121,6 +122,6 @@ class EventServiceTest {
 
         eventService.processEventAsync(event)
 
-        verify(novuService, never()).triggerWorkflow(any(), any(), any())
+        verify(novuService, never()).triggerChannelWorkflow(any(), any(), any(), any())
     }
 }

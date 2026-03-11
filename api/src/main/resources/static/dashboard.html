@@ -741,11 +741,12 @@ const MySubs = {
         <select id="add-sub-type" onchange="MySubs.loadFilterDefs()">${opts}</select>
       </div>
       <div class="form-group">
-        <label>Channels</label>
+        <label>Delivery channels</label>
         <div class="checkbox-group" id="add-sub-channels">
-          <label><input type="checkbox" value="in_app" checked /> In-App</label>
-          <label><input type="checkbox" value="chat" /> Slack DM</label>
+          <label><input type="checkbox" value="slack_dm" /> Slack DM</label>
+          <label><input type="checkbox" value="email" /> Email</label>
         </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">Web notifications are always enabled.</div>
       </div>
       <div class="form-group">
         <label>Filters</label>
@@ -806,7 +807,8 @@ const MySubs = {
 
   async create() {
     const typeId = document.getElementById('add-sub-type').value;
-    const channels = [...document.querySelectorAll('#add-sub-channels input:checked')].map(c => c.value);
+    const selected = [...document.querySelectorAll('#add-sub-channels input:checked')].map(c => c.value);
+    const channels = ['in_app', ...selected];
     const filterRows = document.querySelectorAll('#add-sub-filters .filter-row');
     const filters = [...filterRows].map(row => ({
       field: row.querySelector('.f-field').value,
@@ -819,18 +821,17 @@ const MySubs = {
         method: 'POST',
         body: JSON.stringify({
           userId: currentUser.slackId,
+          email: currentUser.email || null,
           notificationTypeId: typeId,
           channels,
           filters,
           enabled: true,
         }),
       });
-      // Create Slack endpoint so Novu can deliver DMs
-      if (channels.includes('chat') || channels.includes('slack_dm')) {
-        try {
-          await fetch(`${API}/subscribers/${encodeURIComponent(currentUser.slackId)}/slack/endpoint`, { method: 'POST' });
-        } catch {}
-      }
+      // Create Slack endpoint and register email in Novu
+      try {
+        await fetch(`${API}/subscribers/${encodeURIComponent(currentUser.slackId)}/slack/endpoint`, { method: 'POST' });
+      } catch {}
       toast('Subscription created');
       closeModal();
       this.load();

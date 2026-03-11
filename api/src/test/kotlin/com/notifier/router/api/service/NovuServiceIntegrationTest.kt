@@ -124,8 +124,9 @@ class NovuServiceIntegrationTest : BaseIntegrationTest() {
 
         // Use mockito-kotlin's check {} for null-safe verification
         verify(novuService)
-            .triggerWorkflow(
-                check { workflowId -> assertEquals("pr_created", workflowId) },
+            .triggerChannelWorkflow(
+                check { typeKey -> assertEquals("pr_created", typeKey) },
+                check { channel -> assertEquals("in_app", channel) },
                 check { subscribers ->
                     assertEquals(1, subscribers.size)
                     assertEquals("U_DEEP_TEST", subscribers[0])
@@ -222,8 +223,9 @@ class NovuServiceIntegrationTest : BaseIntegrationTest() {
         Thread.sleep(500)
 
         verify(novuService)
-            .triggerWorkflow(
+            .triggerChannelWorkflow(
                 check { assertEquals("pr_created", it) },
+                check { assertEquals("in_app", it) },
                 check { subscribers ->
                     assertEquals(2, subscribers.size)
                     assertTrue(subscribers.contains("U_DEEP_TEST"))
@@ -280,7 +282,7 @@ class NovuServiceIntegrationTest : BaseIntegrationTest() {
 
         Thread.sleep(500)
 
-        verify(novuService, never()).triggerWorkflow(any(), any(), any())
+        verify(novuService, never()).triggerChannelWorkflow(any(), any(), any(), any())
     }
 
     @Test
@@ -312,6 +314,6 @@ class NovuServiceIntegrationTest : BaseIntegrationTest() {
 
         Thread.sleep(500)
 
-        verify(novuService, never()).triggerWorkflow(any(), any(), any())
+        verify(novuService, never()).triggerChannelWorkflow(any(), any(), any(), any())
     }
 }

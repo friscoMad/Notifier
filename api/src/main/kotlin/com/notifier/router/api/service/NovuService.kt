@@ -33,7 +33,7 @@ import org.springframework.web.client.RestTemplate
 import retrofit2.Retrofit
 
 // All ensure*/trigger*/cleanup methods belong together as the single Novu integration surface.
-@Suppress("LargeClass")
+@Suppress("LargeClass", "TooManyFunctions")
 @Service
 class NovuService(
     private val novuApiProps: NovuApiProperties,

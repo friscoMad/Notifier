@@ -166,3 +166,4 @@ You can then log into Novu on `http://localhost:4000` (User: `admin@notifier.loc
  
  
  
+ 

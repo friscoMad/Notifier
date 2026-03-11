@@ -131,12 +131,13 @@ GITHUB_WEBHOOK_SECRET=<the generated value>
 
 A green checkmark next to the webhook confirms it is working.
 
-### 6.4 Rotate the webhook secret
+### 6.4 Rotate the webhook secret (if compromised)
+
+Only needed if the secret is ever leaked and needs to be replaced:
 
 1. Generate a new secret: `openssl rand -hex 32`
 2. Update `GITHUB_WEBHOOK_SECRET` in your environment and restart the API
 3. In GitHub webhook settings, update the **Secret** field to the same new value
-4. GitHub will immediately start signing payloads with the new secret
 
 ### Handled GitHub event types
 

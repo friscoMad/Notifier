@@ -27,7 +27,7 @@ class ChannelSubscriptionControllerTest {
                 notificationTypeId = "${java.util.UUID.randomUUID()}",
                 filters = emptyList(),
                 digestEnabled = false,
-                digestInterval = "24h",
+                digestInterval = "1w",
                 enabled = true,
             )
 
@@ -60,7 +60,7 @@ class ChannelSubscriptionControllerTest {
                 notificationTypeId = "${java.util.UUID.randomUUID()}",
                 filters = emptyList(),
                 digestEnabled = false,
-                digestInterval = "24h",
+                digestInterval = "1w",
                 enabled = true,
             )
 

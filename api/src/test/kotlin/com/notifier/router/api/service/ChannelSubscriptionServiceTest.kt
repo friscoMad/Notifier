@@ -29,7 +29,7 @@ class ChannelSubscriptionServiceTest {
                 notificationTypeId = "${UUID.randomUUID()}",
                 filters = emptyList(),
                 digestEnabled = false,
-                digestInterval = "24h",
+                digestInterval = "1w",
                 enabled = true,
             )
 
@@ -76,7 +76,7 @@ class ChannelSubscriptionServiceTest {
                 notificationTypeId = UUID.randomUUID(),
                 filters = emptyList(),
                 digestEnabled = false,
-                digestInterval = "24h",
+                digestInterval = "1w",
                 enabled = true,
             )
         val subscription2 =
@@ -87,7 +87,7 @@ class ChannelSubscriptionServiceTest {
                 notificationTypeId = UUID.randomUUID(),
                 filters = emptyList(),
                 digestEnabled = false,
-                digestInterval = "24h",
+                digestInterval = "1w",
                 enabled = true,
             )
 

@@ -10,6 +10,6 @@ data class ChannelSubscriptionDto(
     @field:NotBlank val notificationTypeId: String,
     val filters: List<Filter> = emptyList(),
     val digestEnabled: Boolean = false,
-    val digestInterval: String = "24h",
+    val digestInterval: String = "1w",
     val enabled: Boolean = true,
 )

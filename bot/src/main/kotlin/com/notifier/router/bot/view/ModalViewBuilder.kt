@@ -176,8 +176,8 @@ object ModalViewBuilder {
                 options =
                 listOf(
                     Option("Immediate", "immediate"),
-                    Option("Daily (24h)", "24h"),
-                    Option("Half-Day (12h)", "12h"),
+                    Option("1 Week", "1w"),
+                    Option("1 Day", "1d"),
                 ),
                 initialValue = "immediate",
             )

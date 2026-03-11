@@ -52,6 +52,21 @@ class NovuSeeder(
             }
         }
 
+        DIGEST_TYPE_KEYS.forEach { typeKey ->
+            val typeName = types.find { it.typeKey == typeKey }?.name ?: typeKey
+            DIGEST_CHANNELS.forEach { channel ->
+                DIGEST_INTERVALS.forEach { intervalKey ->
+                    novuService.ensureDigestChannelWorkflowExists(
+                        typeKey = typeKey,
+                        name = typeName,
+                        channel = channel,
+                        intervalKey = intervalKey,
+                        existingNames = existingWorkflows,
+                    )
+                }
+            }
+        }
+
         logger.info("Novu workflow provisioning completed.")
     }
 
@@ -60,5 +75,14 @@ class NovuSeeder(
     companion object {
         /** Each notification type gets one Novu workflow per delivery channel. */
         private val WORKFLOW_CHANNELS = listOf("in_app", "chat", "email")
+
+        /** Notification types that support digest delivery. */
+        private val DIGEST_TYPE_KEYS = listOf("pr_created")
+
+        /** Channels for which digest variants are provisioned. */
+        private val DIGEST_CHANNELS = listOf("chat", "email")
+
+        /** Digest interval keys; each produces a separate Novu workflow with a distinct window. */
+        private val DIGEST_INTERVALS = listOf("1d", "1w")
     }
 }

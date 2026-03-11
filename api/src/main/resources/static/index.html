@@ -1597,6 +1597,8 @@ const Channels = {
           enabled: true,
         }),
       });
+      // Create Slack endpoint so Novu can deliver to the channel
+      try { await fetch(`${API}/subscribers/${encodeURIComponent(channelId)}/slack/endpoint`, { method: 'POST' }); } catch {}
       toast('Channel subscription created');
       closeModal();
       this.load();

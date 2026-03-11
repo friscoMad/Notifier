@@ -269,6 +269,10 @@ class NovuService(
         if ("subject" !in enrichedPayload) {
             enrichedPayload["subject"] = enrichedPayload["title"] ?: "Notification"
         }
+        if (channel == "email" && "emailContent" !in enrichedPayload) {
+            val rawContent = enrichedPayload["content"] as? String ?: ""
+            enrichedPayload["emailContent"] = slackMrkdwnToHtml(rawContent)
+        }
         request.payload = enrichedPayload
 
         val response = novuClient.triggerEvent(request)
@@ -318,7 +322,7 @@ class NovuService(
                 when (it.template.type) {
                     "chat" -> it.template.content != "{{{content}}}"
                     "email" ->
-                        it.template.content != "{{{content}}}" ||
+                        it.template.content != NOVU_EMAIL_HTML_TEMPLATE ||
                             it.template.contentType != "customHtml" ||
                             it.template.subject.isNullOrBlank()
                     else -> false
@@ -348,7 +352,9 @@ class NovuService(
                     listOf(
                         NovuWorkflowStep(NovuStepTemplate("in_app", "{{content}}")),
                         NovuWorkflowStep(NovuStepTemplate("chat", "{{{content}}}")),
-                        NovuWorkflowStep(NovuStepTemplate("email", "{{{content}}}", "customHtml", "{{subject}}")),
+                        NovuWorkflowStep(
+                            NovuStepTemplate("email", NOVU_EMAIL_HTML_TEMPLATE, "customHtml", "{{subject}}")
+                        ),
                     ),
                     active = true,
                     draft = false,
@@ -399,7 +405,7 @@ class NovuService(
                 when (it.template.type) {
                     "chat" -> it.template.content != "{{{content}}}"
                     "email" ->
-                        it.template.content != "{{{content}}}" ||
+                        it.template.content != NOVU_EMAIL_HTML_TEMPLATE ||
                             it.template.contentType != "customHtml" ||
                             it.template.subject.isNullOrBlank()
                     else -> false
@@ -410,7 +416,7 @@ class NovuService(
                     when (it.template.type) {
                         "chat" -> NovuWorkflowStep(NovuStepTemplate("chat", "{{{content}}}"))
                         "email" -> NovuWorkflowStep(
-                            NovuStepTemplate("email", "{{{content}}}", "customHtml", "{{subject}}")
+                            NovuStepTemplate("email", NOVU_EMAIL_HTML_TEMPLATE, "customHtml", "{{subject}}")
                         )
                         else -> it
                     }
@@ -429,7 +435,9 @@ class NovuService(
                 ?: return logger.error("Could not find any notification groups in Novu")
 
         val step = when (channel) {
-            "email" -> NovuWorkflowStep(NovuStepTemplate("email", "{{{content}}}", "customHtml", "{{subject}}"))
+            "email" -> NovuWorkflowStep(
+                NovuStepTemplate("email", NOVU_EMAIL_HTML_TEMPLATE, "customHtml", "{{subject}}")
+            )
             else -> NovuWorkflowStep(NovuStepTemplate(channel, "{{{content}}}"))
         }
 
@@ -468,7 +476,7 @@ class NovuService(
                     when (it.template.type) {
                         "chat" -> NovuWorkflowStep(NovuStepTemplate("chat", "{{{content}}}"))
                         "email" -> NovuWorkflowStep(
-                            NovuStepTemplate("email", "{{{content}}}", "customHtml", "{{subject}}")
+                            NovuStepTemplate("email", NOVU_EMAIL_HTML_TEMPLATE, "customHtml", "{{subject}}")
                         )
                         else -> it
                     }
@@ -476,7 +484,7 @@ class NovuService(
                 .let { if (!hasChatStep) it + NovuWorkflowStep(NovuStepTemplate("chat", "{{{content}}}")) else it }
                 .let {
                     if (!hasEmailStep) {
-                        it + NovuWorkflowStep(NovuStepTemplate("email", "{{{content}}}", "customHtml", "{{subject}}"))
+                        it + NovuWorkflowStep(NovuStepTemplate("email", NOVU_EMAIL_HTML_TEMPLATE, "customHtml", "{{subject}}"))
                     } else {
                         it
                     }
@@ -928,3 +936,47 @@ class NovuService(
                 "</div>"
     }
 }
+
+/**
+ * Full HTML email template for Novu's customHtml step.
+ * The `{{{emailContent}}}` placeholder is replaced by Handlebars at send time with the
+ * styled inner content produced by [slackMrkdwnToHtml].
+ */
+const val NOVU_EMAIL_HTML_TEMPLATE = """<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#F4F5F7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color:#F4F5F7;">
+<tr><td align="center" style="padding:32px 16px;">
+<table width="560" cellpadding="0" cellspacing="0" role="presentation" style="background:#ffffff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.12);">
+<tr><td style="background:#1264A3;border-radius:8px 8px 0 0;padding:16px 28px;">
+<span style="color:#ffffff;font-size:16px;font-weight:700;letter-spacing:0.3px;">&#128276; Notifier</span>
+</td></tr>
+<tr><td style="padding:24px 28px 20px;font-size:14px;line-height:1.6;color:#1D1C1D;">
+{{{emailContent}}}
+</td></tr>
+<tr><td style="padding:12px 28px 20px;border-top:1px solid #E8E8E8;font-size:12px;color:#868686;">
+You received this because you subscribed via <strong>/notifyme</strong>.
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>"""
+
+/**
+ * Converts Slack mrkdwn to styled HTML paragraphs for injection into the email template.
+ *  - `<url|text>` → `<a href="url">text</a>`
+ *  - `*text*`     → `<strong>text</strong>`
+ *  - Each non-blank line → `<p>` block
+ */
+fun slackMrkdwnToHtml(text: String): String =
+    text
+        .replace(Regex("<(https?://[^|>]+)\\|([^>]+)>")) {
+            "<a href=\"${it.groupValues[1]}\" style=\"color:#1264A3;text-decoration:none;font-weight:600;\">" +
+                "${it.groupValues[2]}</a>"
+        }
+        .replace(Regex("\\*([^*\n]+)\\*"), "<strong>$1</strong>")
+        .split("\n")
+        .filter { it.isNotBlank() }
+        .joinToString("") { "<p style=\"margin:0 0 8px 0;\">$it</p>" }

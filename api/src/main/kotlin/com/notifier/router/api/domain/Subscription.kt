@@ -7,7 +7,6 @@ import jakarta.persistence.EntityListeners
 import jakarta.persistence.Id
 import jakarta.persistence.Index
 import jakarta.persistence.Table
-import jakarta.persistence.UniqueConstraint
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
 import org.springframework.data.annotation.CreatedDate
@@ -19,13 +18,6 @@ import java.util.UUID
 @Entity
 @Table(
     name = "subscriptions",
-    uniqueConstraints =
-    [
-        UniqueConstraint(
-            name = "uc_subscription_user_type",
-            columnNames = ["user_id", "notification_type_id"],
-        ),
-    ],
     indexes =
     [
         Index(name = "idx_subscription_user_id", columnList = "user_id"),

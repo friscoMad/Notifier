@@ -19,9 +19,18 @@ class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(DataIntegrityViolationException::class)
-    fun handleDataIntegrityViolation(ex: DataIntegrityViolationException): ResponseEntity<Unit> {
+    fun handleDataIntegrityViolation(ex: DataIntegrityViolationException): ResponseEntity<Map<String, String>> {
         logger.warn("Data integrity violation: ${ex.message}")
-        return ResponseEntity.status(HttpStatus.CONFLICT).build()
+        val message = when {
+            ex.message?.contains("uc_subscription_user_type_filters") == true ->
+                "You already have a subscription to this event type with the same filters."
+            ex.message?.contains("uc_channel_sub_channel_type_filters") == true ->
+                "This channel already has a subscription to this event type with the same filters."
+            ex.message?.contains("uc_user_slack_id") == true ->
+                "A user with this Slack ID already exists."
+            else -> "A record with these values already exists."
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(mapOf("error" to message))
     }
 
     @ExceptionHandler(Exception::class)

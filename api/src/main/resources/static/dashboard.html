@@ -451,7 +451,12 @@ function toast(msg, type = 'success') {
 
 async function apiFetch(path, opts = {}) {
   const res = await fetch(API + path, { headers: { 'Content-Type': 'application/json', ...opts.headers }, ...opts });
-  if (!res.ok) { const text = await res.text(); throw new Error(text || res.statusText); }
+  if (!res.ok) {
+    const text = await res.text();
+    let msg = res.statusText;
+    try { const json = JSON.parse(text); msg = json.error || json.message || text; } catch { msg = text || res.statusText; }
+    throw new Error(msg);
+  }
   if (res.status === 204 || res.status === 202) return null;
   return res.json();
 }

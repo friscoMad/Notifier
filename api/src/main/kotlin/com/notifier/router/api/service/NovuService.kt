@@ -275,7 +275,7 @@ class NovuService(
             val hasPushStep = steps.any { it.template.type == "push" }
             val hasWrongTemplate = steps.any {
                 when (it.template.type) {
-                    "chat" -> it.template.content != "{{content}}"
+                    "chat" -> it.template.content != "{{{content}}}"
                     "email" ->
                         it.template.content != "{{content}}" ||
                             it.template.contentType != "customHtml" ||
@@ -306,7 +306,7 @@ class NovuService(
                     steps =
                     listOf(
                         NovuWorkflowStep(NovuStepTemplate("in_app", "{{content}}")),
-                        NovuWorkflowStep(NovuStepTemplate("chat", "{{content}}")),
+                        NovuWorkflowStep(NovuStepTemplate("chat", "{{{content}}}")),
                         NovuWorkflowStep(NovuStepTemplate("email", "{{content}}", "customHtml", "{{subject}}")),
                     ),
                     active = true,
@@ -336,14 +336,14 @@ class NovuService(
                 .filter { it.template.type != "push" }
                 .map {
                     when (it.template.type) {
-                        "chat" -> NovuWorkflowStep(NovuStepTemplate("chat", "{{content}}"))
+                        "chat" -> NovuWorkflowStep(NovuStepTemplate("chat", "{{{content}}}"))
                         "email" -> NovuWorkflowStep(
                             NovuStepTemplate("email", "{{content}}", "customHtml", "{{subject}}")
                         )
                         else -> it
                     }
                 }
-                .let { if (!hasChatStep) it + NovuWorkflowStep(NovuStepTemplate("chat", "{{content}}")) else it }
+                .let { if (!hasChatStep) it + NovuWorkflowStep(NovuStepTemplate("chat", "{{{content}}}")) else it }
                 .let {
                     if (!hasEmailStep) {
                         it + NovuWorkflowStep(NovuStepTemplate("email", "{{content}}", "customHtml", "{{subject}}"))

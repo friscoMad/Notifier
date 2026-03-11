@@ -359,7 +359,8 @@ class NotificationEventTest {
             assertEquals("buildkite_build_finished", event.typeKey)
             val content = event.payload["content"] as String
             assertTrue(content.startsWith("✅ *Build Passed* —"), "content=$content")
-            assertTrue(content.contains("<https://buildkite.com/build/1|#42 · api>"), "content=$content")
+            assertTrue(content.contains("<https://buildkite.com/build/1|#42>"), "content=$content")
+            assertTrue(content.contains("*Pipeline:* api"), "content=$content")
             assertTrue(content.contains("alice"), "content=$content")
         }
 
@@ -377,7 +378,7 @@ class NotificationEventTest {
             assertTrue(content.startsWith("❌ *Build Failed* —"), "content=$content")
         }
 
-        @Test fun `buildMessage is included in content when non-blank`() {
+        @Test fun `buildMessage becomes the link text when non-blank`() {
             val event = BuildFinishedEvent(
                 pipeline = "api",
                 buildNumber = 42,
@@ -389,10 +390,10 @@ class NotificationEventTest {
                 buildMessage = "Fix payment flow",
             )
             val content = event.payload["content"] as String
-            assertTrue(content.contains("\"Fix payment flow\""), "content=$content")
+            assertTrue(content.contains("<https://buildkite.com/build/1|Fix payment flow>"), "content=$content")
         }
 
-        @Test fun `buildMessage is omitted when blank`() {
+        @Test fun `build number is the link text when buildMessage is blank`() {
             val event = BuildFinishedEvent(
                 pipeline = "api",
                 buildNumber = 42,
@@ -404,7 +405,7 @@ class NotificationEventTest {
                 buildMessage = "",
             )
             val content = event.payload["content"] as String
-            assertTrue(!content.contains("\"\""), "blank message should not appear: content=$content")
+            assertTrue(content.contains("<https://buildkite.com/build/1|#42>"), "content=$content")
         }
     }
 

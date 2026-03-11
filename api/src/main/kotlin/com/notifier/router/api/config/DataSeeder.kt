@@ -233,6 +233,13 @@ class DataSeeder(
                             createFilter("00000000-0000-0000-0000-000000000010", "author"),
                             createFilter("00000000-0000-0000-0000-000000000010", "repo"),
                         ),
+                    // Buildkite Ping
+                    createType(
+                        "00000000-0000-0000-0000-000000000011",
+                        "buildkite_ping",
+                        "Buildkite Ping",
+                        "Triggered when Buildkite sends a webhook ping (connection confirmed)",
+                    ) to emptyList(),
                 )
             }
     }

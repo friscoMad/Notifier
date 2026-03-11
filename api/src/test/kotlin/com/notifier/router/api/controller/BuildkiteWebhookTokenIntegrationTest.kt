@@ -73,4 +73,27 @@ class BuildkiteWebhookTokenIntegrationTest : BaseIntegrationTest() {
             .expectStatus()
             .isUnauthorized
     }
+
+    @Test
+    fun `POST buildkite ping with valid token returns 200`() {
+        val pingPayload =
+            """
+            {
+              "event": "ping",
+              "service": { "id": "abc", "provider": "webhook" },
+              "organization": { "slug": "my-org" },
+              "sender": { "name": "Test User" }
+            }
+            """.trimIndent()
+
+        restTemplate
+            .post()
+            .uri("/api/v1/webhooks/buildkite")
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("X-Buildkite-Token", "integration-test-token")
+            .body(pingPayload)
+            .exchange()
+            .expectStatus()
+            .isOk
+    }
 }

@@ -73,6 +73,7 @@ object BuildkiteWebhookAdapter {
             branch = build.branch,
             creator = build.creator?.name ?: "",
             buildUrl = build.webUrl,
+            buildMessage = build.message,
         )
     }
 
@@ -84,6 +85,7 @@ object BuildkiteWebhookAdapter {
             branch = build.branch,
             creator = build.creator?.name ?: "",
             buildUrl = build.webUrl,
+            buildMessage = build.message,
         )
     }
 
@@ -93,9 +95,11 @@ object BuildkiteWebhookAdapter {
             pipeline = w.pipeline.slug,
             buildNumber = build.number,
             branch = build.branch,
+            creator = build.creator?.name ?: "",
             status = build.state,
             buildUrl = build.webUrl,
             finishedAt = build.finishedAt ?: "",
+            buildMessage = build.message,
         )
     }
 
@@ -107,7 +111,10 @@ object BuildkiteWebhookAdapter {
             jobName = job.name,
             buildNumber = build.number,
             branch = build.branch,
+            creator = build.creator?.name ?: "",
+            jobUrl = job.webUrl,
             buildUrl = build.webUrl,
+            buildMessage = build.message,
         )
     }
 
@@ -119,6 +126,7 @@ object BuildkiteWebhookAdapter {
             jobName = job.name,
             buildNumber = build.number,
             branch = build.branch,
+            creator = build.creator?.name ?: "",
             agentName = job.agent?.name ?: "",
             jobUrl = job.webUrl,
             buildUrl = build.webUrl,
@@ -133,6 +141,7 @@ object BuildkiteWebhookAdapter {
             jobName = job.name,
             buildNumber = build.number,
             branch = build.branch,
+            creator = build.creator?.name ?: "",
             status = job.state,
             exitStatus = job.exitStatus,
             jobUrl = job.webUrl,

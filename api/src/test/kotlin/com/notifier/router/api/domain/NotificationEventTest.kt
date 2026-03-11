@@ -292,6 +292,7 @@ class NotificationEventTest {
                 jobName = "unit-tests",
                 buildNumber = 42,
                 branch = "master",
+                creator = "alice",
                 status = "passed",
                 exitStatus = 0,
                 jobUrl = "https://buildkite.com/job/1",
@@ -300,9 +301,10 @@ class NotificationEventTest {
             )
             assertEquals("buildkite_job_finished", event.typeKey)
             val content = event.payload["content"] as String
-            assertTrue(content.startsWith("✅ *Job Passed:*"), "content=$content")
+            assertTrue(content.startsWith("✅ *Job Passed* —"), "content=$content")
             assertTrue(content.contains("unit-tests"), "content=$content")
             assertTrue(content.contains("<https://buildkite.com/build/1|#42>"), "content=$content")
+            assertTrue(content.contains("alice"), "content=$content")
         }
 
         @Test fun `failed status shows failure icon`() {
@@ -311,6 +313,7 @@ class NotificationEventTest {
                 jobName = "unit-tests",
                 buildNumber = 42,
                 branch = "master",
+                creator = "alice",
                 status = "failed",
                 exitStatus = 1,
                 jobUrl = "https://buildkite.com/job/1",
@@ -318,7 +321,7 @@ class NotificationEventTest {
                 finishedAt = "2024-01-01T00:00:00Z",
             )
             val content = event.payload["content"] as String
-            assertTrue(content.startsWith("❌ *Job Failed:*"), "content=$content")
+            assertTrue(content.startsWith("❌ *Job Failed* —"), "content=$content")
         }
     }
 
@@ -348,14 +351,16 @@ class NotificationEventTest {
                 pipeline = "api",
                 buildNumber = 42,
                 branch = "master",
+                creator = "alice",
                 status = "passed",
                 buildUrl = "https://buildkite.com/build/1",
                 finishedAt = "2024-01-01T00:00:00Z",
             )
             assertEquals("buildkite_build_finished", event.typeKey)
             val content = event.payload["content"] as String
-            assertTrue(content.startsWith("✅ *Build Passed:*"), "content=$content")
-            assertTrue(content.contains("<https://buildkite.com/build/1|#42 api>"), "content=$content")
+            assertTrue(content.startsWith("✅ *Build Passed* —"), "content=$content")
+            assertTrue(content.contains("<https://buildkite.com/build/1|#42 · api>"), "content=$content")
+            assertTrue(content.contains("alice"), "content=$content")
         }
 
         @Test fun `failed status shows failure icon`() {
@@ -363,12 +368,43 @@ class NotificationEventTest {
                 pipeline = "api",
                 buildNumber = 42,
                 branch = "master",
+                creator = "alice",
                 status = "failed",
                 buildUrl = "https://buildkite.com/build/1",
                 finishedAt = "2024-01-01T00:00:00Z",
             )
             val content = event.payload["content"] as String
-            assertTrue(content.startsWith("❌ *Build Failed:*"), "content=$content")
+            assertTrue(content.startsWith("❌ *Build Failed* —"), "content=$content")
+        }
+
+        @Test fun `buildMessage is included in content when non-blank`() {
+            val event = BuildFinishedEvent(
+                pipeline = "api",
+                buildNumber = 42,
+                branch = "master",
+                creator = "alice",
+                status = "passed",
+                buildUrl = "https://buildkite.com/build/1",
+                finishedAt = "2024-01-01T00:00:00Z",
+                buildMessage = "Fix payment flow",
+            )
+            val content = event.payload["content"] as String
+            assertTrue(content.contains("\"Fix payment flow\""), "content=$content")
+        }
+
+        @Test fun `buildMessage is omitted when blank`() {
+            val event = BuildFinishedEvent(
+                pipeline = "api",
+                buildNumber = 42,
+                branch = "master",
+                creator = "alice",
+                status = "passed",
+                buildUrl = "https://buildkite.com/build/1",
+                finishedAt = "2024-01-01T00:00:00Z",
+                buildMessage = "",
+            )
+            val content = event.payload["content"] as String
+            assertTrue(!content.contains("\"\""), "blank message should not appear: content=$content")
         }
     }
 

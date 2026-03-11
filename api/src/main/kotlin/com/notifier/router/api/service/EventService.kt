@@ -92,5 +92,4 @@ class EventService(
             logger.error("Error processing event ${event.typeKey}", e)
         }
     }
-
 }

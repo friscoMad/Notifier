@@ -37,16 +37,16 @@ class DataSeeder(
         if (fullReset) {
             logger.info("Full reset enabled — wiping all data including subscriptions and Novu state...")
             userRepository.findAll().forEach { novuService.cleanupSubscriber(it.slackId) }
-            subscriptionRepository.deleteAll()
-            channelSubscriptionRepository.deleteAll()
-            userRepository.deleteAll()
+            subscriptionRepository.deleteAllInBatch()
+            channelSubscriptionRepository.deleteAllInBatch()
+            userRepository.deleteAllInBatch()
         } else {
             logger.info("Seeding notification types and filter definitions (subscriptions preserved)...")
         }
 
         // Always reset static reference data
-        filterDefinitionRepository.deleteAll()
-        notificationTypeRepository.deleteAll()
+        filterDefinitionRepository.deleteAllInBatch()
+        notificationTypeRepository.deleteAllInBatch()
 
         seedData.forEach { (type, filters) ->
             notificationTypeRepository.save(type)

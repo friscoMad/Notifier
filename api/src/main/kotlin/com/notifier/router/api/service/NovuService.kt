@@ -32,6 +32,7 @@ import org.springframework.web.client.RestTemplate
 import retrofit2.Retrofit
 
 @Service
+@Suppress("LargeClass")
 class NovuService(
     private val novuApiProps: NovuApiProperties,
     private val slackProps: NovuSlackProperties,

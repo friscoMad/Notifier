@@ -391,7 +391,32 @@ class NovuService(
         if (existing != null) {
             val novuIdentifier = existing.triggers?.firstOrNull()?.identifier
             if (novuIdentifier != null) workflowRegistry[workflowKey] = novuIdentifier
-            logger.info("Registered existing channel workflow: $workflowKey -> $novuIdentifier")
+            val steps = existing.steps ?: emptyList()
+            val hasWrongTemplate = steps.any {
+                when (it.template.type) {
+                    "chat" -> it.template.content != "{{{content}}}"
+                    "email" ->
+                        it.template.content != "{{content}}" ||
+                            it.template.contentType != "customHtml" ||
+                            it.template.subject.isNullOrBlank()
+                    else -> false
+                }
+            }
+            if (hasWrongTemplate) {
+                val fixedSteps = steps.map {
+                    when (it.template.type) {
+                        "chat" -> NovuWorkflowStep(NovuStepTemplate("chat", "{{{content}}}"))
+                        "email" -> NovuWorkflowStep(
+                            NovuStepTemplate("email", "{{content}}", "customHtml", "{{subject}}")
+                        )
+                        else -> it
+                    }
+                }
+                novuApiClient!!.updateWorkflow(existing._id!!, existing.copy(steps = fixedSteps))
+                logger.info("Patched channel workflow $workflowKey: corrected template")
+            } else {
+                logger.info("Registered existing channel workflow: $workflowKey -> $novuIdentifier")
+            }
             return
         }
 
@@ -402,7 +427,7 @@ class NovuService(
 
         val step = when (channel) {
             "email" -> NovuWorkflowStep(NovuStepTemplate("email", "{{content}}", "customHtml", "{{subject}}"))
-            else -> NovuWorkflowStep(NovuStepTemplate(channel, "{{content}}"))
+            else -> NovuWorkflowStep(NovuStepTemplate(channel, "{{{content}}}"))
         }
 
         val created =

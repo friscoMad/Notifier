@@ -509,6 +509,9 @@ async function loadTypes() {
 function typeNameById(id) { const t = notifTypes.find(t => t.id === id); return t ? t.name : id; }
 function typeKeyById(id) { const t = notifTypes.find(t => t.id === id); return t ? t.key : id; }
 
+const CHANNEL_LABELS = { in_app: 'Web Inbox', chat: 'Slack', email: 'Email' };
+function formatChannel(key) { return CHANNEL_LABELS[key] ?? key; }
+
 // ── Tab Navigation ──
 document.querySelectorAll('.tabs button').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -646,7 +649,7 @@ const NotifFeed = {
 
       const { icon, color } = this.getIcon(typeKey);
       const created = n.createdAt ? this.timeAgo(new Date(n.createdAt)) : '';
-      const channels = (n.channels || []).map(ch => `<span class="badge badge-type" style="font-size:9px">${esc(ch)}</span>`).join(' ');
+      const channels = (n.channels || []).map(ch => `<span class="badge badge-type" style="font-size:9px">${esc(formatChannel(ch))}</span>`).join(' ');
       const lines = content.split('\n');
 
       return `<div class="feed-item${isNew ? ' feed-item-new' : ''}">
@@ -720,7 +723,7 @@ const MySubs = {
       ).join('');
       const channels = (sub.channels || []).map(ch => {
         const icon = ch === 'chat' || ch === 'slack_dm' ? 'message-square' : 'layout-grid';
-        return `<span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="${icon}" style="width:12px;height:12px"></i>${esc(ch)}</span>`;
+        return `<span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="${icon}" style="width:12px;height:12px"></i>${esc(formatChannel(ch))}</span>`;
       }).join(', ');
       return `<div class="card">
         <div class="card-header">

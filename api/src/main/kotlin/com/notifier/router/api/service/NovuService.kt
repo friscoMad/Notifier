@@ -817,6 +817,7 @@ class NovuService(
         val workflowKey = "${typeKey}_${channel}_digest_$intervalKey"
         val digestAmount = DIGEST_AMOUNT_BY_INTERVAL[intervalKey] ?: DIGEST_AMOUNT_24H
 
+        val intervalLabel = DIGEST_LABEL_BY_INTERVAL[intervalKey] ?: intervalKey
         val digestStep = NovuWorkflowStep(
             template = NovuStepTemplate(type = "digest"),
             metadata = NovuDigestMetadata(type = "regular", amount = digestAmount, unit = DIGEST_UNIT),
@@ -827,12 +828,12 @@ class NovuService(
             "email" -> NovuWorkflowStep(
                 NovuStepTemplate(
                     "email",
-                    DIGEST_EMAIL_TEMPLATE,
+                    digestEmailTemplate(name, intervalLabel),
                     "customHtml",
-                    "🔔 PR Digest — {{step.total_count}} pull request(s)",
+                    "🔔 $intervalLabel $name Digest — {{step.total_count}} notification(s)",
                 ),
             )
-            else -> NovuWorkflowStep(NovuStepTemplate(channel, DIGEST_CHAT_TEMPLATE))
+            else -> NovuWorkflowStep(NovuStepTemplate(channel, digestChatTemplate(name, intervalLabel)))
         }
         val steps = listOf(digestStep, deliveryStep)
 
@@ -900,40 +901,43 @@ class NovuService(
         }
     }
 
-    private fun getBaseUrl() = if (novuApiProps.url.isNotBlank()) novuApiProps.url else "https://api.novu.co/v1"
+    private fun getBaseUrl() = novuApiProps.url.ifBlank { "https://api.novu.co/v1" }
 
     companion object {
         private const val DIGEST_AMOUNT_12H = 1
         private const val DIGEST_AMOUNT_24H = 2
         private const val DIGEST_UNIT = "minutes"
         private val DIGEST_AMOUNT_BY_INTERVAL = mapOf("1d" to DIGEST_AMOUNT_12H, "1w" to DIGEST_AMOUNT_24H)
+        private val DIGEST_LABEL_BY_INTERVAL = mapOf("1d" to "Daily", "1w" to "Weekly")
 
         // Novu v3 legacy workflow template context exposes digest data under `step`:
         //   step.events      — array of accumulated trigger payloads (each item IS the payload)
         //   step.total_count — total number of digested events
         // Within {{#each step.events}}, payload fields are accessed directly (no `payload.` prefix).
-        private const val DIGEST_CHAT_TEMPLATE =
-            "📋 *PR Digest — {{step.total_count}} new PR(s)*\n" +
+        private fun digestChatTemplate(name: String, intervalLabel: String) =
+            "📋 *$intervalLabel $name Digest — {{step.total_count}} new notification(s)*\n" +
                 "{{#each step.events}}\n" +
                 "─────────────────────\n" +
                 "{{{content}}}\n" +
                 "{{/each}}"
 
-        private const val DIGEST_EMAIL_TEMPLATE =
-            "<div style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;" +
-                "max-width:600px;margin:0 auto;color:#24292f\">" +
-                "<div style=\"background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;" +
+        // Inner content injected into NOVU_EMAIL_HTML_TEMPLATE at the {{{emailContent}}} slot.
+        // Uses {{{emailContent}}} inside the each loop so each event renders its HTML-converted body.
+        private fun digestEmailInner(name: String, intervalLabel: String) =
+            "<div style=\"background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;" +
                 "padding:16px 20px;margin-bottom:16px\">" +
-                "<h2 style=\"margin:0;font-size:18px\">🔔 PR Digest</h2>" +
+                "<h2 style=\"margin:0;font-size:18px\">🔔 $intervalLabel $name Digest</h2>" +
                 "<p style=\"margin:6px 0 0;color:#57606a;font-size:14px\">" +
-                "{{step.total_count}} pull request(s) to review</p>" +
+                "{{step.total_count}} notification(s)</p>" +
                 "</div>" +
                 "{{#each step.events}}" +
                 "<div style=\"border:1px solid #d0d7de;border-radius:6px;padding:16px;margin-bottom:12px\">" +
                 "{{{content}}}" +
                 "</div>" +
-                "{{/each}}" +
-                "</div>"
+                "{{/each}}"
+
+        private fun digestEmailTemplate(name: String, intervalLabel: String) =
+            NOVU_EMAIL_HTML_TEMPLATE.replace("{{{emailContent}}}", digestEmailInner(name, intervalLabel))
     }
 }
 

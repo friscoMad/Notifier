@@ -35,6 +35,8 @@ class EventServiceTest {
 
     @Mock private lateinit var novuService: NovuService
 
+    @Mock private lateinit var slackNotificationService: SlackNotificationService
+
     @InjectMocks private lateinit var eventService: EventService
 
     @Test
@@ -98,8 +100,14 @@ class EventServiceTest {
 
         eventService.processEventAsync(event)
 
-        verify(novuService).triggerChannelWorkflow("pr_created", "in_app", listOf("U123"), event.payload)
-        verify(novuService).triggerChannelWorkflow("pr_created", "chat", listOf("U123"), event.payload)
+        verify(novuService).triggerChannelWorkflow(
+            eq("pr_created"),
+            eq("in_app"),
+            eq(listOf("U123")),
+            eq(event.payload),
+        )
+        verify(novuService, never()).triggerChannelWorkflow(any(), eq("chat"), any(), any())
+        verify(slackNotificationService).sendMessage(eq("U123"), eq(event.payload["content"] as String))
     }
 
     @Test
@@ -179,5 +187,6 @@ class EventServiceTest {
         eventService.processEventAsync(event)
 
         verify(novuService, never()).triggerChannelWorkflow(any(), any(), any(), any())
+        verify(slackNotificationService, never()).sendMessage(any(), any())
     }
 }

@@ -246,16 +246,19 @@ data class BuildScheduledEvent(
     val branch: String,
     val creator: String,
     val buildUrl: String,
+    val buildMessage: String = "",
 ) : NotificationEvent {
     override val typeKey = "buildkite_build_scheduled"
     override val metadata
         get() = mapOf("pipeline" to pipeline, "branch" to branch, "creator" to creator)
-    override val payload
-        get() =
-            mapOf<String, Any>(
-                "content" to "🕐 *Build Scheduled:* <$buildUrl|#$buildNumber $pipeline>\n*Branch:* $branch  ·  *By:* $creator",
+    override val payload: Map<String, Any>
+        get() {
+            val linkText = if (buildMessage.isNotBlank()) buildMessage else "#$buildNumber"
+            return mapOf(
+                "content" to "🕐 *Build Scheduled* — <$buildUrl|$linkText>\n*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>",
                 "build_url" to buildUrl,
             )
+        }
 }
 
 data class BuildRunningEvent(
@@ -264,41 +267,49 @@ data class BuildRunningEvent(
     val branch: String,
     val creator: String,
     val buildUrl: String,
+    val buildMessage: String = "",
 ) : NotificationEvent {
     override val typeKey = "buildkite_build_running"
     override val metadata
         get() = mapOf("pipeline" to pipeline, "branch" to branch, "creator" to creator)
-    override val payload
-        get() =
-            mapOf<String, Any>(
-                "content" to "🏃 *Build Running:* <$buildUrl|#$buildNumber $pipeline>\n*Branch:* $branch  ·  *By:* $creator",
+    override val payload: Map<String, Any>
+        get() {
+            val linkText = if (buildMessage.isNotBlank()) buildMessage else "#$buildNumber"
+            return mapOf(
+                "content" to "🏃 *Build Running* — <$buildUrl|$linkText>\n*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>",
                 "build_url" to buildUrl,
             )
+        }
 }
 
 data class BuildFinishedEvent(
     val pipeline: String,
     val buildNumber: Int,
     val branch: String,
+    val creator: String,
     val status: String,
     val buildUrl: String,
     val finishedAt: String,
+    val buildMessage: String = "",
 ) : NotificationEvent {
     override val typeKey = "buildkite_build_finished"
     override val metadata
-        get() = mapOf("pipeline" to pipeline, "branch" to branch, "status" to status)
-    override val payload
-        get() =
-            mapOf<String, Any>(
+        get() = mapOf("pipeline" to pipeline, "branch" to branch, "creator" to creator, "status" to status)
+    override val payload: Map<String, Any>
+        get() {
+            val linkText = if (buildMessage.isNotBlank()) buildMessage else "#$buildNumber"
+            val line2 = "*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>"
+            return mapOf(
                 "content" to if (status == "passed") {
-                    "✅ *Build Passed:* <$buildUrl|#$buildNumber $pipeline>\n*Branch:* $branch"
+                    "✅ *Build Passed* — <$buildUrl|$linkText>\n$line2"
                 } else {
-                    "❌ *Build Failed:* <$buildUrl|#$buildNumber $pipeline>\n*Branch:* $branch  ·  *Status:* $status"
+                    "❌ *Build Failed* — <$buildUrl|$linkText>\n$line2"
                 },
                 "build_url" to buildUrl,
                 "finished_at" to finishedAt,
                 "state" to status,
             )
+        }
 }
 
 data class JobScheduledEvent(
@@ -306,17 +317,23 @@ data class JobScheduledEvent(
     val jobName: String,
     val buildNumber: Int,
     val branch: String,
+    val creator: String,
+    val jobUrl: String,
     val buildUrl: String,
+    val buildMessage: String = "",
 ) : NotificationEvent {
     override val typeKey = "buildkite_job_scheduled"
     override val metadata
         get() = mapOf("pipeline" to pipeline, "job_name" to jobName, "branch" to branch)
-    override val payload
-        get() =
-            mapOf<String, Any>(
-                "content" to "🕐 *Job Scheduled:* $jobName\n*Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>  ·  *Branch:* $branch",
+    override val payload: Map<String, Any>
+        get() {
+            val linkText = if (buildMessage.isNotBlank()) "$buildMessage - $jobName" else jobName
+            return mapOf(
+                "content" to "🕐 *Job Scheduled* — <$jobUrl|$linkText>\n*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>",
+                "job_url" to jobUrl,
                 "build_url" to buildUrl,
             )
+        }
 }
 
 data class JobStartedEvent(
@@ -324,6 +341,7 @@ data class JobStartedEvent(
     val jobName: String,
     val buildNumber: Int,
     val branch: String,
+    val creator: String,
     val agentName: String,
     val jobUrl: String,
     val buildUrl: String,
@@ -334,7 +352,7 @@ data class JobStartedEvent(
     override val payload
         get() =
             mapOf<String, Any>(
-                "content" to "🏃 *Job Started:* <$jobUrl|$jobName>\n*Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>  ·  *Agent:* $agentName",
+                "content" to "🏃 *Job Started* — <$jobUrl|$jobName>\n*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>",
                 "job_url" to jobUrl,
                 "build_url" to buildUrl,
             )
@@ -345,6 +363,7 @@ data class JobFinishedEvent(
     val jobName: String,
     val buildNumber: Int,
     val branch: String,
+    val creator: String,
     val status: String,
     val exitStatus: Int?,
     val jobUrl: String,
@@ -364,9 +383,9 @@ data class JobFinishedEvent(
         get() =
             mapOf<String, Any>(
                 "content" to if (status == "passed") {
-                    "✅ *Job Passed:* <$jobUrl|$jobName>\n*Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>"
+                    "✅ *Job Passed* — <$jobUrl|$jobName>\n*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>"
                 } else {
-                    "❌ *Job Failed:* <$jobUrl|$jobName>\n*Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>  ·  *Exit:* ${exitStatus ?: "?"}"
+                    "❌ *Job Failed* — <$jobUrl|$jobName>\n*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>  ·  *Exit:* ${exitStatus ?: "?"}"
                 },
                 "job_url" to jobUrl,
                 "build_url" to buildUrl,

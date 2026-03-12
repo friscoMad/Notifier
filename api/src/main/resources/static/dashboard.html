@@ -384,16 +384,32 @@
           <label>Type</label>
           <select id="notif-filter-type" onchange="NotifFeed.renderFiltered()">
             <option value="">All types</option>
-            <option value="pr_created">PR Created</option>
-            <option value="pr_review_requested">Review Requested</option>
-            <option value="pr_merged_service">PR Merged (Service)</option>
-            <option value="pr_checks_passed">Checks Passed</option>
-            <option value="pr_checks_failed">Checks Failed</option>
-            <option value="deploy_started">Deploy Started</option>
-            <option value="deploy_completed">Deploy Completed</option>
-            <option value="flaky_test_detected">Flaky Test</option>
-            <option value="pr_merged_master_success">Merged Master OK</option>
-            <option value="pr_merged_master_error">Merged Master Error</option>
+            <optgroup label="GitHub">
+              <option value="pr_created">PR Created</option>
+              <option value="pr_updated">PR Updated</option>
+              <option value="pr_review_requested">Review Requested</option>
+              <option value="pr_merged_service">PR Merged (Service)</option>
+              <option value="pr_checks_passed">Checks Passed</option>
+              <option value="pr_checks_failed">Checks Failed</option>
+              <option value="pr_merged_master_success">Merged Master OK</option>
+              <option value="pr_merged_master_error">Merged Master Error</option>
+              <option value="flaky_test_detected">Flaky Test</option>
+            </optgroup>
+            <optgroup label="Buildkite">
+              <option value="buildkite_build_scheduled">Build Scheduled</option>
+              <option value="buildkite_build_running">Build Running</option>
+              <option value="buildkite_build_finished">Build Finished</option>
+              <option value="buildkite_job_scheduled">Job Scheduled</option>
+              <option value="buildkite_job_started">Job Started</option>
+              <option value="buildkite_job_finished">Job Finished</option>
+              <option value="buildkite_pipeline_updated">Pipeline Updated</option>
+              <option value="buildkite_agent_connected">Agent Connected</option>
+              <option value="buildkite_agent_disconnected">Agent Disconnected</option>
+            </optgroup>
+            <optgroup label="Deploy">
+              <option value="deploy_started">Deploy Started</option>
+              <option value="deploy_completed">Deploy Completed</option>
+            </optgroup>
           </select>
         </div>
         <div class="form-group" style="margin:0;flex:1;min-width:160px">

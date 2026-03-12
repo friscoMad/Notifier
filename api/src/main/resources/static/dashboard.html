@@ -439,6 +439,17 @@ function esc(str) {
   return d.innerHTML;
 }
 
+function renderMrkdwn(str) {
+  // Convert Slack mrkdwn to HTML: escape first, then convert patterns
+  return esc(str)
+    // <url|text> links (already escaped to &lt;url|text&gt;)
+    .replace(/&lt;(https?:\/\/[^|&]+)\|([^&]+)&gt;/g, '<a href="$1" target="_blank" rel="noopener">$2</a>')
+    // <url> bare links
+    .replace(/&lt;(https?:\/\/[^&]+)&gt;/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')
+    // *bold*
+    .replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
+}
+
 function toast(msg, type = 'success') {
   const el = document.createElement('div');
   const icon = type === 'success' ? 'check-circle' : 'alert-circle';
@@ -624,12 +635,12 @@ const NotifFeed = {
         <div class="feed-icon" style="background:${color.bg};color:${color.fg}"><i data-lucide="${icon}"></i></div>
         <div class="feed-content">
           <div class="feed-title">
-            ${esc(lines[0])}
+            ${renderMrkdwn(lines[0])}
             <span class="badge badge-type" style="font-size:9px">${esc(typeName)}</span>
             ${channels}
             ${isNew ? '<span class="badge badge-new">new</span>' : ''}
           </div>
-          ${lines.length > 1 ? `<div class="feed-body" style="font-size:12px;color:var(--text-secondary);white-space:pre-line;margin-top:4px">${esc(lines.slice(1).join('\n'))}</div>` : ''}
+          ${lines.length > 1 ? `<div class="feed-body" style="font-size:12px;color:var(--text-secondary);white-space:pre-line;margin-top:4px">${lines.slice(1).map(l => renderMrkdwn(l)).join('\n')}</div>` : ''}
           <div class="feed-time"><i data-lucide="clock"></i>${esc(created)}</div>
         </div>
       </div>`;

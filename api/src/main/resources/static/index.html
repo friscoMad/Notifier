@@ -992,6 +992,13 @@ function esc(str) {
   return d.innerHTML;
 }
 
+function renderMrkdwn(str) {
+  return esc(str)
+    .replace(/&lt;(https?:\/\/[^|&]+)\|([^&]+)&gt;/g, '<a href="$1" target="_blank" rel="noopener">$2</a>')
+    .replace(/&lt;(https?:\/\/[^&]+)&gt;/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')
+    .replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
+}
+
 function toast(msg, type = 'success') {
   const el = document.createElement('div');
   const icon = type === 'success' ? 'check-circle' : 'alert-circle';
@@ -1198,11 +1205,11 @@ const Feed = {
         </div>
         <div class="feed-content">
           <div class="feed-title">
-            ${esc(lines[0] || this.formatType(item.typeKey))}
+            ${renderMrkdwn(lines[0] || this.formatType(item.typeKey))}
             <span class="badge badge-type" style="font-size:10px">${esc(item.typeKey)}</span>
             ${subscriber}
           </div>
-          ${lines.length > 1 ? `<div class="feed-body" style="font-size:12px;color:var(--text-secondary);white-space:pre-line;margin-top:4px">${esc(lines.slice(1).join('\n'))}</div>` : ''}
+          ${lines.length > 1 ? `<div class="feed-body" style="font-size:12px;color:var(--text-secondary);white-space:pre-line;margin-top:4px">${lines.slice(1).map(l => renderMrkdwn(l)).join('\n')}</div>` : ''}
           <div class="feed-time"><i data-lucide="clock"></i>${ago}</div>
         </div>
       </div>`;

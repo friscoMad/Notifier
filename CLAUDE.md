@@ -1,6 +1,6 @@
 # Notification Router
 
-A centralized notification management system built as a multi-module Kotlin Spring Boot application. Users self-subscribe to notifications from GitHub/Buildkite via a Slack bot, with delivery routed through Novu.
+A centralized notification management system built as a multi-module Kotlin Spring Boot application. Users self-subscribe to notifications from GitHub/Buildkite via a Slack bot, with delivery via Slack API (chat/DM) and Novu (web inbox).
 
 ## Commands
 
@@ -36,9 +36,17 @@ GitHub Webhook / GitHub Actions / Buildkite
                                  ↓
                            PostgreSQL
                                  ↓
-                        NovuService (trigger)
-                                 ↓
-                    Novu → Slack DM / Web Inbox
+              ┌────────────────────────────────┐
+              │ chat (Slack DM / channel)       │
+              │   SlackNotificationService      │
+              │   → Slack chat.postMessage API  │
+              │   (Block Kit mrkdwn — links     │
+              │    render correctly)            │
+              ├────────────────────────────────┤
+              │ in_app / email / digest         │
+              │   NovuService → Novu            │
+              │   → Web Inbox / Email           │
+              └────────────────────────────────┘
            ↓
     bot/ (Kotlin Slack Bolt)
       /notifyme slash commands + modals → Router API
@@ -58,6 +66,7 @@ GitHub Webhook / GitHub Actions / Buildkite
 
 - `api/src/main/kotlin/.../service/EventService.kt` — orchestrates event routing
 - `api/src/main/kotlin/.../service/NovuService.kt` — Novu trigger dispatch
+- `api/src/main/kotlin/.../service/SlackNotificationService.kt` — direct Slack delivery for `chat` channel (bypasses Novu to ensure mrkdwn links render)
 - `api/src/main/kotlin/.../service/FilterEvaluator.kt` — subscription filter matching
 - `api/src/main/kotlin/.../config/NovuSeeder.kt` — seeds Novu workflows on startup
 - `api/src/test/resources/application-test.yml` — shared H2/Flyway test config
@@ -220,14 +229,23 @@ fun unsubscribe(subscriptionId: String) {
 |----------|--------|---------------|
 | `pr_created` | GitHub | author, repo, base_branch |
 | `pr_review_requested` | GitHub | author, repo, reviewer |
-| `pr_merged_service` | GitHub | author, repo, affected_services[] |
-| `pr_checks_passed` | GitHub | author, repo, check_name |
-| `pr_checks_failed` | GitHub | author, repo, check_name |
-| `deploy_started` | GH Actions/Buildkite | service, environment |
-| `deploy_completed` | GH Actions/Buildkite | service, environment, status |
+| `pr_updated` | GitHub | author, repo, base_branch |
+| `pr_merged_master_success` | GitHub | author, repo, base_branch |
+| `pr_merged_master_error` | GitHub | author, repo, base_branch |
+| `pr_checks_passed` | GitHub | author, repo, check_name, base_branch |
+| `pr_checks_failed` | GitHub | author, repo, check_name, base_branch |
+| `deploy_started` | GH Actions/Buildkite | service, environment, author, pipeline |
+| `deploy_completed` | GH Actions/Buildkite | service, environment, author, pipeline, status |
+| `buildkite_build_scheduled` | Buildkite | pipeline, branch, creator |
+| `buildkite_build_running` | Buildkite | pipeline, branch, creator |
+| `buildkite_build_finished` | Buildkite | pipeline, branch, creator, status |
+| `buildkite_job_scheduled` | Buildkite | pipeline, job_name, branch |
+| `buildkite_job_started` | Buildkite | pipeline, job_name, branch |
+| `buildkite_job_finished` | Buildkite | pipeline, job_name, branch, status |
+| `pipeline_updated` | Buildkite | service, team |
+| `buildkite_agent_connected` | Buildkite | agent_name, hostname |
+| `buildkite_agent_disconnected` | Buildkite | agent_name, hostname |
 | `flaky_test_detected` | Custom | test_name, service, team |
-| `pr_merged_master_success` | GitHub | author, repo |
-| `pr_merged_master_error` | GitHub | author, repo |
 
 ## Novu Delivery Architecture (Slack)
 
@@ -255,4 +273,3 @@ Slack delivery chain: Integration → ChannelConnection → ChannelEndpoint → 
 
 See `docs/IMPLEMENTATION_PLAN.md` for detailed task breakdown. Current focus:
 - `bot/` — Slack Bolt slash commands (`/notifyme`) and interactive modals
-- Buildkite HMAC signature verification

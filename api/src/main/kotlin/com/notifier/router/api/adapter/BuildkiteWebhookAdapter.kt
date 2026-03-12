@@ -130,6 +130,7 @@ object BuildkiteWebhookAdapter {
             agentName = job.agent?.name ?: "",
             jobUrl = job.webUrl,
             buildUrl = build.webUrl,
+            buildMessage = build.message,
         )
     }
 
@@ -147,6 +148,7 @@ object BuildkiteWebhookAdapter {
             jobUrl = job.webUrl,
             buildUrl = build.webUrl,
             finishedAt = job.finishedAt ?: "",
+            buildMessage = build.message,
         )
     }
 

@@ -63,7 +63,8 @@
       "Bash(AWS_PROFILE=affirm-infra-poc aws iam list-users 2>&1 | head -30)",
       "Bash(AWS_PROFILE=affirm-infra-poc aws iam list-users 2>&1 | python3 -c \"import sys,json; users=json.load\\(sys.stdin\\)['Users']; [print\\(u['UserName']\\) for u in users]\")",
       "Bash(grep -n \"SecurityConfig\\\\|WebSecurityConfig\\\\|antMatchers\\\\|requestMatchers\\\\|permitAll\\\\|notifications/all\\\\|/api/v1/notifications\" /Users/juan.sanchezaranda/projects/Notifier/api/src/main/kotlin/com/notifier/router/api/config/*.kt 2>/dev/null)",
-      "Bash(grep -rn \"NOTIFICATION_PAGE_SIZE\\\\|limit=\\\\$NOTIFICATION\" /Users/juan.sanchezaranda/projects/Notifier/api/src/main/kotlin/com/notifier/router/api/novu/NovuApiClient.kt)"
+      "Bash(grep -rn \"NOTIFICATION_PAGE_SIZE\\\\|limit=\\\\$NOTIFICATION\" /Users/juan.sanchezaranda/projects/Notifier/api/src/main/kotlin/com/notifier/router/api/novu/NovuApiClient.kt)",
+      "Bash(pkill:*)"
     ]
   }
 }

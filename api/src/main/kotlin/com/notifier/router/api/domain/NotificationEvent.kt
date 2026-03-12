@@ -197,6 +197,7 @@ data class DeployStartedEvent(
         get() =
             mapOf<String, Any>(
                 "content" to "🚀 *Deploy Started*\n*Service:* $service  ·  *Environment:* $environment  ·  *Author:* $author",
+                "title" to "🚀 Deploy Started — $service ($environment)",
                 "deployment_url" to deploymentUrl,
                 "status" to status,
                 "created_at" to createdAt,
@@ -231,6 +232,11 @@ data class DeployCompletedEvent(
                 } else {
                     "❌ *Deploy Failed*\n<$deploymentUrl|$service>  ·  *Environment:* $environment  ·  *Status:* $status  ·  *Author:* $author"
                 },
+                "title" to if (status == "success") {
+                    "✅ Deploy Completed — $service ($environment)"
+                } else {
+                    "❌ Deploy Failed — $service ($environment)"
+                },
                 "deployment_url" to deploymentUrl,
                 "status_url" to statusUrl,
                 "status" to status,
@@ -256,6 +262,7 @@ data class BuildScheduledEvent(
             val linkText = if (buildMessage.isNotBlank()) buildMessage else "#$buildNumber"
             return mapOf(
                 "content" to "🕐 *Build Scheduled* — <$buildUrl|$linkText>\n*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>",
+                "title" to "🕐 Build Scheduled — $branch ($pipeline #$buildNumber)",
                 "build_url" to buildUrl,
             )
         }
@@ -277,6 +284,7 @@ data class BuildRunningEvent(
             val linkText = if (buildMessage.isNotBlank()) buildMessage else "#$buildNumber"
             return mapOf(
                 "content" to "🏃 *Build Running* — <$buildUrl|$linkText>\n*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>",
+                "title" to "🏃 Build Running — $branch ($pipeline #$buildNumber)",
                 "build_url" to buildUrl,
             )
         }
@@ -305,6 +313,11 @@ data class BuildFinishedEvent(
                 } else {
                     "❌ *Build Failed* — <$buildUrl|$linkText>\n$line2"
                 },
+                "title" to if (status == "passed") {
+                    "✅ Build Passed — $branch ($pipeline #$buildNumber)"
+                } else {
+                    "❌ Build Failed — $branch ($pipeline #$buildNumber)"
+                },
                 "build_url" to buildUrl,
                 "finished_at" to finishedAt,
                 "state" to status,
@@ -330,6 +343,7 @@ data class JobScheduledEvent(
             val linkText = if (buildMessage.isNotBlank()) "$buildMessage - $jobName" else jobName
             return mapOf(
                 "content" to "🕐 *Job Scheduled* — <$jobUrl|$linkText>\n*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>",
+                "title" to "🕐 Job Scheduled — $jobName | $pipeline #$buildNumber",
                 "job_url" to jobUrl,
                 "build_url" to buildUrl,
             )
@@ -353,6 +367,7 @@ data class JobStartedEvent(
         get() =
             mapOf<String, Any>(
                 "content" to "🏃 *Job Started* — <$jobUrl|$jobName>\n*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>",
+                "title" to "🏃 Job Started — $jobName | $pipeline #$buildNumber",
                 "job_url" to jobUrl,
                 "build_url" to buildUrl,
             )
@@ -387,6 +402,11 @@ data class JobFinishedEvent(
                 } else {
                     "❌ *Job Failed* — <$jobUrl|$jobName>\n*Branch:* $branch  ·  *By:* $creator  ·  *Pipeline:* $pipeline  ·  *Build:* <$buildUrl|#$buildNumber>  ·  *Exit:* ${exitStatus ?: "?"}"
                 },
+                "title" to if (status == "passed") {
+                    "✅ Job Passed — $jobName | $pipeline #$buildNumber"
+                } else {
+                    "❌ Job Failed — $jobName | $pipeline #$buildNumber"
+                },
                 "job_url" to jobUrl,
                 "build_url" to buildUrl,
                 "finished_at" to finishedAt,
@@ -407,6 +427,7 @@ data class PipelineUpdatedEvent(
         get() =
             mapOf<String, Any>(
                 "content" to "🔧 *Pipeline Updated*\n<$pipelineUrl|$service>  ·  *Team:* $team",
+                "title" to "🔧 Pipeline Updated — $service",
                 "pipeline_url" to pipelineUrl,
                 "updated_at" to updatedAt,
             )
@@ -424,6 +445,7 @@ data class AgentConnectedEvent(
         get() =
             mapOf<String, Any>(
                 "content" to "🟢 *Agent Connected:* $agentName\n*Host:* $hostname\n<$agentUrl|View agent>",
+                "title" to "🟢 Agent Connected — $agentName",
                 "agent_url" to agentUrl,
             )
 }
@@ -440,6 +462,7 @@ data class AgentDisconnectedEvent(
         get() =
             mapOf<String, Any>(
                 "content" to "🔴 *Agent Disconnected:* $agentName\n*Host:* $hostname\n<$agentUrl|View agent>",
+                "title" to "🔴 Agent Disconnected — $agentName",
                 "agent_url" to agentUrl,
             )
 }

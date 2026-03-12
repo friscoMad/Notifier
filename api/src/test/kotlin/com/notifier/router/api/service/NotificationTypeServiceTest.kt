@@ -40,11 +40,11 @@ class NotificationTypeServiceTest {
                 description = "A deployment was completed",
             )
 
-        whenever(notificationTypeRepository.findAll()).thenReturn(listOf(type1, type2))
+        whenever(notificationTypeRepository.findAllByOrderByNameAsc()).thenReturn(listOf(type1, type2))
 
         val result = notificationTypeService.getAllNotificationTypes()
 
-        verify(notificationTypeRepository).findAll()
+        verify(notificationTypeRepository).findAllByOrderByNameAsc()
         assert(result.size == 2)
         assert(result.any { it.key == "pr_created" })
         assert(result.any { it.key == "deploy_completed" })

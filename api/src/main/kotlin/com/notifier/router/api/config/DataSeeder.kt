@@ -99,8 +99,8 @@ class DataSeeder(
                     createType(
                         "00000000-0000-0000-0000-000000000001",
                         "pr_created",
-                        "Pull Request Created",
-                        "Triggered when a new Pull Request is opened on GitHub",
+                        "PR Created",
+                        "Triggered when a new PR is opened on GitHub",
                     ) to
                         listOf(
                             createFilter("00000000-0000-0000-0000-000000000001", "author"),

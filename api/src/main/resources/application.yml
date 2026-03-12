@@ -28,6 +28,10 @@ app:
     # false (default): only re-seeds static notification types and filter definitions.
     full-reset: true
 
+github:
+  webhook:
+    secret: ${GITHUB_WEBHOOK_SECRET:}
+
 buildkite:
   webhook:
     token: ${BUILDKITE_WEBHOOK_TOKEN:}
@@ -36,7 +40,7 @@ buildkite:
 novu:
   api:
     url: http://localhost:3000/v1
-    key: nvsk.local_development_api_key_for_testing_purposes_only_12345
+    key: ${NOVU_API_KEY:nvsk.local_development_api_key_for_testing_purposes_only_12345}
   slack:
     client-id: ${SLACK_CLIENT_ID:}
     client-secret: ${SLACK_CLIENT_SECRET:}

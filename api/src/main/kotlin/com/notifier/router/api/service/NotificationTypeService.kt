@@ -15,7 +15,9 @@ class NotificationTypeService(
     private val filterDefinitionRepository: FilterDefinitionRepository,
 ) {
     @Transactional(readOnly = true)
-    fun getAllNotificationTypes(): List<NotificationTypeDto> = notificationTypeRepository.findAll().map { it.toDto() }
+    fun getAllNotificationTypes(): List<NotificationTypeDto> = notificationTypeRepository.findAllByOrderByNameAsc().map {
+        it.toDto()
+    }
 
     @Transactional(readOnly = true)
     fun getNotificationTypeByKey(typeKey: String): NotificationTypeDto? = notificationTypeRepository.findByTypeKey(

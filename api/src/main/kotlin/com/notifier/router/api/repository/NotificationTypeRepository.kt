@@ -8,4 +8,5 @@ import java.util.UUID
 @Repository
 interface NotificationTypeRepository : JpaRepository<NotificationType, UUID> {
     fun findByTypeKey(typeKey: String): NotificationType?
+    fun findAllByOrderByNameAsc(): List<NotificationType>
 }

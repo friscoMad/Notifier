@@ -100,7 +100,12 @@ class EventServiceTest {
 
         eventService.processEventAsync(event)
 
-        verify(novuService).triggerChannelWorkflow(eq("pr_created"), eq("in_app"), eq(listOf("U123")), eq(event.payload))
+        verify(novuService).triggerChannelWorkflow(
+            eq("pr_created"),
+            eq("in_app"),
+            eq(listOf("U123")),
+            eq(event.payload),
+        )
         verify(novuService, never()).triggerChannelWorkflow(any(), eq("chat"), any(), any())
         verify(slackNotificationService).sendMessage(eq("U123"), eq(event.payload["content"] as String))
     }

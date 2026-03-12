@@ -6,6 +6,7 @@ import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
+import org.springframework.web.client.RestClientException
 import org.springframework.web.client.RestTemplate
 
 /**
@@ -52,7 +53,7 @@ class SlackNotificationService(
             } else {
                 logger.debug("Delivered Slack message to $channel")
             }
-        } catch (e: Exception) {
+        } catch (e: RestClientException) {
             logger.error("Exception while sending Slack message to $channel", e)
         }
     }
